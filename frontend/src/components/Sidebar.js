@@ -4,12 +4,13 @@ import { useTheme } from '../context/ThemeContext';
 import { useLang } from '../context/LanguageContext';
 import NotificationBell from './NotificationBell';
 
-function useNavItems(t) {
+function useNavItems(t, lang) {
   return {
     admin: [
       { section: t('nav.overview') },
       { to: '/dashboard', label: t('nav.dashboard'), icon: 'dashboard' },
       { to: '/users', label: t('nav.manageUsers'), icon: 'group' },
+      { to: '/approvals', label: lang === 'fr' ? 'Approbations' : 'Approvals', icon: 'pending_actions' },
       { section: t('nav.system') },
       { to: '/activity', label: t('nav.activityLog'), icon: 'history' },
       { to: '/settings', label: t('nav.settings'), icon: 'settings' },
@@ -17,8 +18,11 @@ function useNavItems(t) {
     owner: [
       { section: t('nav.overview') },
       { to: '/dashboard', label: t('nav.dashboard'), icon: 'dashboard' },
+      { to: '/executive', label: lang === 'fr' ? 'Vue Exécutive' : 'Executive View', icon: 'monitoring' },
       { to: '/risk-report', label: t('nav.riskAnalysis'), icon: 'assessment' },
       { to: '/final-decision', label: t('nav.aiDecision'), icon: 'auto_awesome' },
+      { to: '/simulate', label: lang === 'fr' ? 'Simulation' : 'Simulation', icon: 'science' },
+      { to: '/approvals', label: lang === 'fr' ? 'Approbations' : 'Approvals', icon: 'pending_actions' },
       { to: '/reports', label: t('nav.reports'), icon: 'picture_as_pdf' },
       { section: t('nav.finance') },
       { to: '/transactions', label: t('nav.transactions'), icon: 'receipt_long' },
@@ -50,7 +54,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang, t } = useLang();
-  const navMap = useNavItems(t);
+  const navMap = useNavItems(t, lang);
   const items = navMap[user?.role] || [];
 
   return (

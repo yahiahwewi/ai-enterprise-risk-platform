@@ -19,6 +19,10 @@ import ActivityLog from './pages/ActivityLog';
 import About from './pages/About';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
+import Approvals from './pages/Approvals';
+import Simulate from './pages/Simulate';
+import Executive from './pages/Executive';
+import CopilotChat from './components/CopilotChat';
 
 function ProtectedPage({ children, roles }) {
   return (
@@ -35,6 +39,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Toast />
+        <CopilotChat />
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -50,6 +55,9 @@ export default function App() {
           <Route path="/assets" element={<ProtectedPage roles={['owner', 'finance']}><Assets /></ProtectedPage>} />
           <Route path="/activity" element={<ProtectedPage roles={['owner', 'admin']}><ActivityLog /></ProtectedPage>} />
           <Route path="/reports" element={<ProtectedPage roles={['owner', 'admin']}><Reports /></ProtectedPage>} />
+          <Route path="/approvals" element={<ProtectedPage roles={['owner', 'admin']}><Approvals /></ProtectedPage>} />
+          <Route path="/simulate" element={<ProtectedPage roles={['owner']}><Simulate /></ProtectedPage>} />
+          <Route path="/executive" element={<ProtectedPage roles={['owner']}><Executive /></ProtectedPage>} />
           <Route path="/settings" element={<ProtectedPage roles={['admin']}><Settings /></ProtectedPage>} />
           <Route path="/users" element={<ProtectedPage roles={['admin']}><Dashboard /></ProtectedPage>} />
 

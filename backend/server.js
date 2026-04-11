@@ -34,6 +34,8 @@ app.use('/api/presets', require('./routes/presetRoutes'));
 app.use('/api/activity', require('./routes/activityRoutes'));
 app.use('/api/forecast', require('./routes/forecastRoutes'));
 app.use('/api/export', require('./routes/reportRoutes'));
+app.use('/api/approvals', require('./routes/approvalRoutes'));
+app.use('/api/rules', require('./routes/ruleRoutes'));
 
 // Global error handler
 app.use(errorHandler);

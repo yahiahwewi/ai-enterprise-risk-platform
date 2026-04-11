@@ -347,6 +347,30 @@ async function analyzeRisk() {
   if (trends.expenses.change > 15) recommendations.push(`Investigate the ${trends.expenses.change}% increase in expenses — identify which categories are driving the rise.`);
   if (recommendations.length === 0) recommendations.push('Continue monitoring KPIs regularly and maintain current financial discipline.');
 
+  // ── Root Causes ───────────────────────────────────────
+  const rootCauses = [];
+  if (invoiceRisk > 20) {
+    const lateNames = lateInvoicesList.slice(0, 3).map(i => i.clientName).join(', ');
+    rootCauses.push({ cause: `Invoice delays${lateNames ? ` (${lateNames})` : ''}`, contribution: Math.round(invoiceRisk * 0.25), dimension: 'invoices' });
+  }
+  if (cashFlowRisk > 20) {
+    // Find highest expense category
+    const catTotals = {};
+    transactions.filter(t => t.type === 'expense').forEach(t => { catTotals[t.category] = (catTotals[t.category] || 0) + t.amount; });
+    const topCat = Object.entries(catTotals).sort((a, b) => b[1] - a[1])[0];
+    rootCauses.push({ cause: `High expenses${topCat ? ` in ${topCat[0]} (${topCat[1].toLocaleString()} TND)` : ''}`, contribution: Math.round(cashFlowRisk * 0.35), dimension: 'cashFlow' });
+  }
+  if (debtRisk > 20) {
+    rootCauses.push({ cause: `Debt-to-asset ratio at ${(totalDebt / Math.max(totalAssetValue, 1)).toFixed(2)}x`, contribution: Math.round(debtRisk * 0.25), dimension: 'debt' });
+  }
+  if (loanBurdenRisk > 20) {
+    rootCauses.push({ cause: `Monthly loan payments of ${monthlyLoanPayments.toLocaleString()} TND`, contribution: Math.round(loanBurdenRisk * 0.15), dimension: 'loanBurden' });
+  }
+  anomalies.slice(0, 2).forEach(a => {
+    rootCauses.push({ cause: `Anomaly: ${a.category} ${a.amount.toLocaleString()} TND (${a.deviations}x normal)`, contribution: 5, dimension: 'cashFlow' });
+  });
+  rootCauses.sort((a, b) => b.contribution - a.contribution);
+
   return {
     globalScore,
     level,
@@ -364,6 +388,7 @@ async function analyzeRisk() {
     explanations,
     predictions,
     recommendations,
+    rootCauses,
     lateInvoicesList,
   };
 }

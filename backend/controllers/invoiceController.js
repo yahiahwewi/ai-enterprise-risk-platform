@@ -1,8 +1,22 @@
 const Invoice = require('../models/Invoice');
+const { evaluateRules, applyRuleActions } = require('../services/ruleEngine');
 
 exports.createInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.create(req.body);
+    const invoice = await Invoice.create({ ...req.body, submittedBy: req.user._id, workflowStatus: 'draft' });
+
+    const triggered = await evaluateRules('invoice', invoice, req.user._id);
+    if (triggered.length > 0) {
+      const { requiresApproval } = await applyRuleActions('invoice', invoice, invoice._id, triggered, req.user._id);
+      if (requiresApproval) {
+        invoice.workflowStatus = 'pending_approval';
+        await invoice.save();
+      }
+    } else {
+      invoice.workflowStatus = 'approved';
+      await invoice.save();
+    }
+
     res.locals.createdEntityId = invoice._id;
     res.status(201).json(invoice);
   } catch (error) {
@@ -24,7 +38,6 @@ exports.getInvoices = async (req, res) => {
 
     let invoices = await Invoice.find(filter).sort({ dueDate: -1 });
 
-    // Auto-mark overdue invoices as 'late'
     const now = new Date();
     const updates = [];
     invoices = invoices.map((inv) => {

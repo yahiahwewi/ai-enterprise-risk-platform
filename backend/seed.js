@@ -8,6 +8,8 @@ const Asset = require('./models/Asset');
 const Notification = require('./models/Notification');
 const ActivityLog = require('./models/ActivityLog');
 const Preset = require('./models/Preset');
+const Rule = require('./models/Rule');
+const ApprovalRequest = require('./models/ApprovalRequest');
 
 dotenv.config();
 
@@ -26,6 +28,8 @@ async function seed() {
     Notification.deleteMany({}),
     ActivityLog.deleteMany({}),
     Preset.deleteMany({}),
+    Rule.deleteMany({}),
+    ApprovalRequest.deleteMany({}),
   ]);
   console.log('Cleared existing data');
 
@@ -140,6 +144,14 @@ async function seed() {
     { type: 'client', value: 'bigcorp', label_fr: 'BigCorp', label_en: 'BigCorp' },
   ]);
   console.log('Presets seeded (13 categories + 5 clients)');
+
+  // ── Business Rules ──
+  await Rule.insertMany([
+    { name: 'Facture > 10,000 TND', description: 'Les factures supérieures à 10 000 TND nécessitent une approbation', entityType: 'invoice', condition: { field: 'amount', operator: 'gt', value: 10000 }, action: 'require_approval', createdBy: admin._id },
+    { name: 'Dépense > 5,000 TND', description: 'Les dépenses supérieures à 5 000 TND déclenchent une notification', entityType: 'transaction', condition: { field: 'amount', operator: 'gt', value: 5000 }, action: 'notify', createdBy: admin._id },
+    { name: 'Prêt > 100,000 TND', description: 'Les prêts importants nécessitent une approbation', entityType: 'loan', condition: { field: 'amount', operator: 'gt', value: 100000 }, action: 'require_approval', createdBy: admin._id },
+  ]);
+  console.log('3 business rules seeded');
 
   console.log('\n========================================');
   console.log('  TAC-TIC ERM — Seed Complete');

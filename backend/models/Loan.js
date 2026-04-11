@@ -5,6 +5,11 @@ const loanSchema = new mongoose.Schema({
   interestRate: { type: Number, required: true, min: 0 },
   duration: { type: Number, required: true, min: 1 }, // in months
   monthlyPayment: { type: Number, required: true, min: 0 },
+  workflowStatus: { type: String, enum: ['draft', 'pending_approval', 'approved', 'rejected', 'locked'], default: 'draft' },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvalDate: { type: Date },
+  rejectionReason: { type: String, trim: true },
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Loan', loanSchema);

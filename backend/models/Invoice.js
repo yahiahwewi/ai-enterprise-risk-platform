@@ -13,6 +13,11 @@ const invoiceSchema = new mongoose.Schema({
   description: { type: String, trim: true, default: '' },
   reference: { type: String, trim: true, default: '' },
   notes: { type: String, trim: true, default: '' },
+  workflowStatus: { type: String, enum: ['draft', 'pending_approval', 'approved', 'rejected', 'locked'], default: 'draft' },
+  approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  approvalDate: { type: Date },
+  rejectionReason: { type: String, trim: true },
+  submittedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);
