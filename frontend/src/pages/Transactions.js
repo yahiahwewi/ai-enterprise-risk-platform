@@ -17,6 +17,7 @@ export default function Transactions() {
   const [form, setForm] = useState({ type: 'income', amount: '', category: '', description: '', date: '', reference: '', paymentMethod: '', notes: '' });
   const [showMore, setShowMore] = useState(false);
   const [typeFilter, setTypeFilter] = useState('');
+  const [expanded, setExpanded] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const { addToast } = useToast();
   const { t, lang } = useLang();
@@ -189,56 +190,126 @@ export default function Transactions() {
         {transactions.length === 0 ? (
           <EmptyState icon="receipt_long" title={t('transactions.noData')} message={t('transactions.noDataMsg')} />
         ) : (
-          <div className="space-y-3">
-            {transactions.map((tx) => (
-              <div key={tx._id} className="flex items-center justify-between p-4 bg-surface-container-low dark:bg-slate-700/50 rounded-xl hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all">
-                {/* Left: icon + info */}
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                    <span className={`material-symbols-outlined text-[20px] ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                      {tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
-                    </span>
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{tx.category}</p>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                        {tx.type === 'income' ? (lang === 'fr' ? 'Revenu' : 'Income') : (lang === 'fr' ? 'Dépense' : 'Expense')}
+          <div className="space-y-2">
+            {transactions.map((tx) => {
+              const isOpen = expanded === tx._id;
+              const methodLabels = { fr: { virement: 'Virement bancaire', cheque: 'Chèque', especes: 'Espèces', carte: 'Carte bancaire', autre: 'Autre' }, en: { virement: 'Bank transfer', cheque: 'Check', especes: 'Cash', carte: 'Credit card', autre: 'Other' } };
+              const ml = methodLabels[lang] || methodLabels.fr;
+
+              return (
+                <div key={tx._id} className="bg-surface-container-low dark:bg-slate-700/50 rounded-xl overflow-hidden transition-all">
+                  {/* Main row — clickable */}
+                  <div
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
+                    onClick={() => setExpanded(isOpen ? null : tx._id)}
+                  >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                        <span className={`material-symbols-outlined text-[20px] ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          {tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{tx.category}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                            {tx.type === 'income' ? (lang === 'fr' ? 'Revenu' : 'Income') : (lang === 'fr' ? 'Dépense' : 'Expense')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-on-surface-variant truncate">
+                          {new Date(tx.date).toLocaleDateString()} {tx.description ? `· ${tx.description}` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 pl-4">
+                      <span className={`text-sm font-bold font-headline ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND
                       </span>
+                      <span className={`material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
                     </div>
-                    <p className="text-xs text-on-surface-variant truncate">
-                      {new Date(tx.date).toLocaleDateString()} {tx.description ? `· ${tx.description}` : ''} {tx.reference ? `· ${tx.reference}` : ''}
-                    </p>
                   </div>
-                </div>
 
-                {/* Right: amount + actions */}
-                <div className="flex items-center gap-3 shrink-0 pl-4">
-                  <span className={`text-sm font-bold font-headline ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND
-                  </span>
+                  {/* Expandable details */}
+                  {isOpen && (
+                    <div className="px-4 pb-4 border-t border-surface-container-high dark:border-slate-600">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('common.date')}</p>
+                          <p className="text-sm text-on-surface dark:text-slate-200">{new Date(tx.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('accountant.category')}</p>
+                          <p className="text-sm text-on-surface dark:text-slate-200">{tx.category}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('common.amount')}</p>
+                          <p className="text-sm font-bold text-on-surface dark:text-slate-200">{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">ID</p>
+                          <p className="text-sm text-on-surface-variant font-mono">TX-{String(tx._id).slice(-6).toUpperCase()}</p>
+                        </div>
+                      </div>
 
-                  <button onClick={() => downloadPDF(tx._id, tx.category)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title="PDF">
-                    <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF
-                  </button>
+                      {(tx.description || tx.reference || tx.paymentMethod || tx.notes) && (
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                          {tx.description && (
+                            <div>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('accountant.description')}</p>
+                              <p className="text-sm text-on-surface dark:text-slate-300">{tx.description}</p>
+                            </div>
+                          )}
+                          {tx.reference && (
+                            <div>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{lang === 'fr' ? 'Référence' : 'Reference'}</p>
+                              <p className="text-sm text-on-surface dark:text-slate-300">{tx.reference}</p>
+                            </div>
+                          )}
+                          {tx.paymentMethod && (
+                            <div>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{lang === 'fr' ? 'Mode de paiement' : 'Payment Method'}</p>
+                              <p className="text-sm text-on-surface dark:text-slate-300">{ml[tx.paymentMethod] || tx.paymentMethod}</p>
+                            </div>
+                          )}
+                          {tx.notes && (
+                            <div className="col-span-2">
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{lang === 'fr' ? 'Notes' : 'Notes'}</p>
+                              <p className="text-sm text-on-surface-variant">{tx.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                  {deleting === tx._id ? (
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => deleteTransaction(tx._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors">
-                        {lang === 'fr' ? 'Oui' : 'Yes'}
-                      </button>
-                      <button onClick={() => setDeleting(null)} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-2 py-1.5">
-                        {lang === 'fr' ? 'Non' : 'No'}
-                      </button>
+                      {/* Actions row */}
+                      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-container-high dark:border-slate-600">
+                        <button onClick={(e) => { e.stopPropagation(); downloadPDF(tx._id, tx.category); }} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                          {lang === 'fr' ? 'Télécharger PDF' : 'Download PDF'}
+                        </button>
+
+                        {deleting === tx._id ? (
+                          <div className="flex items-center gap-1 ml-auto">
+                            <span className="text-xs text-on-surface-variant mr-1">{lang === 'fr' ? 'Supprimer ?' : 'Delete?'}</span>
+                            <button onClick={(e) => { e.stopPropagation(); deleteTransaction(tx._id); }} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors">
+                              {lang === 'fr' ? 'Oui' : 'Yes'}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setDeleting(null); }} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-2 py-1.5">
+                              {lang === 'fr' ? 'Non' : 'No'}
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); setDeleting(tx._id); }} className="ml-auto text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                            {lang === 'fr' ? 'Supprimer' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <button onClick={() => setDeleting(tx._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
-                    </button>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
