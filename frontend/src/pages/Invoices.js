@@ -55,16 +55,10 @@ export default function Invoices() {
   };
 
   const downloadPDF = (id, clientName) => {
-    api.get(`/export/invoice-pdf/${id}?language=${lang}`, { responseType: 'blob' })
-      .then((res) => {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `facture_${clientName.replace(/\s+/g, '_')}.pdf`;
-        link.click();
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(() => addToast('error', t('toast.error'), t('toast.failed')));
+    // Use window.open with token in URL to get a clean PDF binary download
+    const token = localStorage.getItem('token');
+    const url = `http://localhost:5000/api/export/invoice-pdf/${id}?language=${lang}&token=${token}`;
+    window.open(url, '_blank');
   };
 
   const statusLabels = { fr: { all: 'Toutes', paid: 'Payées', pending: 'En attente', late: 'En retard' }, en: { all: 'All', paid: 'Paid', pending: 'Pending', late: 'Late' } };
@@ -103,7 +97,6 @@ export default function Invoices() {
       <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100">{t('invoicesPage.all')}</h3>
-          {/* Status filter tabs */}
           <div className="flex gap-1">
             {[['', sl.all], ['paid', sl.paid], ['pending', sl.pending], ['late', sl.late]].map(([val, label]) => (
               <button key={val} onClick={() => setStatusFilter(val)} className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${statusFilter === val ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
@@ -116,74 +109,75 @@ export default function Invoices() {
         {invoices.length === 0 ? (
           <EmptyState icon="description" title={t('invoicesPage.noData')} message={t('invoicesPage.noDataMsg')} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left">
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.client')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.amount')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.dueDate')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.status')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-                {invoices.map((inv) => (
-                  <tr key={inv._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors">
-                    <td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{inv.clientName}</td>
-                    <td className="py-3 text-sm font-bold">{inv.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</td>
-                    <td className="py-3 text-sm text-on-surface-variant">{new Date(inv.dueDate).toLocaleDateString()}</td>
-                    <td className="py-3"><span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${statusBadge[inv.status]}`}>{inv.status}</span></td>
-                    <td className="py-3">
-                      <div className="flex gap-1.5 flex-wrap">
-                        {/* Status actions */}
-                        {inv.status === 'pending' && (
-                          <>
-                            <button onClick={() => updateStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-2.5 py-1 rounded-lg hover:opacity-90 flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[14px]">check</span>{t('common.markPaid')}
-                            </button>
-                            <button onClick={() => updateStatus(inv._id, 'late')} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-surface-container-highest transition-colors">
-                              {t('invoicesPage.markLate')}
-                            </button>
-                          </>
-                        )}
-                        {inv.status === 'late' && (
-                          <button onClick={() => updateStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-2.5 py-1 rounded-lg hover:opacity-90 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">check</span>{t('common.markPaid')}
-                          </button>
-                        )}
-                        {inv.status === 'paid' && (
-                          <button onClick={() => updateStatus(inv._id, 'pending')} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">undo</span>{lang === 'fr' ? 'Annuler' : 'Undo'}
-                          </button>
-                        )}
+          <div className="space-y-3">
+            {invoices.map((inv) => (
+              <div key={inv._id} className="flex items-center justify-between p-4 bg-surface-container-low dark:bg-slate-700/50 rounded-xl hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all">
+                {/* Left: info */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-600 flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-primary text-[20px]">description</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{inv.clientName}</p>
+                    <p className="text-xs text-on-surface-variant">
+                      {lang === 'fr' ? 'Échéance' : 'Due'}: {new Date(inv.dueDate).toLocaleDateString()} · INV-{String(inv._id).slice(-6).toUpperCase()}
+                    </p>
+                  </div>
+                </div>
 
-                        {/* Download PDF */}
-                        <button onClick={() => downloadPDF(inv._id, inv.clientName)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title={lang === 'fr' ? 'Télécharger PDF' : 'Download PDF'}>
-                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF
-                        </button>
+                {/* Center: amount + status */}
+                <div className="flex items-center gap-4 shrink-0 px-4">
+                  <span className="text-sm font-bold text-on-surface dark:text-slate-100 font-headline">
+                    {inv.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND
+                  </span>
+                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${statusBadge[inv.status]}`}>
+                    {sl[inv.status] || inv.status}
+                  </span>
+                </div>
 
-                        {/* Delete */}
-                        {deleting === inv._id ? (
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => deleteInvoice(inv._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-red-200 transition-colors">
-                              {lang === 'fr' ? 'Confirmer' : 'Confirm'}
-                            </button>
-                            <button onClick={() => setDeleting(null)} className="text-xs text-on-surface-variant hover:text-on-surface px-1">
-                              {lang === 'fr' ? 'Non' : 'No'}
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setDeleting(inv._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                {/* Right: actions */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {inv.status === 'pending' && (
+                    <button onClick={() => updateStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">check</span>
+                      {t('common.markPaid')}
+                    </button>
+                  )}
+                  {inv.status === 'late' && (
+                    <button onClick={() => updateStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">check</span>
+                      {t('common.markPaid')}
+                    </button>
+                  )}
+                  {inv.status === 'paid' && (
+                    <button onClick={() => updateStatus(inv._id, 'pending')} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">undo</span>
+                      {lang === 'fr' ? 'Annuler' : 'Undo'}
+                    </button>
+                  )}
+
+                  <button onClick={() => downloadPDF(inv._id, inv.clientName)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title="PDF">
+                    <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                    PDF
+                  </button>
+
+                  {deleting === inv._id ? (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => deleteInvoice(inv._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors">
+                        {lang === 'fr' ? 'Oui' : 'Yes'}
+                      </button>
+                      <button onClick={() => setDeleting(null)} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-2 py-1.5">
+                        {lang === 'fr' ? 'Non' : 'No'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setDeleting(inv._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
