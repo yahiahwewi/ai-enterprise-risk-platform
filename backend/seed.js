@@ -33,7 +33,7 @@ async function seed() {
   const accountant = await User.create({ name: 'Ahmed Benali', email: 'accountant@erm.com', password: 'accountant123', role: 'accountant', status: 'approved' });
   const finance = await User.create({ name: 'Maria Garcia', email: 'finance@erm.com', password: 'finance123', role: 'finance', status: 'approved' });
   // Pending user for testing admin approval workflow
-  await User.create({ name: 'Mohamed Kadi', email: 'mohamed@tac-tic.dz', password: 'test123', role: 'accountant', status: 'pending' });
+  await User.create({ name: 'Mohamed Kadi', email: 'mohamed@tac-tic.tn', password: 'test123', role: 'accountant', status: 'pending' });
   console.log('5 users created (4 approved + 1 pending)');
 
   // ── Transactions (spread across 90 days) ──
