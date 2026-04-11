@@ -17,6 +17,7 @@ export default function Invoices() {
   const [form, setForm] = useState({ clientName: '', amount: '', dueDate: '', issueDate: '', status: 'pending', description: '', reference: '', notes: '' });
   const [showMore, setShowMore] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const [expanded, setExpanded] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const { addToast } = useToast();
   const { t, lang } = useLang();
@@ -165,75 +166,136 @@ export default function Invoices() {
         {invoices.length === 0 ? (
           <EmptyState icon="description" title={t('invoicesPage.noData')} message={t('invoicesPage.noDataMsg')} />
         ) : (
-          <div className="space-y-3">
-            {invoices.map((inv) => (
-              <div key={inv._id} className="flex items-center justify-between p-4 bg-surface-container-low dark:bg-slate-700/50 rounded-xl hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all">
-                {/* Left: info */}
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-600 flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-primary text-[20px]">description</span>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{inv.clientName}</p>
-                    <p className="text-xs text-on-surface-variant">
-                      {lang === 'fr' ? 'Échéance' : 'Due'}: {new Date(inv.dueDate).toLocaleDateString()} · INV-{String(inv._id).slice(-6).toUpperCase()}
-                    </p>
-                  </div>
-                </div>
+          <div className="space-y-2">
+            {invoices.map((inv) => {
+              const isOpen = expanded === inv._id;
+              const statusIcon = { paid: 'check_circle', pending: 'schedule', late: 'warning' };
+              const statusColorIcon = { paid: 'text-green-600', pending: 'text-amber-600', late: 'text-red-600' };
+              const statusBg = { paid: 'bg-green-100 dark:bg-green-900/30', pending: 'bg-amber-100 dark:bg-amber-900/30', late: 'bg-red-100 dark:bg-red-900/30' };
 
-                {/* Center: amount + status */}
-                <div className="flex items-center gap-4 shrink-0 px-4">
-                  <span className="text-sm font-bold text-on-surface dark:text-slate-100 font-headline">
-                    {inv.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND
-                  </span>
-                  <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${statusBadge[inv.status]}`}>
-                    {sl[inv.status] || inv.status}
-                  </span>
-                </div>
-
-                {/* Right: actions */}
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {inv.status === 'pending' && (
-                    <button onClick={() => updateStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">check</span>
-                      {t('common.markPaid')}
-                    </button>
-                  )}
-                  {inv.status === 'late' && (
-                    <button onClick={() => updateStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">check</span>
-                      {t('common.markPaid')}
-                    </button>
-                  )}
-                  {inv.status === 'paid' && (
-                    <button onClick={() => updateStatus(inv._id, 'pending')} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">undo</span>
-                      {lang === 'fr' ? 'Annuler' : 'Undo'}
-                    </button>
-                  )}
-
-                  <button onClick={() => downloadPDF(inv._id, inv.clientName)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title="PDF">
-                    <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
-                    PDF
-                  </button>
-
-                  {deleting === inv._id ? (
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => deleteInvoice(inv._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors">
-                        {lang === 'fr' ? 'Oui' : 'Yes'}
-                      </button>
-                      <button onClick={() => setDeleting(null)} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-2 py-1.5">
-                        {lang === 'fr' ? 'Non' : 'No'}
-                      </button>
+              return (
+                <div key={inv._id} className="bg-surface-container-low dark:bg-slate-700/50 rounded-xl overflow-hidden transition-all">
+                  {/* Main row — clickable */}
+                  <div
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
+                    onClick={() => setExpanded(isOpen ? null : inv._id)}
+                  >
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${statusBg[inv.status]}`}>
+                        <span className={`material-symbols-outlined text-[20px] ${statusColorIcon[inv.status]}`}>{statusIcon[inv.status]}</span>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{inv.clientName}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusBadge[inv.status]}`}>{sl[inv.status] || inv.status}</span>
+                        </div>
+                        <p className="text-xs text-on-surface-variant truncate">
+                          INV-{String(inv._id).slice(-6).toUpperCase()} · {lang === 'fr' ? 'Échéance' : 'Due'}: {new Date(inv.dueDate).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                  ) : (
-                    <button onClick={() => setDeleting(inv._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
-                      <span className="material-symbols-outlined text-[16px]">delete</span>
-                    </button>
+
+                    <div className="flex items-center gap-3 shrink-0 pl-4">
+                      <span className="text-sm font-bold font-headline text-on-surface dark:text-slate-100">
+                        {inv.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND
+                      </span>
+                      <span className={`material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
+                    </div>
+                  </div>
+
+                  {/* Expandable details */}
+                  {isOpen && (
+                    <div className="px-4 pb-4 border-t border-surface-container-high dark:border-slate-600">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('accountant.client')}</p>
+                          <p className="text-sm font-bold text-on-surface dark:text-slate-200">{inv.clientName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('common.amount')}</p>
+                          <p className="text-sm font-bold text-on-surface dark:text-slate-200">{inv.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{lang === 'fr' ? "Date d'émission" : 'Issue Date'}</p>
+                          <p className="text-sm text-on-surface dark:text-slate-300">{new Date(inv.issueDate || inv.createdAt).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{t('accountant.dueDate')}</p>
+                          <p className="text-sm text-on-surface dark:text-slate-300">{new Date(inv.dueDate).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+                      </div>
+
+                      {(inv.description || inv.reference || inv.notes) && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-3">
+                          {inv.description && (
+                            <div>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">Description</p>
+                              <p className="text-sm text-on-surface dark:text-slate-300">{inv.description}</p>
+                            </div>
+                          )}
+                          {inv.reference && (
+                            <div>
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{lang === 'fr' ? 'Référence' : 'Reference'}</p>
+                              <p className="text-sm text-on-surface dark:text-slate-300">{inv.reference}</p>
+                            </div>
+                          )}
+                          {inv.notes && (
+                            <div className="col-span-2">
+                              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-0.5">{lang === 'fr' ? 'Notes' : 'Notes'}</p>
+                              <p className="text-sm text-on-surface-variant">{inv.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Actions row */}
+                      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-surface-container-high dark:border-slate-600">
+                        {(inv.status === 'pending' || inv.status === 'late') && (
+                          <button onClick={(e) => { e.stopPropagation(); updateStatus(inv._id, 'paid'); }} className="executive-gradient text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">check</span>
+                            {t('common.markPaid')}
+                          </button>
+                        )}
+                        {inv.status === 'pending' && (
+                          <button onClick={(e) => { e.stopPropagation(); updateStatus(inv._id, 'late'); }} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">schedule</span>
+                            {t('invoicesPage.markLate')}
+                          </button>
+                        )}
+                        {inv.status === 'paid' && (
+                          <button onClick={(e) => { e.stopPropagation(); updateStatus(inv._id, 'pending'); }} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-surface-container-highest transition-colors flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">undo</span>
+                            {lang === 'fr' ? 'Annuler paiement' : 'Undo Payment'}
+                          </button>
+                        )}
+
+                        <button onClick={(e) => { e.stopPropagation(); downloadPDF(inv._id, inv.clientName); }} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                          {lang === 'fr' ? 'Télécharger PDF' : 'Download PDF'}
+                        </button>
+
+                        {deleting === inv._id ? (
+                          <div className="flex items-center gap-1 ml-auto">
+                            <span className="text-xs text-on-surface-variant mr-1">{lang === 'fr' ? 'Supprimer ?' : 'Delete?'}</span>
+                            <button onClick={(e) => { e.stopPropagation(); deleteInvoice(inv._id); }} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors">
+                              {lang === 'fr' ? 'Oui' : 'Yes'}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setDeleting(null); }} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-2 py-1.5">
+                              {lang === 'fr' ? 'Non' : 'No'}
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); setDeleting(inv._id); }} className="ml-auto text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors text-xs font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                            {lang === 'fr' ? 'Supprimer' : 'Delete'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
