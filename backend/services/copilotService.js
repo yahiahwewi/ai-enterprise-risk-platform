@@ -1,6 +1,5 @@
 /**
- * AI Copilot — smart query router that answers business questions
- * using existing AI services. Not an LLM — a structured query engine.
+ * AI Copilot — smart query router. Fully bilingual (FR/EN).
  */
 
 const { analyzeRisk } = require('./aiService');
@@ -18,80 +17,135 @@ const patterns = {
   expense: /expense|dépense|coût|cost|spending/i,
 };
 
-async function answerQuestion(question) {
+const labels = {
+  fr: {
+    riskScore: 'Score de risque global',
+    confidence: 'Confiance IA',
+    healthScore: 'Indice de santé financière',
+    grade: 'Grade',
+    liquidity: 'Liquidité',
+    stability: 'Stabilité',
+    growth: 'Croissance',
+    efficiency: 'Efficacité',
+    cashFlow: 'Flux de trésorerie',
+    forecast30: 'Prévision 30 jours',
+    forecast60: 'Prévision 60 jours',
+    unpaidInvoices: 'Factures impayées',
+    lateInvoices: 'Factures en retard',
+    riskyClients: 'Clients à risque',
+    totalExpenses: 'Dépenses totales',
+    totalIncome: 'Revenus totaux',
+    expenseRatio: 'Ratio dépenses/revenus',
+    expenseIncrease: 'Les dépenses ont augmenté de',
+    vsPrev: 'par rapport à la période précédente',
+    mainCauses: 'Principales causes',
+    recommendations: 'Recommandations',
+    suggestReco: 'Quelles sont les recommandations ?',
+    suggestWhy: 'Pourquoi le risque est-il à ce niveau ?',
+    suggestForecast: 'Quelle est la prévision de trésorerie ?',
+    suggestHealth: 'Quel est l\'indice de santé financière ?',
+  },
+  en: {
+    riskScore: 'Global risk score',
+    confidence: 'AI Confidence',
+    healthScore: 'Financial health index',
+    grade: 'Grade',
+    liquidity: 'Liquidity',
+    stability: 'Stability',
+    growth: 'Growth',
+    efficiency: 'Efficiency',
+    cashFlow: 'Cash flow',
+    forecast30: '30-day forecast',
+    forecast60: '60-day forecast',
+    unpaidInvoices: 'Unpaid invoices',
+    lateInvoices: 'Late invoices',
+    riskyClients: 'Risky clients',
+    totalExpenses: 'Total expenses',
+    totalIncome: 'Total income',
+    expenseRatio: 'Expense-to-income ratio',
+    expenseIncrease: 'Expenses increased by',
+    vsPrev: 'compared to previous period',
+    mainCauses: 'Main causes',
+    recommendations: 'Recommendations',
+    suggestReco: 'What are the recommendations?',
+    suggestWhy: 'Why is risk at this level?',
+    suggestForecast: 'What is the cash flow forecast?',
+    suggestHealth: 'What is the financial health index?',
+  },
+};
+
+async function answerQuestion(question, language = 'fr') {
+  const l = labels[language] || labels.fr;
   const q = question.toLowerCase();
   const matched = [];
 
   for (const [key, regex] of Object.entries(patterns)) {
     if (regex.test(q)) matched.push(key);
   }
-
-  if (matched.length === 0) matched.push('risk'); // Default to risk overview
+  if (matched.length === 0) matched.push('risk');
 
   const report = await analyzeRisk();
   const sources = [];
   let answer = '';
   const suggestions = [];
 
-  // Build answer based on matched intents
   if (matched.includes('health')) {
     const health = await calculateHealthIndex();
-    answer += `Indice de santé financière: ${health.score}/100 (Grade ${health.grade}). `;
-    answer += `Liquidité: ${health.dimensions.liquidity.score}/100, Stabilité: ${health.dimensions.stability.score}/100, Croissance: ${health.dimensions.growth.score}/100, Efficacité: ${health.dimensions.efficiency.score}/100. `;
+    answer += `${l.healthScore}: ${health.score}/100 (${l.grade} ${health.grade}). `;
+    answer += `${l.liquidity}: ${health.dimensions.liquidity.score}/100, ${l.stability}: ${health.dimensions.stability.score}/100, ${l.growth}: ${health.dimensions.growth.score}/100, ${l.efficiency}: ${health.dimensions.efficiency.score}/100. `;
     sources.push('healthIndex');
   }
 
   if (matched.includes('risk') || matched.includes('why')) {
-    answer += `Score de risque global: ${report.globalScore}/100 (${report.level}). `;
-    answer += `Confiance IA: ${report.confidence}%. `;
-
-    if (matched.includes('why')) {
-      answer += 'Principales causes: ';
-      answer += report.explanations.join(' ');
+    answer += `${l.riskScore}: ${report.globalScore}/100 (${report.level}). `;
+    answer += `${l.confidence}: ${report.confidence}%. `;
+    if (matched.includes('why') && report.rootCauses) {
+      answer += `${l.mainCauses}: `;
+      answer += report.rootCauses.map(rc => `${rc.cause} (+${rc.contribution} pts)`).join('; ') + '. ';
     }
     sources.push('aiService');
   }
 
   if (matched.includes('cashflow') || matched.includes('forecast')) {
-    answer += `Flux de trésorerie: ${report.metrics.cashFlow.toLocaleString()} TND. `;
-    answer += `Prévision 30j: ${report.forecast.forecast30Days.toLocaleString()} TND. `;
-    answer += `Prévision 60j: ${report.forecast.forecast60Days.toLocaleString()} TND. `;
+    answer += `${l.cashFlow}: ${report.metrics.cashFlow.toLocaleString()} TND. `;
+    answer += `${l.forecast30}: ${report.forecast.forecast30Days.toLocaleString()} TND. `;
+    answer += `${l.forecast60}: ${report.forecast.forecast60Days.toLocaleString()} TND. `;
     sources.push('forecast');
   }
 
   if (matched.includes('invoice')) {
     const invoiceRisks = await getInvoiceRiskScores();
     const highRisk = invoiceRisks.filter(ir => ir.riskScore >= 50);
-    answer += `Factures impayées: ${report.metrics.unpaidInvoices.toLocaleString()} TND. `;
-    answer += `Factures en retard: ${report.metrics.lateInvoices.toLocaleString()} TND. `;
+    answer += `${l.unpaidInvoices}: ${report.metrics.unpaidInvoices.toLocaleString()} TND. `;
+    answer += `${l.lateInvoices}: ${report.metrics.lateInvoices.toLocaleString()} TND. `;
     if (highRisk.length > 0) {
-      answer += `Clients à risque: ${highRisk.map(ir => `${ir.clientName} (${ir.riskScore}/100)`).join(', ')}. `;
+      answer += `${l.riskyClients}: ${highRisk.map(ir => `${ir.clientName} (${ir.riskScore}/100)`).join(', ')}. `;
     }
     sources.push('invoiceRisk');
   }
 
   if (matched.includes('expense')) {
-    answer += `Dépenses totales: ${report.metrics.totalExpenses.toLocaleString()} TND. `;
-    answer += `Revenus totaux: ${report.metrics.totalIncome.toLocaleString()} TND. `;
+    answer += `${l.totalExpenses}: ${report.metrics.totalExpenses.toLocaleString()} TND. `;
+    answer += `${l.totalIncome}: ${report.metrics.totalIncome.toLocaleString()} TND. `;
     const ratio = report.metrics.totalIncome > 0 ? Math.round((report.metrics.totalExpenses / report.metrics.totalIncome) * 100) : 100;
-    answer += `Ratio dépenses/revenus: ${ratio}%. `;
+    answer += `${l.expenseRatio}: ${ratio}%. `;
     if (report.trends.expenses.change > 10) {
-      answer += `Les dépenses ont augmenté de ${report.trends.expenses.change}% par rapport à la période précédente. `;
+      answer += `${l.expenseIncrease} ${report.trends.expenses.change}% ${l.vsPrev}. `;
     }
     sources.push('trends');
   }
 
   if (matched.includes('recommend')) {
-    answer += 'Recommandations: ';
+    answer += `${l.recommendations}: `;
     answer += report.recommendations.join(' ');
     sources.push('recommendations');
-    suggestions.push(...report.recommendations.slice(0, 3));
   }
 
-  // Add follow-up suggestions
-  if (!matched.includes('recommend')) suggestions.push('Quelles sont les recommandations ?');
-  if (!matched.includes('why')) suggestions.push('Pourquoi le risque est-il à ce niveau ?');
-  if (!matched.includes('forecast')) suggestions.push('Quelle est la prévision de trésorerie ?');
+  // Follow-up suggestions in the user's language
+  if (!matched.includes('recommend')) suggestions.push(l.suggestReco);
+  if (!matched.includes('why')) suggestions.push(l.suggestWhy);
+  if (!matched.includes('forecast')) suggestions.push(l.suggestForecast);
+  if (!matched.includes('health')) suggestions.push(l.suggestHealth);
 
   return {
     answer: answer.trim(),

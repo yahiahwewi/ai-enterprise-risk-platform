@@ -50,9 +50,9 @@ exports.simulate = async (req, res) => {
 
 exports.copilot = async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, language } = req.body;
     if (!question) return res.status(400).json({ message: 'Question required' });
-    const result = await answerQuestion(question);
+    const result = await answerQuestion(question, language || 'fr');
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });

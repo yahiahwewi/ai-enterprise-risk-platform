@@ -30,7 +30,7 @@ export default function CopilotChat() {
     setLoading(true);
 
     try {
-      const { data } = await api.post('/ai/copilot', { question: q });
+      const { data } = await api.post('/ai/copilot', { question: q, language: lang });
       setMessages(prev => [...prev, { role: 'ai', text: data.answer, suggestions: data.suggestions }]);
     } catch {
       setMessages(prev => [...prev, { role: 'ai', text: lang === 'fr' ? 'Erreur de connexion.' : 'Connection error.' }]);
