@@ -7,6 +7,7 @@ import ComboInput from '../components/ComboInput';
 import { SkeletonKPIGrid, SkeletonChart } from '../components/Skeleton';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LanguageContext';
+import usePresets from '../services/usePresets';
 
 const inputCls = "w-full bg-surface-container-low dark:bg-slate-700 border-none rounded-lg py-2 px-3 text-sm text-on-surface dark:text-slate-200";
 const labelCls = "block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1";
@@ -21,6 +22,7 @@ export default function Transactions() {
   const [deleting, setDeleting] = useState(null);
   const { addToast } = useToast();
   const { t, lang } = useLang();
+  const categoryOptions = usePresets('transaction_category', transactions.map((tx) => tx.category));
 
   const fetchTransactions = () => {
     const params = typeFilter ? `?type=${typeFilter}` : '';
@@ -99,7 +101,7 @@ export default function Transactions() {
             </div>
             <div>
               <label className={labelCls}>{t('accountant.category')} *</label>
-              <ComboInput value={form.category} onChange={(val) => setForm({ ...form, category: val })} options={[...new Set(transactions.map((tx) => tx.category).filter(Boolean))]} placeholder={t('accountant.selectCategory')} label="category" required />
+              <ComboInput value={form.category} onChange={(val) => setForm({ ...form, category: val })} options={categoryOptions} placeholder={t('accountant.selectCategory')} label="category" required />
             </div>
             <div>
               <label className={labelCls}>{t('accountant.description')}</label>

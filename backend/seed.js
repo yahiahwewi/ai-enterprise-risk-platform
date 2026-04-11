@@ -7,6 +7,7 @@ const Loan = require('./models/Loan');
 const Asset = require('./models/Asset');
 const Notification = require('./models/Notification');
 const ActivityLog = require('./models/ActivityLog');
+const Preset = require('./models/Preset');
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ async function seed() {
     Asset.deleteMany({}),
     Notification.deleteMany({}),
     ActivityLog.deleteMany({}),
+    Preset.deleteMany({}),
   ]);
   console.log('Cleared existing data');
 
@@ -113,6 +115,31 @@ async function seed() {
     { userId: owner._id, action: 'invited', entityType: 'user', entityId: finance._id, details: 'Invited Maria Garcia as finance', createdAt: daysAgo(78) },
   ]);
   console.log('10 activity logs seeded');
+
+  // ── Presets (translated categories, types, clients) ──
+  await Preset.insertMany([
+    // Transaction categories
+    { type: 'transaction_category', value: 'salaries', label_fr: 'Salaires', label_en: 'Salaries' },
+    { type: 'transaction_category', value: 'infrastructure', label_fr: 'Infrastructure', label_en: 'Infrastructure' },
+    { type: 'transaction_category', value: 'marketing', label_fr: 'Marketing', label_en: 'Marketing' },
+    { type: 'transaction_category', value: 'office', label_fr: 'Bureau & Loyer', label_en: 'Office & Rent' },
+    { type: 'transaction_category', value: 'software', label_fr: 'Logiciels & Licences', label_en: 'Software & Licenses' },
+    { type: 'transaction_category', value: 'product_sales', label_fr: 'Ventes de produits', label_en: 'Product Sales' },
+    { type: 'transaction_category', value: 'services', label_fr: 'Services & Conseil', label_en: 'Services & Consulting' },
+    { type: 'transaction_category', value: 'subscriptions', label_fr: 'Abonnements', label_en: 'Subscriptions' },
+    { type: 'transaction_category', value: 'equipment', label_fr: 'Équipement', label_en: 'Equipment' },
+    { type: 'transaction_category', value: 'travel', label_fr: 'Déplacements', label_en: 'Travel' },
+    { type: 'transaction_category', value: 'training', label_fr: 'Formation', label_en: 'Training' },
+    { type: 'transaction_category', value: 'taxes', label_fr: 'Impôts & Taxes', label_en: 'Taxes' },
+    { type: 'transaction_category', value: 'other', label_fr: 'Autre', label_en: 'Other' },
+    // Clients
+    { type: 'client', value: 'acme_corp', label_fr: 'Acme Corp', label_en: 'Acme Corp' },
+    { type: 'client', value: 'globaltech', label_fr: 'GlobalTech', label_en: 'GlobalTech' },
+    { type: 'client', value: 'startupx', label_fr: 'StartupX', label_en: 'StartupX' },
+    { type: 'client', value: 'megastore', label_fr: 'MegaStore', label_en: 'MegaStore' },
+    { type: 'client', value: 'bigcorp', label_fr: 'BigCorp', label_en: 'BigCorp' },
+  ]);
+  console.log('Presets seeded (13 categories + 5 clients)');
 
   console.log('\n========================================');
   console.log('  TAC-TIC ERM — Seed Complete');

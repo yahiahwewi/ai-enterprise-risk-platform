@@ -74,6 +74,7 @@ export const fr = {
     system: 'Système',
     manageUsers: 'Gestion des utilisateurs',
     reports: 'Rapports PDF',
+    settings: 'Paramètres',
   },
 
   // ── Dashboard ────────────────────────────────────────

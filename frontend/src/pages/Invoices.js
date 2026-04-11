@@ -6,6 +6,7 @@ import ComboInput from '../components/ComboInput';
 import { SkeletonKPIGrid, SkeletonTable } from '../components/Skeleton';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LanguageContext';
+import usePresets from '../services/usePresets';
 
 const inputCls = "w-full bg-surface-container-low dark:bg-slate-700 border-none rounded-lg py-2 px-3 text-sm text-on-surface dark:text-slate-200";
 const labelCls = "block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1";
@@ -21,6 +22,7 @@ export default function Invoices() {
   const [deleting, setDeleting] = useState(null);
   const { addToast } = useToast();
   const { t, lang } = useLang();
+  const clientOptions = usePresets('client', invoices.map((i) => i.clientName));
 
   const fetchInvoices = () => {
     const params = statusFilter ? `?status=${statusFilter}` : '';
@@ -90,7 +92,7 @@ export default function Invoices() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
               <label className={labelCls}>{t('accountant.client')} *</label>
-              <ComboInput value={form.clientName} onChange={(val) => setForm({ ...form, clientName: val })} options={[...new Set(invoices.map((i) => i.clientName).filter(Boolean))]} placeholder={t('accountant.selectClient')} label="client" required />
+              <ComboInput value={form.clientName} onChange={(val) => setForm({ ...form, clientName: val })} options={clientOptions} placeholder={t('accountant.selectClient')} label="client" required />
             </div>
             <div>
               <label className={labelCls}>{t('common.amount')} (TND) *</label>

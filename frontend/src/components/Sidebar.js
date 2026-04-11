@@ -12,6 +12,7 @@ function useNavItems(t) {
       { to: '/users', label: t('nav.manageUsers'), icon: 'group' },
       { section: t('nav.system') },
       { to: '/activity', label: t('nav.activityLog'), icon: 'history' },
+      { to: '/settings', label: t('nav.settings'), icon: 'settings' },
     ],
     owner: [
       { section: t('nav.overview') },

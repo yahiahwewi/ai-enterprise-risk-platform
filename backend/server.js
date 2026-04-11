@@ -30,6 +30,7 @@ app.use('/api/loans', require('./routes/loanRoutes'));
 app.use('/api/assets', require('./routes/assetRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/presets', require('./routes/presetRoutes'));
 app.use('/api/activity', require('./routes/activityRoutes'));
 app.use('/api/forecast', require('./routes/forecastRoutes'));
 app.use('/api/export', require('./routes/reportRoutes'));

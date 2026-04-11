@@ -6,6 +6,7 @@ import ComboInput from '../../components/ComboInput';
 import { SkeletonKPIGrid, SkeletonTable } from '../../components/Skeleton';
 import { useToast } from '../../context/ToastContext';
 import { useLang } from '../../context/LanguageContext';
+import usePresets from '../../services/usePresets';
 
 export default function AccountantDashboard() {
   const [transactions, setTransactions] = useState([]);
@@ -15,6 +16,8 @@ export default function AccountantDashboard() {
   const [invForm, setInvForm] = useState({ clientName: '', amount: '', dueDate: '', status: 'pending' });
   const { addToast } = useToast();
   const { t } = useLang();
+  const categoryOptions = usePresets('transaction_category', transactions.map((tx) => tx.category));
+  const clientOptions = usePresets('client', invoices.map((i) => i.clientName));
 
   useEffect(() => {
     Promise.all([api.get('/transactions'), api.get('/invoices')])
@@ -79,7 +82,7 @@ export default function AccountantDashboard() {
               <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('common.amount')}</label><input type="number" value={txForm.amount} onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })} className="w-full bg-surface-container-low dark:bg-slate-700 border-none rounded-lg py-2 px-3 text-sm text-on-surface dark:text-slate-200" placeholder="0.00" required min="0" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('accountant.category')}</label><ComboInput value={txForm.category} onChange={(val) => setTxForm({ ...txForm, category: val })} options={[...new Set(transactions.map((t) => t.category).filter(Boolean))]} placeholder={t('accountant.selectCategory')} label="category" required /></div>
+              <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('accountant.category')}</label><ComboInput value={txForm.category} onChange={(val) => setTxForm({ ...txForm, category: val })} options={categoryOptions} placeholder={t('accountant.selectCategory')} label="category" required /></div>
               <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('accountant.description')}</label><input type="text" value={txForm.description} onChange={(e) => setTxForm({ ...txForm, description: e.target.value })} className="w-full bg-surface-container-low dark:bg-slate-700 border-none rounded-lg py-2 px-3 text-sm text-on-surface dark:text-slate-200" placeholder="Optional" /></div>
             </div>
             <button type="submit" className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">{t('accountant.addTransaction')}</button>
@@ -90,7 +93,7 @@ export default function AccountantDashboard() {
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('accountant.addInvoice')}</h3>
           <form onSubmit={addInvoice} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('accountant.client')}</label><ComboInput value={invForm.clientName} onChange={(val) => setInvForm({ ...invForm, clientName: val })} options={[...new Set(invoices.map((i) => i.clientName).filter(Boolean))]} placeholder={t('accountant.selectClient')} label="client" required /></div>
+              <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('accountant.client')}</label><ComboInput value={invForm.clientName} onChange={(val) => setInvForm({ ...invForm, clientName: val })} options={clientOptions} placeholder={t('accountant.selectClient')} label="client" required /></div>
               <div><label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{t('common.amount')}</label><input type="number" value={invForm.amount} onChange={(e) => setInvForm({ ...invForm, amount: e.target.value })} className="w-full bg-surface-container-low dark:bg-slate-700 border-none rounded-lg py-2 px-3 text-sm text-on-surface dark:text-slate-200" placeholder="0.00" required min="0" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">

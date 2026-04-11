@@ -71,6 +71,7 @@ export const en = {
     system: 'System',
     manageUsers: 'Manage Users',
     reports: 'PDF Reports',
+    settings: 'Settings',
   },
 
   dashboard: {
