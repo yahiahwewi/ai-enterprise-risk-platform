@@ -25,7 +25,7 @@ async function generateFinalDecision() {
   }
 
   // ── Summary ──────────────────────────────────────────
-  const fmt = (n) => '$' + Math.abs(n).toLocaleString();
+  const fmt = (n) => Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' TND';
   let summary;
   if (decision === 'OK') {
     summary = `Your company is in good financial health with a risk score of ${globalScore}/100. Cash flow is positive at ${fmt(metrics.cashFlow)}, debt levels are manageable, and invoice collection is on track. Continue current practices and monitor quarterly.`;

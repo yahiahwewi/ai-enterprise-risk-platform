@@ -8,6 +8,7 @@ const invoiceSchema = new mongoose.Schema({
     enum: ['paid', 'pending', 'late'],
     default: 'pending',
   },
+  issueDate: { type: Date, default: Date.now },
   dueDate: { type: Date, required: true },
 }, { timestamps: true });
 

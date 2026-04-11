@@ -18,7 +18,7 @@ export default function Loans() {
 
   useEffect(() => { api.get('/loans').then((r) => setLoans(r.data)).catch(() => addToast('error', t('toast.error'), 'Failed')).finally(() => setLoading(false)); }, [addToast, t]);
 
-  const add = async (e) => { e.preventDefault(); try { const { data } = await api.post('/loans', { amount: Number(form.amount), interestRate: Number(form.interestRate), duration: Number(form.duration), monthlyPayment: Number(form.monthlyPayment) }); setLoans([data, ...loans]); setForm({ amount: '', interestRate: '', duration: '', monthlyPayment: '' }); addToast('success', t('toast.loanAdded'), `Loan of $${form.amount}`); } catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || 'Failed'); } };
+  const add = async (e) => { e.preventDefault(); try { const { data } = await api.post('/loans', { amount: Number(form.amount), interestRate: Number(form.interestRate), duration: Number(form.duration), monthlyPayment: Number(form.monthlyPayment) }); setLoans([data, ...loans]); setForm({ amount: '', interestRate: '', duration: '', monthlyPayment: '' }); addToast('success', t('toast.loanAdded'), `Loan of ${form.amount} TND`); } catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || 'Failed'); } };
 
   if (loading) return (<div><section className="mb-10"><h2 className="text-3xl font-extrabold font-headline">{t('loansPage.title')}</h2></section><SkeletonKPIGrid count={3} /><SkeletonTable /></div>);
 
@@ -30,8 +30,8 @@ export default function Loans() {
       <section className="mb-10"><h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface dark:text-slate-100">{t('loansPage.title')}</h2><p className="text-on-surface-variant mt-2">{t('loansPage.subtitle')}</p></section>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        <KPICard label={t('loansPage.totalDebt')} value={totalDebt} prefix="$" icon="credit_score" iconColor="red" />
-        <KPICard label={t('loansPage.monthlyPayments')} value={totalMonthly} prefix="$" icon="payments" iconColor="yellow" />
+        <KPICard label={t('loansPage.totalDebt')} value={totalDebt} suffix=" TND" icon="credit_score" iconColor="red" />
+        <KPICard label={t('loansPage.monthlyPayments')} value={totalMonthly} suffix=" TND" icon="payments" iconColor="yellow" />
         <KPICard label={t('loansPage.activeLoans')} value={loans.length} icon="account_balance" iconColor="blue" />
       </div>
 
@@ -52,7 +52,7 @@ export default function Loans() {
         <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('loansPage.all')}</h3>
         {loans.length === 0 ? <EmptyState icon="account_balance" title={t('loansPage.noData')} message={t('loansPage.noDataMsg')} /> : (
           <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.amount')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.interestRate')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.duration')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.monthlyPayment')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.date')}</th></tr></thead><tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-            {loans.map((l) => (<tr key={l._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">${l.amount.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">{l.interestRate}%</td><td className="py-3 text-sm text-on-surface-variant">{l.duration}mo</td><td className="py-3 text-sm font-bold">${l.monthlyPayment.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">{new Date(l.createdAt).toLocaleDateString()}</td></tr>))}
+            {loans.map((l) => (<tr key={l._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{l.amount.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{l.interestRate}%</td><td className="py-3 text-sm text-on-surface-variant">{l.duration}mo</td><td className="py-3 text-sm font-bold">{l.monthlyPayment.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{new Date(l.createdAt).toLocaleDateString()}</td></tr>))}
           </tbody></table></div>
         )}
       </div>

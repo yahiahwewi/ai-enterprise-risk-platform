@@ -21,7 +21,7 @@ export default function Transactions() {
 
   const add = async (e) => {
     e.preventDefault();
-    try { const { data } = await api.post('/transactions', { ...form, amount: Number(form.amount) }); setTransactions([data, ...transactions]); setForm({ type: 'income', amount: '', category: '', description: '' }); addToast('success', t('toast.transactionAdded'), `${form.type} of $${form.amount}`); }
+    try { const { data } = await api.post('/transactions', { ...form, amount: Number(form.amount) }); setTransactions([data, ...transactions]); setForm({ type: 'income', amount: '', category: '', description: '' }); addToast('success', t('toast.transactionAdded'), `${form.type} of ${form.amount} TND`); }
     catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || 'Failed'); }
   };
 
@@ -53,7 +53,7 @@ export default function Transactions() {
           <h3 className="text-lg font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('transactions.incomeVsExpenses')}</h3>
           <div style={{ height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} barSize={28}><XAxis dataKey="category" tick={{ fontSize: 11, fill: '#42474f' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `$${v.toLocaleString()}`} /><Legend /><Bar dataKey="income" name={t('accountant.income')} fill="#22c55e" radius={[6, 6, 0, 0]} /><Bar dataKey="expense" name={t('accountant.expense')} fill="#ba1a1a" radius={[6, 6, 0, 0]} /></BarChart>
+              <BarChart data={chartData} barSize={28}><XAxis dataKey="category" tick={{ fontSize: 11, fill: '#42474f' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `${v.toLocaleString()} TND`} /><Legend /><Bar dataKey="income" name={t('accountant.income')} fill="#22c55e" radius={[6, 6, 0, 0]} /><Bar dataKey="expense" name={t('accountant.expense')} fill="#ba1a1a" radius={[6, 6, 0, 0]} /></BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -63,7 +63,7 @@ export default function Transactions() {
         <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('transactions.all')}</h3>
         {transactions.length === 0 ? <EmptyState icon="receipt_long" title={t('transactions.noData')} message={t('transactions.noDataMsg')} /> : (
           <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.date')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.type')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.category')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.description')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3 text-right">{t('common.amount')}</th></tr></thead><tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-            {transactions.map((tx) => (<tr key={tx._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm text-on-surface dark:text-slate-300">{new Date(tx.date).toLocaleDateString()}</td><td className="py-3"><span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{tx.type}</span></td><td className="py-3 text-sm">{tx.category}</td><td className="py-3 text-sm text-on-surface-variant">{tx.description || '—'}</td><td className="py-3 text-sm font-bold text-right">${tx.amount.toLocaleString()}</td></tr>))}
+            {transactions.map((tx) => (<tr key={tx._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm text-on-surface dark:text-slate-300">{new Date(tx.date).toLocaleDateString()}</td><td className="py-3"><span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{tx.type}</span></td><td className="py-3 text-sm">{tx.category}</td><td className="py-3 text-sm text-on-surface-variant">{tx.description || '—'}</td><td className="py-3 text-sm font-bold text-right">{tx.amount.toLocaleString()} TND</td></tr>))}
           </tbody></table></div>
         )}
       </div>

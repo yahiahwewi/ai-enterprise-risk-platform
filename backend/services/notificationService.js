@@ -61,7 +61,7 @@ async function checkOverdueInvoices(lateInvoices) {
     userId: owner._id,
     type: 'invoice_overdue',
     title: 'Overdue Invoices Detected',
-    message: `${lateInvoices.length} invoice(s) totaling $${totalOverdue.toLocaleString()} are overdue.`,
+    message: `${lateInvoices.length} invoice(s) totaling ${totalOverdue.toLocaleString()} TND are overdue.`,
     severity: 'warning',
     metadata: { count: lateInvoices.length, totalAmount: totalOverdue },
   });
@@ -86,7 +86,7 @@ async function checkNegativeCashFlow(cashFlow) {
     userId: owner._id,
     type: 'cash_flow_negative',
     title: 'Negative Cash Flow Alert',
-    message: `Cash flow is -$${Math.abs(cashFlow).toLocaleString()}. Expenses exceed income.`,
+    message: `Cash flow is -${Math.abs(cashFlow).toLocaleString()} TND. Expenses exceed income.`,
     severity: 'critical',
     metadata: { cashFlow },
   });

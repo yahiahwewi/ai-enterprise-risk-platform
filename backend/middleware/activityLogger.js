@@ -18,15 +18,15 @@ function logActivity(action, entityType) {
           let details = `${action} ${entityType}`;
           if (body && typeof body === 'object') {
             if (entityType === 'transaction' && body.type) {
-              details = `Created ${body.type} transaction of $${body.amount?.toLocaleString()} in ${body.category}`;
+              details = `Created ${body.type} transaction of ${body.amount?.toLocaleString()} TND in ${body.category}`;
             } else if (entityType === 'invoice' && action === 'created') {
-              details = `Created invoice of $${body.amount?.toLocaleString()} for ${body.clientName}`;
+              details = `Created invoice of ${body.amount?.toLocaleString()} TND for ${body.clientName}`;
             } else if (entityType === 'invoice' && action === 'status_changed') {
               details = `Updated invoice for ${body.clientName} to ${body.status}`;
             } else if (entityType === 'loan') {
-              details = `Added loan of $${body.amount?.toLocaleString()} at ${body.interestRate}%`;
+              details = `Added loan of ${body.amount?.toLocaleString()} TND at ${body.interestRate}%`;
             } else if (entityType === 'asset') {
-              details = `Added asset "${body.name}" valued at $${body.value?.toLocaleString()}`;
+              details = `Added asset "${body.name}" valued at ${body.value?.toLocaleString()} TND`;
             } else if (entityType === 'user') {
               details = `Invited ${body.name} as ${body.role}`;
             }

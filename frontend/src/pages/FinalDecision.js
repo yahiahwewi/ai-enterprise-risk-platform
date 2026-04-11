@@ -88,10 +88,10 @@ export default function FinalDecision() {
 
       {/* Trends */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KPICard label={t('riskReport.totalIncome')} value={trends.income.current} prefix="$" trend={trends.income.change} trendLabel="vs prev" icon="trending_up" iconColor="green" />
-        <KPICard label={t('riskReport.totalExpenses')} value={trends.expenses.current} prefix="$" trend={trends.expenses.change} trendLabel="vs prev" icon="trending_down" iconColor="red" />
-        <KPICard label={t('riskReport.forecast30')} value={forecast.forecast30Days} prefix="$" icon="calendar_month" iconColor="blue" />
-        <KPICard label={t('riskReport.forecast60')} value={forecast.forecast60Days} prefix="$" icon="date_range" iconColor="blue" />
+        <KPICard label={t('riskReport.totalIncome')} value={trends.income.current} suffix=" TND" trend={trends.income.change} trendLabel="vs prev" icon="trending_up" iconColor="green" />
+        <KPICard label={t('riskReport.totalExpenses')} value={trends.expenses.current} suffix=" TND" trend={trends.expenses.change} trendLabel="vs prev" icon="trending_down" iconColor="red" />
+        <KPICard label={t('riskReport.forecast30')} value={forecast.forecast30Days} suffix=" TND" icon="calendar_month" iconColor="blue" />
+        <KPICard label={t('riskReport.forecast60')} value={forecast.forecast60Days} suffix=" TND" icon="date_range" iconColor="blue" />
       </div>
 
       {/* Radar + Bar */}
@@ -119,7 +119,7 @@ export default function FinalDecision() {
         <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-6 mb-10">
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('decision.anomaliesDetected')}</h3>
           <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.category')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.type')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.amount')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">Expected</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">Deviation</th></tr></thead><tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-            {anomalies.map((a, i) => (<tr key={i}><td className="py-3 text-sm">{a.category}</td><td className="py-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{a.type}</span></td><td className="py-3 text-sm font-bold">${a.amount.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">${a.mean.toLocaleString()}</td><td className="py-3"><span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{a.deviations}x ({a.direction})</span></td></tr>))}
+            {anomalies.map((a, i) => (<tr key={i}><td className="py-3 text-sm">{a.category}</td><td className="py-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{a.type}</span></td><td className="py-3 text-sm font-bold">{a.amount.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{a.mean.toLocaleString()} TND</td><td className="py-3"><span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{a.deviations}x ({a.direction})</span></td></tr>))}
           </tbody></table></div>
         </div>
       )}

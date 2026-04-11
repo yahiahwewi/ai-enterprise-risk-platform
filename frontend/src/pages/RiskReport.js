@@ -67,14 +67,14 @@ export default function RiskReport() {
       {/* Trends */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
         <div className="grid grid-cols-2 gap-4">
-          <KPICard label={t('riskReport.totalIncome')} value={report.trends.income.current} prefix="$" trend={report.trends.income.change} trendLabel="vs prev" icon="trending_up" iconColor="green" />
-          <KPICard label={t('riskReport.totalExpenses')} value={report.trends.expenses.current} prefix="$" trend={report.trends.expenses.change} trendLabel="vs prev" icon="trending_down" iconColor="red" />
+          <KPICard label={t('riskReport.totalIncome')} value={report.trends.income.current} suffix=" TND" trend={report.trends.income.change} trendLabel="vs prev" icon="trending_up" iconColor="green" />
+          <KPICard label={t('riskReport.totalExpenses')} value={report.trends.expenses.current} suffix=" TND" trend={report.trends.expenses.change} trendLabel="vs prev" icon="trending_down" iconColor="red" />
         </div>
         <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-8">
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('riskReport.periodComparison')}</h3>
           <div style={{ height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={trendChart} barSize={28}><XAxis dataKey="name" tick={{ fontSize: 12, fill: '#42474f' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `$${v.toLocaleString()}`} /><Legend /><Bar dataKey="previous" name={t('riskReport.prev30d')} fill="#c2c7d1" radius={[6, 6, 0, 0]} /><Bar dataKey="current" name={t('riskReport.last30d')} fill="#0f4c81" radius={[6, 6, 0, 0]} /></BarChart>
+              <BarChart data={trendChart} barSize={28}><XAxis dataKey="name" tick={{ fontSize: 12, fill: '#42474f' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `${v.toLocaleString()} TND`} /><Legend /><Bar dataKey="previous" name={t('riskReport.prev30d')} fill="#c2c7d1" radius={[6, 6, 0, 0]} /><Bar dataKey="current" name={t('riskReport.last30d')} fill="#0f4c81" radius={[6, 6, 0, 0]} /></BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -82,10 +82,10 @@ export default function RiskReport() {
 
       {/* Forecast */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KPICard label={t('riskReport.forecast30')} value={report.forecast.forecast30Days} prefix="$" icon="calendar_month" iconColor="blue" />
-        <KPICard label={t('riskReport.forecast60')} value={report.forecast.forecast60Days} prefix="$" icon="date_range" iconColor="blue" />
-        <KPICard label={t('riskReport.pendingInvoices')} value={report.forecast.breakdown.pendingInvoiceInflow30} prefix="$" icon="move_to_inbox" iconColor="green" />
-        <KPICard label={t('riskReport.loanPayments')} value={report.forecast.breakdown.monthlyLoanPayments} prefix="$" icon="savings" iconColor="yellow" />
+        <KPICard label={t('riskReport.forecast30')} value={report.forecast.forecast30Days} suffix=" TND" icon="calendar_month" iconColor="blue" />
+        <KPICard label={t('riskReport.forecast60')} value={report.forecast.forecast60Days} suffix=" TND" icon="date_range" iconColor="blue" />
+        <KPICard label={t('riskReport.pendingInvoices')} value={report.forecast.breakdown.pendingInvoiceInflow30} suffix=" TND" icon="move_to_inbox" iconColor="green" />
+        <KPICard label={t('riskReport.loanPayments')} value={report.forecast.breakdown.monthlyLoanPayments} suffix=" TND" icon="savings" iconColor="yellow" />
       </div>
 
       {/* Anomalies */}
@@ -93,7 +93,7 @@ export default function RiskReport() {
         <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-6 mb-10">
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('riskReport.anomalies')} ({report.anomalies.length})</h3>
           <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.category')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.type')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.amount')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">Expected</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">Deviation</th></tr></thead><tbody className="divide-y divide-surface-container-high">
-            {report.anomalies.map((a, i) => (<tr key={i}><td className="py-3 text-sm">{a.category}</td><td className="py-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{a.type}</span></td><td className="py-3 text-sm font-bold">${a.amount.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">${a.mean.toLocaleString()}</td><td className="py-3"><span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{a.deviations}x</span></td></tr>))}
+            {report.anomalies.map((a, i) => (<tr key={i}><td className="py-3 text-sm">{a.category}</td><td className="py-3"><span className={`text-xs font-bold px-2 py-0.5 rounded-full ${a.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{a.type}</span></td><td className="py-3 text-sm font-bold">{a.amount.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{a.mean.toLocaleString()} TND</td><td className="py-3"><span className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">{a.deviations}x</span></td></tr>))}
           </tbody></table></div>
         </div>
       )}
@@ -127,7 +127,7 @@ export default function RiskReport() {
           {[[t('riskReport.totalIncome'), report.metrics.totalIncome], [t('riskReport.totalExpenses'), report.metrics.totalExpenses], [t('riskReport.cashFlow'), report.metrics.cashFlow], [t('riskReport.unpaidInvoices'), report.metrics.unpaidInvoices], [t('riskReport.totalDebt'), report.metrics.totalDebt], [t('riskReport.totalAssets'), report.metrics.totalAssetValue]].map(([label, val]) => (
             <div key={label}>
               <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">{label}</p>
-              <p className={`text-lg font-bold font-headline ${label === t('riskReport.cashFlow') && val < 0 ? 'text-error' : 'text-on-surface dark:text-slate-100'}`}>${val.toLocaleString()}</p>
+              <p className={`text-lg font-bold font-headline ${label === t('riskReport.cashFlow') && val < 0 ? 'text-error' : 'text-on-surface dark:text-slate-100'}`}>{val.toLocaleString()} TND</p>
             </div>
           ))}
         </div>

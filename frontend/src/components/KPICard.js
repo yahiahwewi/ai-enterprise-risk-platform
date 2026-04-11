@@ -12,7 +12,7 @@ const riskColors = {
   critical: 'bg-error',
 };
 
-export default function KPICard({ label, value, trend, trendLabel, riskLevel, prefix = '', icon, iconColor = 'blue', insight, progress }) {
+export default function KPICard({ label, value, trend, trendLabel, riskLevel, prefix = '', suffix = '', icon, iconColor = 'blue', insight, progress }) {
   const trendColor = trend > 0 ? 'text-error' : trend < 0 ? 'text-green-600' : 'text-slate-500';
   const trendIcon = trend > 0 ? 'trending_up' : trend < 0 ? 'trending_down' : 'horizontal_rule';
   const barColor = riskColors[riskLevel] || 'bg-primary';
@@ -34,7 +34,7 @@ export default function KPICard({ label, value, trend, trendLabel, riskLevel, pr
       <p className="text-xs font-bold text-on-surface-variant uppercase mb-1 tracking-wide">{label}</p>
       <div className="flex items-end gap-1">
         <span className="text-2xl font-bold font-headline text-on-surface dark:text-slate-100">
-          {prefix}{typeof value === 'number' ? value.toLocaleString() : value}
+          {prefix}{typeof value === 'number' ? value.toLocaleString('en-US', suffix === ' TND' ? { minimumFractionDigits: 3, maximumFractionDigits: 3 } : {}) : value}{suffix}
         </span>
       </div>
       {insight && <p className="text-[11px] text-on-surface-variant mt-1">{insight}</p>}

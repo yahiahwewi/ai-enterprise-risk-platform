@@ -74,10 +74,10 @@ export default function OwnerDashboard() {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KPICard label={t('dashboard.income30d')} value={report.trends.income.current} prefix="$" trend={report.trends.income.change} trendLabel={t('common.prev30d')} icon="trending_up" iconColor="green" />
-        <KPICard label={t('dashboard.expenses30d')} value={report.trends.expenses.current} prefix="$" trend={report.trends.expenses.change} trendLabel={t('common.prev30d')} icon="trending_down" iconColor="red" />
-        <KPICard label={t('dashboard.forecast30d')} value={report.forecast.forecast30Days} prefix="$" icon="calendar_month" iconColor="blue" insight={t('dashboard.projectedCashFlow')} />
-        <KPICard label={t('dashboard.forecast60d')} value={report.forecast.forecast60Days} prefix="$" icon="date_range" iconColor="blue" insight={t('dashboard.extendedProjection')} />
+        <KPICard label={t('dashboard.income30d')} value={report.trends.income.current} suffix=" TND" trend={report.trends.income.change} trendLabel={t('common.prev30d')} icon="trending_up" iconColor="green" />
+        <KPICard label={t('dashboard.expenses30d')} value={report.trends.expenses.current} suffix=" TND" trend={report.trends.expenses.change} trendLabel={t('common.prev30d')} icon="trending_down" iconColor="red" />
+        <KPICard label={t('dashboard.forecast30d')} value={report.forecast.forecast30Days} suffix=" TND" icon="calendar_month" iconColor="blue" insight={t('dashboard.projectedCashFlow')} />
+        <KPICard label={t('dashboard.forecast60d')} value={report.forecast.forecast60Days} suffix=" TND" icon="date_range" iconColor="blue" insight={t('dashboard.extendedProjection')} />
       </div>
 
       {report.anomalies.length > 0 && (

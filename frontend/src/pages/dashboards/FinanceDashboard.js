@@ -29,7 +29,7 @@ export default function FinanceDashboard() {
     try {
       const { data } = await api.post('/loans', { amount: Number(loanForm.amount), interestRate: Number(loanForm.interestRate), duration: Number(loanForm.duration), monthlyPayment: Number(loanForm.monthlyPayment) });
       setLoans([data, ...loans]); setLoanForm({ amount: '', interestRate: '', duration: '', monthlyPayment: '' });
-      addToast('success', t('toast.loanAdded'), `Loan of $${loanForm.amount} recorded`);
+      addToast('success', t('toast.loanAdded'), `Loan of ${loanForm.amount} TND`);
     } catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || 'Failed'); }
   };
 
@@ -60,9 +60,9 @@ export default function FinanceDashboard() {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KPICard label={t('financeD.totalDebt')} value={totalDebt} prefix="$" icon="credit_score" iconColor="red" />
-        <KPICard label={t('financeD.monthlyPayments')} value={monthlyPayments} prefix="$" icon="payments" iconColor="yellow" />
-        <KPICard label={t('financeD.totalAssets')} value={totalAssets} prefix="$" icon="inventory_2" iconColor="green" />
+        <KPICard label={t('financeD.totalDebt')} value={totalDebt} suffix=" TND" icon="credit_score" iconColor="red" />
+        <KPICard label={t('financeD.monthlyPayments')} value={monthlyPayments} suffix=" TND" icon="payments" iconColor="yellow" />
+        <KPICard label={t('financeD.totalAssets')} value={totalAssets} suffix=" TND" icon="inventory_2" iconColor="green" />
         <KPICard label={t('financeD.debtToAsset')} value={ratio} icon="analytics" iconColor="blue" progress={Math.min(parseFloat(ratio) * 50, 100) || 0} />
       </div>
 
@@ -74,7 +74,7 @@ export default function FinanceDashboard() {
               <BarChart data={assets.map((a) => ({ name: a.name, value: a.value }))} barSize={36}>
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#42474f' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `$${v.toLocaleString()}`} />
+                <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `${v.toLocaleString()} TND`} />
                 <Bar dataKey="value" fill="#0f4c81" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -115,7 +115,7 @@ export default function FinanceDashboard() {
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('financeD.loans')}</h3>
           {loans.length === 0 ? <EmptyState icon="account_balance" title={t('financeD.noLoans')} message={t('financeD.noLoansMsg')} /> : (
             <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.amount')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.interestRate')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.duration')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.monthlyPayment')}</th></tr></thead><tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-              {loans.map((l) => (<tr key={l._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">${l.amount.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">{l.interestRate}%</td><td className="py-3 text-sm text-on-surface-variant">{l.duration}mo</td><td className="py-3 text-sm font-bold text-on-surface dark:text-slate-200">${l.monthlyPayment.toLocaleString()}</td></tr>))}
+              {loans.map((l) => (<tr key={l._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{l.amount.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{l.interestRate}%</td><td className="py-3 text-sm text-on-surface-variant">{l.duration}mo</td><td className="py-3 text-sm font-bold text-on-surface dark:text-slate-200">{l.monthlyPayment.toLocaleString()} TND</td></tr>))}
             </tbody></table></div>
           )}
         </div>
@@ -123,7 +123,7 @@ export default function FinanceDashboard() {
           <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('financeD.assets')}</h3>
           {assets.length === 0 ? <EmptyState icon="inventory_2" title={t('financeD.noAssets')} message={t('financeD.noAssetsMsg')} /> : (
             <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.name')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.value')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.depreciationRate')}</th></tr></thead><tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-              {assets.map((a) => (<tr key={a._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{a.name}</td><td className="py-3 text-sm text-on-surface dark:text-slate-300">${a.value.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">{a.depreciationRate}%/yr</td></tr>))}
+              {assets.map((a) => (<tr key={a._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{a.name}</td><td className="py-3 text-sm text-on-surface dark:text-slate-300">{a.value.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{a.depreciationRate}%/yr</td></tr>))}
             </tbody></table></div>
           )}
         </div>

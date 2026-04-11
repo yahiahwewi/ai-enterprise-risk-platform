@@ -29,7 +29,7 @@ export default function AccountantDashboard() {
       const { data } = await api.post('/transactions', { ...txForm, amount: Number(txForm.amount) });
       setTransactions([data, ...transactions]);
       setTxForm({ type: 'income', amount: '', category: '', description: '' });
-      addToast('success', t('toast.transactionAdded'), `${txForm.type} of $${txForm.amount} recorded`);
+      addToast('success', t('toast.transactionAdded'), `${txForm.type} of ${txForm.amount} TND`);
     } catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || 'Failed'); }
   };
 
@@ -64,8 +64,8 @@ export default function AccountantDashboard() {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-        <KPICard label={t('accountant.totalIncome')} value={totalIncome} prefix="$" icon="trending_up" iconColor="green" />
-        <KPICard label={t('accountant.totalExpenses')} value={totalExpenses} prefix="$" icon="trending_down" iconColor="red" />
+        <KPICard label={t('accountant.totalIncome')} value={totalIncome} suffix=" TND" icon="trending_up" iconColor="green" />
+        <KPICard label={t('accountant.totalExpenses')} value={totalExpenses} suffix=" TND" icon="trending_down" iconColor="red" />
         <KPICard label={t('accountant.invoices')} value={invoices.length} icon="description" iconColor="blue" />
         <KPICard label={t('accountant.unpaid')} value={invoices.filter((i) => i.status !== 'paid').length} icon="warning" iconColor="yellow" />
       </div>
@@ -117,7 +117,7 @@ export default function AccountantDashboard() {
                 <td className="py-3 text-sm text-on-surface dark:text-slate-300">{new Date(tx.date).toLocaleDateString()}</td>
                 <td className="py-3"><span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>{tx.type}</span></td>
                 <td className="py-3 text-sm text-on-surface dark:text-slate-300">{tx.category}</td>
-                <td className="py-3 text-sm font-bold text-on-surface dark:text-slate-200 text-right">${tx.amount.toLocaleString()}</td>
+                <td className="py-3 text-sm font-bold text-on-surface dark:text-slate-200 text-right">{tx.amount.toLocaleString()} TND</td>
               </tr>
             ))}
           </tbody></table></div>
@@ -137,7 +137,7 @@ export default function AccountantDashboard() {
             {invoices.map((inv) => (
               <tr key={inv._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors">
                 <td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{inv.clientName}</td>
-                <td className="py-3 text-sm text-on-surface dark:text-slate-300">${inv.amount.toLocaleString()}</td>
+                <td className="py-3 text-sm text-on-surface dark:text-slate-300">{inv.amount.toLocaleString()} TND</td>
                 <td className="py-3 text-sm text-on-surface-variant">{new Date(inv.dueDate).toLocaleDateString()}</td>
                 <td className="py-3"><span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${inv.status === 'paid' ? 'bg-green-100 text-green-700' : inv.status === 'late' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{inv.status}</span></td>
                 <td className="py-3">{inv.status !== 'paid' && <button onClick={() => updateInvoiceStatus(inv._id, 'paid')} className="executive-gradient text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:opacity-90">{t('common.markPaid')}</button>}</td>

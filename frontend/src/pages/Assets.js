@@ -31,7 +31,7 @@ export default function Assets() {
       <section className="mb-10"><h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface dark:text-slate-100">{t('assetsPage.title')}</h2><p className="text-on-surface-variant mt-2">{t('assetsPage.subtitle')}</p></section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-        <KPICard label={t('assetsPage.totalValue')} value={totalValue} prefix="$" icon="inventory_2" iconColor="green" />
+        <KPICard label={t('assetsPage.totalValue')} value={totalValue} suffix=" TND" icon="inventory_2" iconColor="green" />
         <KPICard label={t('assetsPage.count')} value={assets.length} icon="category" iconColor="blue" />
       </div>
 
@@ -40,7 +40,7 @@ export default function Assets() {
           <h3 className="text-lg font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('assetsPage.valuation')}</h3>
           <div style={{ height: 280 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={assets.map((a) => ({ name: a.name, value: a.value }))} barSize={36}><XAxis dataKey="name" tick={{ fontSize: 11, fill: '#42474f' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `$${v.toLocaleString()}`} /><Bar dataKey="value" fill="#0f4c81" radius={[6, 6, 0, 0]} /></BarChart>
+              <BarChart data={assets.map((a) => ({ name: a.name, value: a.value }))} barSize={36}><XAxis dataKey="name" tick={{ fontSize: 11, fill: '#42474f' }} axisLine={false} tickLine={false} /><YAxis tick={{ fontSize: 11, fill: '#727780' }} axisLine={false} tickLine={false} /><Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #e6e8ea' }} formatter={(v) => `${v.toLocaleString()} TND`} /><Bar dataKey="value" fill="#0f4c81" radius={[6, 6, 0, 0]} /></BarChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -62,7 +62,7 @@ export default function Assets() {
         <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('assetsPage.all')}</h3>
         {assets.length === 0 ? <EmptyState icon="inventory_2" title={t('assetsPage.noData')} message={t('assetsPage.noDataMsg')} /> : (
           <div className="overflow-x-auto"><table className="w-full"><thead><tr className="text-left"><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.name')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.value')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('financeD.depreciationRate')}</th><th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.date')}</th></tr></thead><tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-            {assets.map((a) => (<tr key={a._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{a.name}</td><td className="py-3 text-sm">${a.value.toLocaleString()}</td><td className="py-3 text-sm text-on-surface-variant">{a.depreciationRate}%/yr</td><td className="py-3 text-sm text-on-surface-variant">{new Date(a.createdAt).toLocaleDateString()}</td></tr>))}
+            {assets.map((a) => (<tr key={a._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors"><td className="py-3 text-sm font-medium text-on-surface dark:text-slate-200">{a.name}</td><td className="py-3 text-sm">{a.value.toLocaleString()} TND</td><td className="py-3 text-sm text-on-surface-variant">{a.depreciationRate}%/yr</td><td className="py-3 text-sm text-on-surface-variant">{new Date(a.createdAt).toLocaleDateString()}</td></tr>))}
           </tbody></table></div>
         )}
       </div>

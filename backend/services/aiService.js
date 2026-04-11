@@ -162,7 +162,7 @@ function computeConfidence(transactions, invoices, loans, assets) {
 // ────────────────────────────────────────────────────────
 function generateSmartExplanations(scores, metrics, trends, anomalies) {
   const explanations = [];
-  const fmt = (n) => '$' + Math.abs(n).toLocaleString();
+  const fmt = (n) => Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' TND';
 
   // Cash flow explanation with trend context
   if (scores.cashFlowRisk >= 70) {
@@ -319,10 +319,10 @@ async function analyzeRisk() {
   const predictions = [];
   if (cashFlow < 0) {
     const burnRate = Math.abs(cashFlow);
-    predictions.push(`At the current burn rate of $${burnRate.toLocaleString()}, cash reserves may be depleted within 3-6 months without intervention.`);
+    predictions.push(`At the current burn rate of ${burnRate.toLocaleString()} TND, cash reserves may be depleted within 3-6 months without intervention.`);
   }
   if (forecast.forecast30Days < 0) {
-    predictions.push(`30-day cash flow forecast is negative ($${forecast.forecast30Days.toLocaleString()}). Short-term liquidity risk is elevated.`);
+    predictions.push(`30-day cash flow forecast is negative (${forecast.forecast30Days.toLocaleString()} TND). Short-term liquidity risk is elevated.`);
   }
   if (lateInvoices > totalInvoices * 0.2) {
     predictions.push('Late invoice rate exceeds 20%, suggesting potential bad debt write-offs next quarter.');
