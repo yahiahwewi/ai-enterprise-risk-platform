@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build
+frontend/build/
+
+# Environment
+backend/.env
+
+# Python
+AiModule/app/ml/trained_model.pkl
+AiModule/app/ml/scaler.pkl
+AiModule/app/data/sample_dataset.csv
+AiModule/app/data/ai_results.json
+AiModule/app/data/feedback.json
+__pycache__/
+*.pyc
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

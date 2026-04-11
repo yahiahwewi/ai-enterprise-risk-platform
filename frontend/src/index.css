@@ -1,0 +1,15 @@
+/* Minimal CSS — all styling is handled by Tailwind utility classes.
+   This file only contains overrides that can't be expressed in Tailwind. */
+
+/* Smooth scrolling */
+html { scroll-behavior: smooth; }
+
+/* Transition for dark mode */
+body { transition: background-color 0.3s ease, color 0.3s ease; }
+
+/* Toast slide-in animation */
+@keyframes toastSlideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.toast-slide-in { animation: toastSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
