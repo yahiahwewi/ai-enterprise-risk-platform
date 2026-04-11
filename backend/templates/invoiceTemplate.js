@@ -103,10 +103,14 @@ function generateInvoiceHTML(invoice, lang = 'fr') {
     </div>
   </div>
 
+  ${invoice.reference ? `<div style="margin-bottom:20px"><div class="meta-label">${lang === 'fr' ? 'Référence' : 'Reference'}</div><div class="meta-value" style="font-size:11px">${invoice.reference}</div></div>` : ''}
+
   <table>
     <tr><th>Description</th><th class="text-right">${l.amount}</th></tr>
-    <tr><td>${lang === 'fr' ? 'Prestation de services' : 'Service delivery'} — ${invoice.clientName}</td><td class="text-right" style="font-weight:700">${fmtTND(subtotal)}</td></tr>
+    <tr><td>${invoice.description || (lang === 'fr' ? 'Prestation de services' : 'Service delivery')} — ${invoice.clientName}</td><td class="text-right" style="font-weight:700">${fmtTND(subtotal)}</td></tr>
   </table>
+
+  ${invoice.notes ? `<div style="margin-top:20px;padding:10px 14px;background:#f7f9fb;border-radius:6px;font-size:9px;color:#57657a"><strong>${lang === 'fr' ? 'Notes :' : 'Notes:'}</strong> ${invoice.notes}</div>` : ''}
 
   <table style="width:50%;margin-left:auto">
     <tr><td>${l.subtotal}</td><td class="text-right" style="font-weight:600">${fmtTND(subtotal)}</td></tr>

@@ -10,6 +10,9 @@ const invoiceSchema = new mongoose.Schema({
   },
   issueDate: { type: Date, default: Date.now },
   dueDate: { type: Date, required: true },
+  description: { type: String, trim: true, default: '' },
+  reference: { type: String, trim: true, default: '' },
+  notes: { type: String, trim: true, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Invoice', invoiceSchema);
