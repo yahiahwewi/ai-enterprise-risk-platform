@@ -39,6 +39,11 @@ export default function Transactions() {
     } catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || t('toast.failed')); }
   };
 
+  const downloadPDF = (id, category) => {
+    const token = localStorage.getItem('token');
+    window.open(`http://localhost:5000/api/export/transaction-pdf/${id}?language=${lang}&token=${token}`, '_blank');
+  };
+
   const deleteTransaction = async (id) => {
     try {
       await api.delete(`/transactions/${id}`);
@@ -205,20 +210,25 @@ export default function Transactions() {
                     <td className="py-3 text-sm text-on-surface-variant">{tx.description || '—'}</td>
                     <td className="py-3 text-sm font-bold text-right">{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</td>
                     <td className="py-3">
-                      {deleting === tx._id ? (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => deleteTransaction(tx._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-red-200 transition-colors">
-                            {lang === 'fr' ? 'Confirmer' : 'Confirm'}
-                          </button>
-                          <button onClick={() => setDeleting(null)} className="text-xs text-on-surface-variant hover:text-on-surface px-1">
-                            {lang === 'fr' ? 'Non' : 'No'}
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setDeleting(tx._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => downloadPDF(tx._id, tx.category)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title="PDF">
+                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF
                         </button>
-                      )}
+                        {deleting === tx._id ? (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => deleteTransaction(tx._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-red-200 transition-colors">
+                              {lang === 'fr' ? 'Oui' : 'Yes'}
+                            </button>
+                            <button onClick={() => setDeleting(null)} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-1">
+                              {lang === 'fr' ? 'Non' : 'No'}
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setDeleting(tx._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

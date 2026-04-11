@@ -91,6 +91,36 @@ exports.downloadInvoicePDF = async (req, res) => {
   }
 };
 
+// GET /api/export/transaction-pdf/:transactionId
+exports.downloadTransactionPDF = async (req, res) => {
+  try {
+    const Transaction = require('../models/Transaction');
+    const puppeteer = require('puppeteer');
+    const { generateTransactionHTML } = require('../templates/transactionTemplate');
+
+    const tx = await Transaction.findById(req.params.transactionId);
+    if (!tx) return res.status(404).json({ message: 'Transaction not found' });
+
+    const lang = req.query.language || 'fr';
+    const html = generateTransactionHTML(tx.toObject(), lang);
+
+    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdfUint8 = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    await browser.close();
+
+    const pdfBuffer = Buffer.from(pdfUint8);
+    const filename = `recu_${tx.type}_${tx.category.replace(/\s+/g, '_')}_${String(tx._id).slice(-6).toUpperCase()}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer);
+  } catch (error) {
+    res.status(500).json({ message: 'Transaction PDF failed: ' + error.message });
+  }
+};
+
 exports.runScheduler = async (req, res) => {
   try {
     const results = await runMonthlyReports();
