@@ -36,7 +36,7 @@ const patterns = {
     /(?:subtotal|sous[- ]?total|montant\s*ht)\s*[:#]?\s*([\d\s,.]+)/i,
   ],
   tva: [
-    /(?:tva|taxe|vat|t\.v\.a\.?)\s*(?:\(?(?:19|7|13)\s*%?\)?)?\s*[:#]?\s*([\d\s,.]+)/i,
+    /(?:tva|taxe|vat|t\.v\.a\.?)\s*(?:(?:19|7|13)\s*%?)?\s*[:#]?\s*([\d\s,.]+)/i,
     /(?:montant\s*(?:de\s*la\s*)?(?:tva|taxe))\s*[:#]?\s*([\d\s,.]+)/i,
   ],
   totalTTC: [
@@ -86,8 +86,10 @@ function parseDate(str) {
 // ── Extract a field using multiple patterns ──
 function extractField(text, fieldPatterns) {
   for (const regex of fieldPatterns) {
-    const match = text.match(regex);
-    if (match && match[1]) return match[1].trim();
+    try {
+      const match = text.match(regex);
+      if (match && match[1]) return match[1].trim();
+    } catch { /* skip broken regex on this text */ }
   }
   return null;
 }
@@ -98,6 +100,25 @@ async function extractInvoiceFromPDF(pdfBuffer) {
   const parsed = await pdfParse(pdfBuffer);
   const rawText = parsed.text;
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Step 1b: Detect garbled text (custom font encoding)
+  // Count ratio of recognizable words vs total words
+  const words = rawText.replace(/[^a-zA-ZàâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+  const knownWords = /facture|invoice|total|montant|client|date|tva|vat|amount|payment|due|paid|net|ttc|ht|société|company|adresse|address|tel|fax|email/i;
+  const recognizable = words.filter(w => knownWords.test(w) || /^[A-Z][a-z]{2,}$/.test(w)).length;
+  const readabilityScore = words.length > 0 ? recognizable / words.length : 0;
+  const isGarbled = words.length > 20 && readabilityScore < 0.02;
+
+  if (isGarbled) {
+    return {
+      data: { invoiceNumber: null, clientName: null, issueDate: new Date().toISOString().split('T')[0], dueDate: null, totalHT: null, tvaRate: 19, tva: null, totalTTC: null, amount: null, lineItems: [], detectedLanguage: 'unknown', description: null },
+      confidence: { clientName: 0, invoiceNumber: 0, issueDate: 0, dueDate: 0, totalHT: 0, tva: 0, totalTTC: 0, overall: 0 },
+      warnings: [{ field: 'document', message: 'Ce PDF utilise des polices encodées que le système ne peut pas lire. Le texte extrait est illisible. Veuillez saisir les données manuellement ou utiliser un PDF avec du texte sélectionnable.' }],
+      garbled: true,
+      rawText: rawText.substring(0, 500),
+      pageCount: parsed.numpages,
+    };
+  }
 
   // Step 2: Extract fields
   const invoiceNumber = extractField(rawText, patterns.invoiceNumber);

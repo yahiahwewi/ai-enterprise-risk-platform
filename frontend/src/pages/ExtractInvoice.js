@@ -83,6 +83,11 @@ export default function ExtractInvoice() {
     setExtracting(false);
   };
 
+  const startManualEntry = () => {
+    setResult({ data: {}, confidence: { overall: 0 }, warnings: [], garbled: false });
+    setForm({ clientName: '', amount: '', issueDate: new Date().toISOString().split('T')[0], dueDate: '', description: '', reference: '', status: 'pending' });
+  };
+
   const confirmAndSave = async () => {
     setSaving(true);
     try {
@@ -134,8 +139,39 @@ export default function ExtractInvoice() {
         </div>
       )}
 
+      {/* Step 2b: Garbled PDF detected */}
+      {result?.garbled && (
+        <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-10 text-center">
+          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-amber-600 text-[32px]">warning</span>
+          </div>
+          <h3 className="text-lg font-bold font-headline text-on-surface dark:text-slate-200 mb-2">
+            {lang === 'fr' ? 'PDF non lisible par l\'IA' : 'PDF not readable by AI'}
+          </h3>
+          <p className="text-sm text-on-surface-variant mb-2 max-w-md mx-auto">
+            {lang === 'fr'
+              ? 'Ce PDF utilise des polices encodées (fréquent avec les factures Orange, Tunisie Telecom, etc.). Le texte extrait est illisible.'
+              : 'This PDF uses encoded fonts (common with Orange, Telecom invoices). The extracted text is unreadable.'}
+          </p>
+          <p className="text-xs text-on-surface-variant mb-6 max-w-md mx-auto">
+            {lang === 'fr'
+              ? 'Vous pouvez saisir les données manuellement ci-dessous, ou réessayer avec un PDF contenant du texte sélectionnable.'
+              : 'You can enter the data manually below, or retry with a PDF that contains selectable text.'}
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button onClick={startManualEntry} className="executive-gradient text-white text-sm font-bold px-6 py-2.5 rounded-lg hover:opacity-90 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">edit</span>
+              {lang === 'fr' ? 'Saisie manuelle' : 'Manual entry'}
+            </button>
+            <button onClick={reset} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-sm font-bold px-6 py-2.5 rounded-lg hover:bg-surface-container-highest transition-colors">
+              {lang === 'fr' ? 'Essayer un autre PDF' : 'Try another PDF'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Step 3: Review & Edit */}
-      {result && form && (
+      {result && !result.garbled && form && (
         <div className="space-y-6">
           {/* Meta bar */}
           <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
