@@ -14,7 +14,8 @@ const labelCls = "block text-[10px] font-bold text-on-surface-variant uppercase 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ type: 'income', amount: '', category: '', description: '' });
+  const [form, setForm] = useState({ type: 'income', amount: '', category: '', description: '', date: '', reference: '', paymentMethod: '', notes: '' });
+  const [showMore, setShowMore] = useState(false);
   const [typeFilter, setTypeFilter] = useState('');
   const [deleting, setDeleting] = useState(null);
   const { addToast } = useToast();
@@ -32,7 +33,8 @@ export default function Transactions() {
     try {
       const { data } = await api.post('/transactions', { ...form, amount: Number(form.amount) });
       setTransactions([data, ...transactions]);
-      setForm({ type: 'income', amount: '', category: '', description: '' });
+      setForm({ type: 'income', amount: '', category: '', description: '', date: '', reference: '', paymentMethod: '', notes: '' });
+      setShowMore(false);
       addToast('success', t('toast.transactionAdded'), `${form.amount} TND`);
     } catch (err) { addToast('error', t('toast.error'), err.response?.data?.message || t('toast.failed')); }
   };
@@ -75,14 +77,75 @@ export default function Transactions() {
       {/* Create form */}
       <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-6 mb-10">
         <h3 className="text-base font-bold font-headline text-on-surface dark:text-slate-100 mb-4">{t('transactions.add')}</h3>
-        <form onSubmit={add} className="space-y-3">
+        <form onSubmit={add} className="space-y-4">
+          {/* Required fields */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div><label className={labelCls}>{t('accountant.type')}</label><select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className={inputCls}><option value="income">{t('accountant.income')}</option><option value="expense">{t('accountant.expense')}</option></select></div>
-            <div><label className={labelCls}>{t('common.amount')} (TND)</label><input type="number" step="0.001" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className={inputCls} placeholder="0.000" required min="0" /></div>
-            <div><label className={labelCls}>{t('accountant.category')}</label><ComboInput value={form.category} onChange={(val) => setForm({ ...form, category: val })} options={[...new Set(transactions.map((tx) => tx.category).filter(Boolean))]} placeholder={t('accountant.selectCategory')} label="category" required /></div>
-            <div><label className={labelCls}>{t('accountant.description')}</label><input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} placeholder={t('accountant.optional')} /></div>
+            <div>
+              <label className={labelCls}>{t('accountant.type')} *</label>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className={inputCls}>
+                <option value="income">{t('accountant.income')}</option>
+                <option value="expense">{t('accountant.expense')}</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>{t('common.amount')} (TND) *</label>
+              <input type="number" step="0.001" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className={inputCls} placeholder="0.000" required min="0" />
+            </div>
+            <div>
+              <label className={labelCls}>{t('accountant.category')} *</label>
+              <ComboInput value={form.category} onChange={(val) => setForm({ ...form, category: val })} options={[...new Set(transactions.map((tx) => tx.category).filter(Boolean))]} placeholder={t('accountant.selectCategory')} label="category" required />
+            </div>
+            <div>
+              <label className={labelCls}>{t('accountant.description')}</label>
+              <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} placeholder={t('accountant.optional')} />
+            </div>
           </div>
-          <button type="submit" className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg hover:opacity-90">{t('transactions.add')}</button>
+
+          {/* Toggle for optional fields */}
+          <button type="button" onClick={() => setShowMore(!showMore)} className="flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary-container transition-colors">
+            <span className="material-symbols-outlined text-[16px]">{showMore ? 'expand_less' : 'expand_more'}</span>
+            {showMore
+              ? (lang === 'fr' ? 'Masquer les détails' : 'Hide details')
+              : (lang === 'fr' ? 'Ajouter des détails (optionnel)' : 'Add details (optional)')
+            }
+          </button>
+
+          {/* Optional fields — collapsible */}
+          {showMore && (
+            <div className="border-t border-surface-container-high dark:border-slate-700 pt-4 space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div>
+                  <label className={labelCls}>{t('common.date')}</label>
+                  <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className={inputCls} />
+                  <p className="text-[10px] text-on-surface-variant mt-0.5">{lang === 'fr' ? "Par défaut : aujourd'hui" : 'Default: today'}</p>
+                </div>
+                <div>
+                  <label className={labelCls}>{lang === 'fr' ? 'Référence' : 'Reference'}</label>
+                  <input type="text" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} className={inputCls} placeholder={lang === 'fr' ? 'N° facture, reçu...' : 'Invoice no., receipt...'} />
+                </div>
+                <div>
+                  <label className={labelCls}>{lang === 'fr' ? 'Mode de paiement' : 'Payment Method'}</label>
+                  <select value={form.paymentMethod} onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })} className={inputCls}>
+                    <option value="">{lang === 'fr' ? '— Non spécifié —' : '— Not specified —'}</option>
+                    <option value="virement">{lang === 'fr' ? 'Virement bancaire' : 'Bank transfer'}</option>
+                    <option value="cheque">{lang === 'fr' ? 'Chèque' : 'Check'}</option>
+                    <option value="especes">{lang === 'fr' ? 'Espèces' : 'Cash'}</option>
+                    <option value="carte">{lang === 'fr' ? 'Carte bancaire' : 'Credit card'}</option>
+                    <option value="autre">{lang === 'fr' ? 'Autre' : 'Other'}</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className={labelCls}>{lang === 'fr' ? 'Notes internes' : 'Internal Notes'}</label>
+                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className={inputCls + ' resize-none'} rows="2" placeholder={lang === 'fr' ? 'Notes visibles uniquement en interne...' : 'Notes visible only internally...'} />
+              </div>
+            </div>
+          )}
+
+          <button type="submit" className="executive-gradient text-white text-xs font-bold px-5 py-2.5 rounded-lg hover:opacity-90 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            {t('transactions.add')}
+          </button>
         </form>
       </div>
 

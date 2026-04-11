@@ -6,6 +6,9 @@ const transactionSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   category: { type: String, required: true, trim: true },
   description: { type: String, trim: true },
+  reference: { type: String, trim: true, default: '' },
+  paymentMethod: { type: String, trim: true, default: '' },
+  notes: { type: String, trim: true, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
