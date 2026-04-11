@@ -21,6 +21,7 @@ import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import Approvals from './pages/Approvals';
 import Simulate from './pages/Simulate';
+import ExtractInvoice from './pages/ExtractInvoice';
 import Executive from './pages/Executive';
 import CopilotChat from './components/CopilotChat';
 
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="/team" element={<ProtectedPage roles={['owner']}><Team /></ProtectedPage>} />
           <Route path="/transactions" element={<ProtectedPage roles={['owner', 'accountant']}><Transactions /></ProtectedPage>} />
           <Route path="/invoices" element={<ProtectedPage roles={['owner', 'accountant']}><Invoices /></ProtectedPage>} />
+          <Route path="/extract-invoice" element={<ProtectedPage roles={['owner', 'accountant']}><ExtractInvoice /></ProtectedPage>} />
           <Route path="/loans" element={<ProtectedPage roles={['owner', 'finance']}><Loans /></ProtectedPage>} />
           <Route path="/assets" element={<ProtectedPage roles={['owner', 'finance']}><Assets /></ProtectedPage>} />
           <Route path="/activity" element={<ProtectedPage roles={['owner', 'admin']}><ActivityLog /></ProtectedPage>} />

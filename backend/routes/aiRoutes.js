@@ -9,4 +9,8 @@ router.post('/simulate', protect, authorize('owner'), simulate);
 router.post('/copilot', protect, authorize('owner'), copilot);
 router.post('/suggest-category', protect, suggestCat);
 
+// Invoice extraction
+const { extractInvoice } = require('../controllers/extractionController');
+router.post('/extract-invoice', protect, authorize('accountant', 'owner', 'admin'), extractInvoice);
+
 module.exports = router;

@@ -19,6 +19,7 @@ const pageHelp = {
     '/activity': { title: 'Journal d\'activité', icon: 'history', description: 'Traçabilité complète de toutes les actions effectuées dans le système.', tips: ['Qui a fait quoi et quand', 'Toutes les créations, modifications et suppressions', 'Pagination avec chargement progressif'] },
     '/settings': { title: 'Paramètres', icon: 'settings', description: 'Gérez les catégories prédéfinies et les clients utilisés dans les formulaires.', tips: ['Onglets : Catégories / Clients', 'Chaque élément a un libellé FR et EN', 'Modification et suppression en ligne'] },
     '/users': { title: 'Gestion des utilisateurs', icon: 'group', description: 'Approuvez ou refusez les demandes d\'accès. Gérez tous les utilisateurs.', tips: ['Les nouveaux inscrits sont en attente d\'approbation', 'Approuver active le compte immédiatement', 'Refuser bloque définitivement l\'accès'] },
+    '/extract-invoice': { title: 'Import Facture IA', icon: 'document_scanner', description: 'Importez un PDF de facture — l\'IA extrait automatiquement les données (client, montant, dates, TVA).', tips: ['Glissez-déposez ou parcourez pour sélectionner un PDF', 'L\'IA détecte les champs avec un score de confiance', 'Les champs à faible confiance sont surlignés en orange', 'Vérifiez et modifiez avant de confirmer', 'Détection de doublons automatique'] },
   },
   en: {
     '/dashboard': { title: 'Dashboard', icon: 'dashboard', description: 'Overview based on your role. Displayed data depends on your permissions.', tips: ['KPIs update in real time', 'Click an indicator for more details', 'Risk score recalculates on each view'] },
@@ -36,6 +37,7 @@ const pageHelp = {
     '/activity': { title: 'Activity Log', icon: 'history', description: 'Complete traceability of all actions performed in the system.', tips: ['Who did what and when', 'All creates, updates, and deletes', 'Pagination with progressive loading'] },
     '/settings': { title: 'Settings', icon: 'settings', description: 'Manage predefined categories and clients used in forms.', tips: ['Tabs: Categories / Clients', 'Each item has FR and EN labels', 'Inline edit and delete'] },
     '/users': { title: 'User Management', icon: 'group', description: 'Approve or reject access requests. Manage all users.', tips: ['New signups are pending approval', 'Approving activates the account immediately', 'Rejecting permanently blocks access'] },
+    '/extract-invoice': { title: 'AI Invoice Import', icon: 'document_scanner', description: 'Upload an invoice PDF — AI automatically extracts data (client, amount, dates, VAT).', tips: ['Drag & drop or browse to select a PDF', 'AI detects fields with confidence scores', 'Low-confidence fields are highlighted in orange', 'Review and edit before confirming', 'Automatic duplicate detection'] },
   },
 };
 

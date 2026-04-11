@@ -27,6 +27,7 @@ function useNavItems(t, lang) {
       { section: t('nav.finance') },
       { to: '/transactions', label: t('nav.transactions'), icon: 'receipt_long' },
       { to: '/invoices', label: t('nav.invoices'), icon: 'description' },
+      { to: '/extract-invoice', label: lang === 'fr' ? 'Import Facture IA' : 'AI Invoice Import', icon: 'document_scanner' },
       { to: '/loans', label: t('nav.loans'), icon: 'account_balance' },
       { to: '/assets', label: t('nav.assets'), icon: 'inventory_2' },
       { section: t('nav.organization') },
@@ -39,6 +40,7 @@ function useNavItems(t, lang) {
       { section: t('nav.finance') },
       { to: '/transactions', label: t('nav.transactions'), icon: 'receipt_long' },
       { to: '/invoices', label: t('nav.invoices'), icon: 'description' },
+      { to: '/extract-invoice', label: lang === 'fr' ? 'Import Facture IA' : 'AI Invoice Import', icon: 'document_scanner' },
     ],
     finance: [
       { section: t('nav.overview') },
