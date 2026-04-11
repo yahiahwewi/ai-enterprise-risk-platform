@@ -8,7 +8,12 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ['admin', 'owner', 'accountant', 'finance'],
-    default: 'owner',
+    default: 'accountant',
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending',
   },
 }, { timestamps: true });
 

@@ -16,8 +16,7 @@ const validateRegister = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').isIn(['admin', 'owner', 'accountant', 'finance']).withMessage('Invalid role'),
-  body('companyName').optional().trim().notEmpty().withMessage('Company name cannot be empty'),
+  body('role').optional().isIn(['accountant', 'finance']).withMessage('Role must be accountant or finance'),
   handleValidationErrors,
 ];
 

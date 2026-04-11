@@ -9,12 +9,23 @@ export default function Login() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [pendingStatus, setPendingStatus] = useState(null); // 'pending' | 'rejected'
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    try { await login(form.email, form.password); navigate('/dashboard'); }
-    catch (err) { setError(err.response?.data?.message || t('toast.failed')); }
+    setPendingStatus(null);
+    try {
+      await login(form.email, form.password);
+      navigate('/dashboard');
+    } catch (err) {
+      const status = err.response?.data?.status;
+      if (status === 'pending' || status === 'rejected') {
+        setPendingStatus(status);
+      } else {
+        setError(err.response?.data?.message || t('toast.failed'));
+      }
+    }
   };
 
   return (
@@ -39,6 +50,20 @@ export default function Login() {
           <h2 className="text-xl font-extrabold font-headline text-on-surface dark:text-slate-200">{t('auth.welcomeBack')}</h2>
           <p className="text-sm text-on-surface-variant mt-1">{t('auth.signInSubtitle')}</p>
         </div>
+        {pendingStatus === 'pending' && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-4 text-center">
+            <span className="material-symbols-outlined text-amber-600 text-[28px] block mb-2">hourglass_top</span>
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{lang === 'fr' ? 'Compte en attente de validation' : 'Account pending approval'}</p>
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">{lang === 'fr' ? 'Un administrateur doit approuver votre accès.' : 'An administrator must approve your access.'}</p>
+          </div>
+        )}
+        {pendingStatus === 'rejected' && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4 text-center">
+            <span className="material-symbols-outlined text-red-600 text-[28px] block mb-2">block</span>
+            <p className="text-sm font-bold text-red-700 dark:text-red-400">{lang === 'fr' ? 'Accès refusé' : 'Access denied'}</p>
+            <p className="text-xs text-red-600 dark:text-red-500 mt-1">{lang === 'fr' ? 'Votre demande d\'accès a été refusée.' : 'Your access request has been denied.'}</p>
+          </div>
+        )}
         {error && <div className="bg-error-container text-on-error-container text-sm px-4 py-2.5 rounded-lg mb-4">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

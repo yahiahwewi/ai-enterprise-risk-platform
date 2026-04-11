@@ -28,11 +28,13 @@ async function seed() {
   console.log('Cleared existing data');
 
   // ── Users (all share the same Tac-Tic environment) ──
-  const admin = await User.create({ name: 'Admin User', email: 'admin@erm.com', password: 'admin123', role: 'admin' });
-  const owner = await User.create({ name: 'Sarah Johnson', email: 'owner@erm.com', password: 'owner123', role: 'owner' });
-  const accountant = await User.create({ name: 'Ahmed Benali', email: 'accountant@erm.com', password: 'accountant123', role: 'accountant' });
-  const finance = await User.create({ name: 'Maria Garcia', email: 'finance@erm.com', password: 'finance123', role: 'finance' });
-  console.log('4 users created');
+  const admin = await User.create({ name: 'Admin User', email: 'admin@erm.com', password: 'admin123', role: 'admin', status: 'approved' });
+  const owner = await User.create({ name: 'Sarah Johnson', email: 'owner@erm.com', password: 'owner123', role: 'owner', status: 'approved' });
+  const accountant = await User.create({ name: 'Ahmed Benali', email: 'accountant@erm.com', password: 'accountant123', role: 'accountant', status: 'approved' });
+  const finance = await User.create({ name: 'Maria Garcia', email: 'finance@erm.com', password: 'finance123', role: 'finance', status: 'approved' });
+  // Pending user for testing admin approval workflow
+  await User.create({ name: 'Mohamed Kadi', email: 'mohamed@tac-tic.dz', password: 'test123', role: 'accountant', status: 'pending' });
+  console.log('5 users created (4 approved + 1 pending)');
 
   // ── Transactions (spread across 90 days) ──
   const transactions = await Transaction.insertMany([
