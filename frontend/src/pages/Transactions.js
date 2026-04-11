@@ -189,51 +189,56 @@ export default function Transactions() {
         {transactions.length === 0 ? (
           <EmptyState icon="receipt_long" title={t('transactions.noData')} message={t('transactions.noDataMsg')} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-left">
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.date')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.type')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.category')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('accountant.description')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3 text-right">{t('common.amount')}</th>
-                  <th className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest pb-3">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-surface-container-high dark:divide-slate-700">
-                {transactions.map((tx) => (
-                  <tr key={tx._id} className="hover:bg-surface-container-low dark:hover:bg-slate-700/50 transition-colors">
-                    <td className="py-3 text-sm text-on-surface dark:text-slate-300">{new Date(tx.date).toLocaleDateString()}</td>
-                    <td className="py-3"><span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{tx.type}</span></td>
-                    <td className="py-3 text-sm">{tx.category}</td>
-                    <td className="py-3 text-sm text-on-surface-variant">{tx.description || '—'}</td>
-                    <td className="py-3 text-sm font-bold text-right">{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</td>
-                    <td className="py-3">
-                      <div className="flex items-center gap-1.5">
-                        <button onClick={() => downloadPDF(tx._id, tx.category)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title="PDF">
-                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF
-                        </button>
-                        {deleting === tx._id ? (
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => deleteTransaction(tx._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-2.5 py-1 rounded-lg hover:bg-red-200 transition-colors">
-                              {lang === 'fr' ? 'Oui' : 'Yes'}
-                            </button>
-                            <button onClick={() => setDeleting(null)} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-1">
-                              {lang === 'fr' ? 'Non' : 'No'}
-                            </button>
-                          </div>
-                        ) : (
-                          <button onClick={() => setDeleting(tx._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {transactions.map((tx) => (
+              <div key={tx._id} className="flex items-center justify-between p-4 bg-surface-container-low dark:bg-slate-700/50 rounded-xl hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-all">
+                {/* Left: icon + info */}
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                    <span className={`material-symbols-outlined text-[20px] ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      {tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{tx.category}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                        {tx.type === 'income' ? (lang === 'fr' ? 'Revenu' : 'Income') : (lang === 'fr' ? 'Dépense' : 'Expense')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {new Date(tx.date).toLocaleDateString()} {tx.description ? `· ${tx.description}` : ''} {tx.reference ? `· ${tx.reference}` : ''}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right: amount + actions */}
+                <div className="flex items-center gap-3 shrink-0 pl-4">
+                  <span className={`text-sm font-bold font-headline ${tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {tx.type === 'income' ? '+' : '-'}{tx.amount.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND
+                  </span>
+
+                  <button onClick={() => downloadPDF(tx._id, tx.category)} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1" title="PDF">
+                    <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>PDF
+                  </button>
+
+                  {deleting === tx._id ? (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => deleteTransaction(tx._id)} className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-red-200 transition-colors">
+                        {lang === 'fr' ? 'Oui' : 'Yes'}
+                      </button>
+                      <button onClick={() => setDeleting(null)} className="text-xs font-bold text-on-surface-variant hover:text-on-surface px-2 py-1.5">
+                        {lang === 'fr' ? 'Non' : 'No'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setDeleting(tx._id)} className="text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title={lang === 'fr' ? 'Supprimer' : 'Delete'}>
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
