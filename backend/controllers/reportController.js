@@ -75,13 +75,17 @@ exports.downloadInvoicePDF = async (req, res) => {
     const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const pdfUint8 = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
     await browser.close();
+
+    // Convert Uint8Array to Node Buffer so Express sends raw bytes (not JSON)
+    const pdfBuffer = Buffer.from(pdfUint8);
 
     const filename = `facture_${invoice.clientName.replace(/\s+/g, '_')}_${String(invoice._id).slice(-6).toUpperCase()}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.send(pdfBuffer);
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.end(pdfBuffer);
   } catch (error) {
     res.status(500).json({ message: 'Invoice PDF generation failed: ' + error.message });
   }
