@@ -2,10 +2,8 @@ const Notification = require('../models/Notification');
 
 exports.getNotifications = async (req, res) => {
   try {
-    const notifications = await Notification.find({
-      userId: req.user._id,
-      companyId: req.user.companyId,
-    }).sort({ createdAt: -1 }).limit(50);
+    const notifications = await Notification.find({ userId: req.user._id })
+      .sort({ createdAt: -1 }).limit(50);
     res.json(notifications);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -14,11 +12,7 @@ exports.getNotifications = async (req, res) => {
 
 exports.getUnreadCount = async (req, res) => {
   try {
-    const count = await Notification.countDocuments({
-      userId: req.user._id,
-      companyId: req.user.companyId,
-      read: false,
-    });
+    const count = await Notification.countDocuments({ userId: req.user._id, read: false });
     res.json({ count });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -41,10 +35,7 @@ exports.markAsRead = async (req, res) => {
 
 exports.markAllRead = async (req, res) => {
   try {
-    await Notification.updateMany(
-      { userId: req.user._id, companyId: req.user.companyId, read: false },
-      { read: true }
-    );
+    await Notification.updateMany({ userId: req.user._id, read: false }, { read: true });
     res.json({ message: 'All notifications marked as read' });
   } catch (error) {
     res.status(500).json({ message: error.message });

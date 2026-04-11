@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Company = require('../models/Company');
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -8,20 +7,13 @@ const generateToken = (id) =>
 // POST /api/auth/register
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, role, companyName } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (await User.findOne({ email })) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    const user = await User.create({ name, email, password, role });
-
-    // If registering as owner, create a company automatically
-    if (role === 'owner' && companyName) {
-      const company = await Company.create({ name: companyName, ownerId: user._id });
-      user.companyId = company._id;
-      await user.save();
-    }
+    const user = await User.create({ name, email, password, role: role || 'owner' });
 
     res.status(201).json({ user, token: generateToken(user._id) });
   } catch (error) {

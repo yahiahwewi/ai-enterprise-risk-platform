@@ -5,9 +5,9 @@ const Asset = require('../models/Asset');
 /**
  * Invoice Risk Scoring — per-invoice late probability
  */
-async function getInvoiceRiskScores(companyId) {
-  const invoices = await Invoice.find({ companyId, status: { $ne: 'paid' } });
-  const allInvoices = await Invoice.find({ companyId });
+async function getInvoiceRiskScores() {
+  const invoices = await Invoice.find({ status: { $ne: 'paid' } });
+  const allInvoices = await Invoice.find();
 
   // Build client history: ratio of late invoices per client
   const clientHistory = {};
@@ -64,8 +64,8 @@ async function getInvoiceRiskScores(companyId) {
 /**
  * Loan Stress Test — impact of interest rate increases
  */
-async function getLoanStressTest(companyId, rateIncrease = 1) {
-  const loans = await Loan.find({ companyId });
+async function getLoanStressTest(rateIncrease = 1) {
+  const loans = await Loan.find();
 
   const results = loans.map((loan) => {
     // Simple approximation: monthly payment scales roughly with rate increase
@@ -112,8 +112,8 @@ async function getLoanStressTest(companyId, rateIncrease = 1) {
 /**
  * Asset Depreciation Projection — values over N years
  */
-async function getAssetDepreciation(companyId, years = 5) {
-  const assets = await Asset.find({ companyId });
+async function getAssetDepreciation(years = 5) {
+  const assets = await Asset.find();
 
   return assets.map((asset) => {
     const projections = [];

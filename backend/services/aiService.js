@@ -218,14 +218,14 @@ function generateSmartExplanations(scores, metrics, trends, anomalies) {
 }
 
 // ────────────────────────────────────────────────────────
-// MAIN: analyzeRisk(companyId)
+// MAIN: analyzeRisk() — single company, no scoping needed
 // ────────────────────────────────────────────────────────
-async function analyzeRisk(companyId) {
+async function analyzeRisk() {
   const [transactions, invoices, loans, assets] = await Promise.all([
-    Transaction.find({ companyId }),
-    Invoice.find({ companyId }),
-    Loan.find({ companyId }),
-    Asset.find({ companyId }),
+    Transaction.find(),
+    Invoice.find(),
+    Loan.find(),
+    Asset.find(),
   ]);
 
   // ── Aggregate financial metrics ──────────────────────

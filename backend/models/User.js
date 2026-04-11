@@ -10,7 +10,6 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'owner', 'accountant', 'finance'],
     default: 'owner',
   },
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
 }, { timestamps: true });
 
 // Hash password before saving

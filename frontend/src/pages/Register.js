@@ -14,7 +14,7 @@ export default function Register() {
     e.preventDefault();
     setError('');
     try {
-      await register({ ...form, role: 'owner', companyName: 'Tac-Tic' });
+      await register({ ...form, role: 'owner' });
       navigate('/dashboard');
     } catch (err) { setError(err.response?.data?.message || t('toast.failed')); }
   };

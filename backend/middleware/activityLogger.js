@@ -34,7 +34,6 @@ function logActivity(action, entityType) {
 
           ActivityLog.create({
             userId: req.user._id,
-            companyId: req.user.companyId,
             action,
             entityType,
             entityId,

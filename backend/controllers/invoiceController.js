@@ -3,10 +3,7 @@ const Invoice = require('../models/Invoice');
 // POST /api/invoices
 exports.createInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.create({
-      ...req.body,
-      companyId: req.user.companyId,
-    });
+    const invoice = await Invoice.create(req.body);
     res.locals.createdEntityId = invoice._id;
     res.status(201).json(invoice);
   } catch (error) {
@@ -17,8 +14,7 @@ exports.createInvoice = async (req, res) => {
 // GET /api/invoices
 exports.getInvoices = async (req, res) => {
   try {
-    const invoices = await Invoice.find({ companyId: req.user.companyId })
-      .sort({ dueDate: -1 });
+    const invoices = await Invoice.find().sort({ dueDate: -1 });
     res.json(invoices);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -28,8 +24,8 @@ exports.getInvoices = async (req, res) => {
 // PATCH /api/invoices/:id
 exports.updateInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.findOneAndUpdate(
-      { _id: req.params.id, companyId: req.user.companyId },
+    const invoice = await Invoice.findByIdAndUpdate(
+      req.params.id,
       req.body,
       { new: true, runValidators: true }
     );

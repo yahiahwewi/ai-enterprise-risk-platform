@@ -4,8 +4,8 @@ const { analyzeRisk } = require('./aiService');
  * Final Decision Engine
  * Transforms AI risk analysis into actionable business decisions.
  */
-async function generateFinalDecision(companyId) {
-  const report = await analyzeRisk(companyId);
+async function generateFinalDecision() {
+  const report = await analyzeRisk();
   const { globalScore, level, breakdown, metrics, trends, anomalies, forecast } = report;
 
   // ── Decision tier ────────────────────────────────────

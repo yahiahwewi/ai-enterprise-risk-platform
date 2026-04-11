@@ -20,13 +20,11 @@ const Transaction = require('../../models/Transaction');
 const Invoice = require('../../models/Invoice');
 const Loan = require('../../models/Loan');
 const Asset = require('../../models/Asset');
-const Company = require('../../models/Company');
 const User = require('../../models/User');
 
-async function buildReportData(companyId, language = 'fr') {
-  // Fetch all data in parallel
+async function buildReportData(language = 'fr') {
+  // Fetch all data in parallel (single company — no scoping)
   const [
-    company,
     owner,
     riskReport,
     decisionResult,
@@ -38,17 +36,16 @@ async function buildReportData(companyId, language = 'fr') {
     loans,
     assets,
   ] = await Promise.all([
-    Company.findById(companyId),
-    User.findOne({ companyId, role: 'owner' }).select('name email'),
-    analyzeRisk(companyId),
-    generateFinalDecision(companyId),
-    getInvoiceRiskScores(companyId),
-    getLoanStressTest(companyId, 2),
-    getAssetDepreciation(companyId, 5),
-    Transaction.find({ companyId }).sort({ date: -1 }),
-    Invoice.find({ companyId }),
-    Loan.find({ companyId }),
-    Asset.find({ companyId }),
+    User.findOne({ role: 'owner' }).select('name email'),
+    analyzeRisk(),
+    generateFinalDecision(),
+    getInvoiceRiskScores(),
+    getLoanStressTest(2),
+    getAssetDepreciation(5),
+    Transaction.find().sort({ date: -1 }),
+    Invoice.find(),
+    Loan.find(),
+    Asset.find(),
   ]);
 
   const now = new Date();
@@ -94,7 +91,7 @@ async function buildReportData(companyId, language = 'fr') {
 
     // Company
     company: {
-      name: company?.name || 'Tac-Tic',
+      name: 'Tac-Tic',
       owner: owner?.name || 'N/A',
       ownerEmail: owner?.email || '',
     },
