@@ -171,6 +171,8 @@ export default function Invoices() {
           <div className="space-y-2">
             {invoices.map((inv) => {
               const isOpen = expanded === inv._id;
+              const isPendingApproval = inv.workflowStatus === 'pending_approval';
+              const isRejected = inv.workflowStatus === 'rejected';
               const statusIcon = { paid: 'check_circle', pending: 'schedule', late: 'warning' };
               const statusColorIcon = { paid: 'text-green-600', pending: 'text-amber-600', late: 'text-red-600' };
               const statusBg = { paid: 'bg-green-100 dark:bg-green-900/30', pending: 'bg-amber-100 dark:bg-amber-900/30', late: 'bg-red-100 dark:bg-red-900/30' };
@@ -183,13 +185,27 @@ export default function Invoices() {
                     onClick={() => setExpanded(isOpen ? null : inv._id)}
                   >
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${statusBg[inv.status]}`}>
-                        <span className={`material-symbols-outlined text-[20px] ${statusColorIcon[inv.status]}`}>{statusIcon[inv.status]}</span>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isPendingApproval ? 'bg-purple-100 dark:bg-purple-900/30' : isRejected ? 'bg-red-100 dark:bg-red-900/30' : statusBg[inv.status]}`}>
+                        <span className={`material-symbols-outlined text-[20px] ${isPendingApproval ? 'text-purple-600' : isRejected ? 'text-red-600' : statusColorIcon[inv.status]}`}>
+                          {isPendingApproval ? 'hourglass_top' : isRejected ? 'block' : statusIcon[inv.status]}
+                        </span>
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{inv.clientName}</p>
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusBadge[inv.status]}`}>{sl[inv.status] || inv.status}</span>
+                          {isPendingApproval && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[12px]">hourglass_top</span>
+                              {lang === 'fr' ? 'En attente d\'approbation' : 'Pending approval'}
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[12px]">block</span>
+                              {lang === 'fr' ? 'Rejeté' : 'Rejected'}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-on-surface-variant truncate">
                           INV-{String(inv._id).slice(-6).toUpperCase()} · {lang === 'fr' ? 'Échéance' : 'Due'}: {new Date(inv.dueDate).toLocaleDateString()}

@@ -56,14 +56,24 @@ async function applyRuleActions(entityType, entity, entityId, triggeredRules, us
         requestedBy: userId,
       });
 
+      // Notify the submitter that their item is pending
+      await createNotification({
+        userId,
+        type: 'approval_needed',
+        title: 'En attente d\'approbation',
+        message: `Votre ${entityType === 'invoice' ? 'facture' : entityType === 'transaction' ? 'transaction' : 'prêt'} de ${entity.amount?.toLocaleString()} TND est en attente de validation (Règle: ${rule.name}).`,
+        severity: 'info',
+        metadata: { entityType, entityId, ruleId: rule._id },
+      });
+
       // Notify approvers
       const owners = await User.find({ role: 'owner', status: 'approved' }).select('_id');
       for (const owner of owners) {
         await createNotification({
           userId: owner._id,
-          type: 'system',
+          type: 'approval_needed',
           title: 'Approbation requise',
-          message: `${entityType} de ${entity.amount?.toLocaleString()} TND nécessite votre approbation (Règle: ${rule.name})`,
+          message: `${entityType === 'invoice' ? 'Facture' : entityType === 'transaction' ? 'Transaction' : 'Prêt'} de ${entity.amount?.toLocaleString()} TND nécessite votre approbation (Règle: ${rule.name})`,
           severity: 'warning',
           metadata: { entityType, entityId, ruleId: rule._id },
         });

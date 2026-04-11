@@ -197,18 +197,20 @@ export default function Transactions() {
               const isOpen = expanded === tx._id;
               const methodLabels = { fr: { virement: 'Virement bancaire', cheque: 'Chèque', especes: 'Espèces', carte: 'Carte bancaire', autre: 'Autre' }, en: { virement: 'Bank transfer', cheque: 'Check', especes: 'Cash', carte: 'Credit card', autre: 'Other' } };
               const ml = methodLabels[lang] || methodLabels.fr;
+              const isPendingApproval = tx.workflowStatus === 'pending_approval';
+              const isRejected = tx.workflowStatus === 'rejected';
 
               return (
-                <div key={tx._id} className="bg-surface-container-low dark:bg-slate-700/50 rounded-xl overflow-hidden transition-all">
+                <div key={tx._id} className={`bg-surface-container-low dark:bg-slate-700/50 rounded-xl overflow-hidden transition-all ${isPendingApproval ? 'ring-1 ring-purple-200 dark:ring-purple-800' : ''}`}>
                   {/* Main row — clickable */}
                   <div
                     className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
                     onClick={() => setExpanded(isOpen ? null : tx._id)}
                   >
                     <div className="flex items-center gap-4 flex-1 min-w-0">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                        <span className={`material-symbols-outlined text-[20px] ${tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
-                          {tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isPendingApproval ? 'bg-purple-100 dark:bg-purple-900/30' : isRejected ? 'bg-red-100 dark:bg-red-900/30' : tx.type === 'income' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                        <span className={`material-symbols-outlined text-[20px] ${isPendingApproval ? 'text-purple-600' : isRejected ? 'text-red-600' : tx.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          {isPendingApproval ? 'hourglass_top' : isRejected ? 'block' : tx.type === 'income' ? 'arrow_downward' : 'arrow_upward'}
                         </span>
                       </div>
                       <div className="min-w-0">
@@ -217,6 +219,18 @@ export default function Transactions() {
                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${tx.type === 'income' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                             {tx.type === 'income' ? (lang === 'fr' ? 'Revenu' : 'Income') : (lang === 'fr' ? 'Dépense' : 'Expense')}
                           </span>
+                          {isPendingApproval && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[12px]">hourglass_top</span>
+                              {lang === 'fr' ? 'En attente' : 'Pending'}
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex items-center gap-0.5">
+                              <span className="material-symbols-outlined text-[12px]">block</span>
+                              {lang === 'fr' ? 'Rejeté' : 'Rejected'}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-on-surface-variant truncate">
                           {new Date(tx.date).toLocaleDateString()} {tx.description ? `· ${tx.description}` : ''}
