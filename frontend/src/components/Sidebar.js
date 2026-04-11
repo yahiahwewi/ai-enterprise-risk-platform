@@ -18,6 +18,7 @@ function useNavItems(t) {
       { to: '/dashboard', label: t('nav.dashboard'), icon: 'dashboard' },
       { to: '/risk-report', label: t('nav.riskAnalysis'), icon: 'assessment' },
       { to: '/final-decision', label: t('nav.aiDecision'), icon: 'auto_awesome' },
+      { to: '/reports', label: t('nav.reports'), icon: 'picture_as_pdf' },
       { section: t('nav.finance') },
       { to: '/transactions', label: t('nav.transactions'), icon: 'receipt_long' },
       { to: '/invoices', label: t('nav.invoices'), icon: 'description' },

@@ -122,7 +122,7 @@ Tac-Tic ERM is a full-stack enterprise risk management platform that combines fi
 
 ## API Endpoints
 
-### Backend (Express) — 24 endpoints
+### Backend (Express) — 28 endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
@@ -150,6 +150,10 @@ Tac-Tic ERM is a full-stack enterprise risk management platform that combines fi
 | GET | `/api/forecast/invoice-risk` | Owner/Accountant | Per-invoice risk scores |
 | GET | `/api/forecast/loan-stress` | Owner/Finance | Loan stress test |
 | GET | `/api/forecast/asset-depreciation` | Owner/Finance | Asset depreciation projection |
+| POST | `/api/export/pdf/generate` | Owner/Admin | Generate PDF report |
+| GET | `/api/export/pdf/history` | JWT | Report history |
+| GET | `/api/export/pdf/:reportId` | JWT | Download PDF report |
+| POST | `/api/export/scheduler/run-monthly-report` | Owner/Admin | Trigger monthly reports |
 
 ### AiModule (FastAPI) — 11 endpoints
 

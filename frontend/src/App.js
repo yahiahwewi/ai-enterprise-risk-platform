@@ -17,6 +17,7 @@ import Loans from './pages/Loans';
 import Assets from './pages/Assets';
 import ActivityLog from './pages/ActivityLog';
 import About from './pages/About';
+import Reports from './pages/Reports';
 
 function ProtectedPage({ children, roles }) {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/loans" element={<ProtectedPage roles={['owner', 'finance']}><Loans /></ProtectedPage>} />
           <Route path="/assets" element={<ProtectedPage roles={['owner', 'finance']}><Assets /></ProtectedPage>} />
           <Route path="/activity" element={<ProtectedPage roles={['owner', 'admin']}><ActivityLog /></ProtectedPage>} />
+          <Route path="/reports" element={<ProtectedPage roles={['owner', 'admin']}><Reports /></ProtectedPage>} />
           <Route path="/users" element={<ProtectedPage roles={['admin']}><Dashboard /></ProtectedPage>} />
 
           <Route path="*" element={<Navigate to="/dashboard" />} />

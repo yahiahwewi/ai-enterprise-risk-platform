@@ -70,6 +70,7 @@ export const en = {
     activityLog: 'Activity Log',
     system: 'System',
     manageUsers: 'Manage Users',
+    reports: 'PDF Reports',
   },
 
   dashboard: {

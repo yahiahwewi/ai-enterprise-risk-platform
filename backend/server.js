@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { startScheduler } = require('./services/report/scheduler');
 
 dotenv.config();
 connectDB();
@@ -31,9 +32,13 @@ app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/activity', require('./routes/activityRoutes'));
 app.use('/api/forecast', require('./routes/forecastRoutes'));
+app.use('/api/export', require('./routes/reportRoutes'));
 
 // Global error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  startScheduler();
+});

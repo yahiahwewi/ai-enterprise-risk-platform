@@ -13,7 +13,7 @@ export default function FinalDecision() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   useEffect(() => { api.get('/ai/final-decision').then((r) => setData(r.data)).catch(() => addToast('error', t('toast.error'), 'Failed')).finally(() => setLoading(false)); }, [addToast, t]);
 
@@ -27,9 +27,15 @@ export default function FinalDecision() {
 
   return (
     <div>
-      <section className="mb-10">
-        <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface dark:text-slate-100">{t('decision.title')}</h2>
-        <p className="text-on-surface-variant mt-2">{t('decision.subtitle')}</p>
+      <section className="mb-10 flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface dark:text-slate-100">{t('decision.title')}</h2>
+          <p className="text-on-surface-variant mt-2">{t('decision.subtitle')}</p>
+        </div>
+        <button onClick={() => { api.post(`/export/pdf/generate?type=decision&language=${lang}`).then(() => addToast('success', lang === 'fr' ? 'Rapport généré' : 'Report generated', lang === 'fr' ? 'Disponible dans Rapports PDF' : 'Available in PDF Reports')).catch(() => addToast('error', t('toast.error'), t('toast.failed'))); }} className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-1.5 shrink-0">
+          <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+          {lang === 'fr' ? 'Exporter PDF' : 'Export PDF'}
+        </button>
       </section>
 
       {/* Decision + Score Hero */}

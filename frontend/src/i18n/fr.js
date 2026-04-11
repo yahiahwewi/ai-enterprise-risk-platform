@@ -73,6 +73,7 @@ export const fr = {
     activityLog: 'Journal d\'activité',
     system: 'Système',
     manageUsers: 'Gestion des utilisateurs',
+    reports: 'Rapports PDF',
   },
 
   // ── Dashboard ────────────────────────────────────────

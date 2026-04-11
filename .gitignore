@@ -27,5 +27,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# Generated reports
+backend/reports/
+
 # Claude
 .claude/
