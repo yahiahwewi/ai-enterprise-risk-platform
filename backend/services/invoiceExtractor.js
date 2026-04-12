@@ -1,16 +1,70 @@
 /**
  * Invoice Extraction Service
  *
- * Pipeline: PDF → pdf-parse (text) → intelligent chunking → pattern extraction → validation → confidence scoring
+ * Dual pipeline:
+ *   1. LlamaParse Cloud API (if LLAMA_CLOUD_API_KEY is set) — handles OCR, encoded fonts, scanned PDFs
+ *   2. pdf-parse fallback (local, no API key needed) — works for clean text PDFs
  *
- * Extracts: client name, invoice number, dates, amounts (HT, TVA, TTC), line items
- * Validates: TTC = HT + TVA, applies 19% default TVA if missing
- * Returns: structured data + confidence scores + warnings
+ * After text extraction, applies pattern matching for field extraction,
+ * validation, confidence scoring, and duplicate detection.
  */
 
 const pdfParse = require('pdf-parse');
 const Invoice = require('../models/Invoice');
 const Preset = require('../models/Preset');
+
+const LLAMA_API = 'https://api.cloud.llamaindex.ai/api';
+const LLAMA_KEY = process.env.LLAMA_CLOUD_API_KEY || '';
+
+// ── LlamaParse Cloud API ──────────────────────────────────
+async function extractWithLlamaParse(pdfBuffer, filename) {
+  const fetch = require('node-fetch');
+  const FormData = require('form-data');
+
+  // Step 1: Upload file
+  const formData = new FormData();
+  formData.append('file', pdfBuffer, { filename: filename || 'invoice.pdf', contentType: 'application/pdf' });
+
+  const uploadRes = await fetch(`${LLAMA_API}/v1/files/`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${LLAMA_KEY}`, ...formData.getHeaders() },
+    body: formData,
+  });
+  if (!uploadRes.ok) throw new Error(`LlamaParse upload failed: ${uploadRes.status}`);
+  const uploadData = await uploadRes.json();
+  const fileId = uploadData.id;
+
+  // Step 2: Start parsing job
+  const parseRes = await fetch(`${LLAMA_API}/v2/parse/`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${LLAMA_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ file_id: fileId, version: 'latest' }),
+  });
+  if (!parseRes.ok) throw new Error(`LlamaParse parse failed: ${parseRes.status}`);
+  const parseData = await parseRes.json();
+  const jobId = parseData.id;
+
+  // Step 3: Poll for result (max 60 seconds)
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 2000));
+    const resultRes = await fetch(`${LLAMA_API}/v2/parse/${jobId}/result?include_text=true&include_markdown=true`, {
+      headers: { 'Authorization': `Bearer ${LLAMA_KEY}` },
+    });
+    if (!resultRes.ok) continue;
+    const result = await resultRes.json();
+    if (result.metadata?.status === 'SUCCESS') {
+      return result.text || result.markdown || '';
+    }
+    if (result.metadata?.status === 'ERROR') throw new Error('LlamaParse processing error');
+  }
+  throw new Error('LlamaParse timeout after 60s');
+}
+
+// ── Local pdf-parse fallback ──────────────────────────────
+async function extractWithPdfParse(pdfBuffer) {
+  const parsed = await pdfParse(pdfBuffer);
+  return parsed.text;
+}
 
 // ── Pattern library (FR + EN + Tunisian formats) ──────────
 const patterns = {
@@ -28,7 +82,7 @@ const patterns = {
     /(?:payable|à\s*payer)\s*(?:avant|before)?\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
   ],
   clientName: [
-    /(?:client|destinataire|bill\s*to|facturé\s*à|à\s*l'attention\s*de)\s*[:#]?\s*(.+)/i,
+    /(?:client|destinataire|bill\s*to|facturé\s*à)\s*[:#]?\s*(.+)/i,
     /(?:société|company|entreprise|ste\.?)\s*[:#]?\s*(.+)/i,
   ],
   totalHT: [
@@ -52,11 +106,9 @@ const patterns = {
   ],
 };
 
-// ── Number parsing (handles FR format: 1 234,567 and EN: 1,234.567) ──
 function parseNumber(str) {
   if (!str) return null;
   let clean = str.replace(/\s/g, '');
-  // FR format: 1.234,56 → replace last comma with dot
   if (clean.includes(',') && clean.indexOf(',') > clean.lastIndexOf('.')) {
     clean = clean.replace(/\./g, '').replace(',', '.');
   } else if (clean.includes(',') && !clean.includes('.')) {
@@ -68,12 +120,9 @@ function parseNumber(str) {
   return isNaN(num) ? null : Math.round(num * 1000) / 1000;
 }
 
-// ── Date parsing (handles dd/mm/yyyy, dd.mm.yyyy, yyyy-mm-dd) ──
 function parseDate(str) {
   if (!str) return null;
-  // ISO format
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
-  // dd/mm/yyyy or dd.mm.yyyy
   const m = str.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})/);
   if (m) {
     let [, d, mo, y] = m;
@@ -83,44 +132,68 @@ function parseDate(str) {
   return null;
 }
 
-// ── Extract a field using multiple patterns ──
 function extractField(text, fieldPatterns) {
   for (const regex of fieldPatterns) {
     try {
       const match = text.match(regex);
       if (match && match[1]) return match[1].trim();
-    } catch { /* skip broken regex on this text */ }
+    } catch { /* skip */ }
   }
   return null;
 }
 
 // ── Main extraction pipeline ──────────────────────────────
-async function extractInvoiceFromPDF(pdfBuffer) {
-  // Step 1: Parse PDF text
-  const parsed = await pdfParse(pdfBuffer);
-  const rawText = parsed.text;
+async function extractInvoiceFromPDF(pdfBuffer, filename) {
+  let rawText = '';
+  let usedEngine = 'pdf-parse';
+
+  // Try LlamaParse first if API key is available
+  if (LLAMA_KEY) {
+    try {
+      rawText = await extractWithLlamaParse(pdfBuffer, filename);
+      usedEngine = 'llamaparse';
+      console.log('[EXTRACTOR] Used LlamaParse Cloud API');
+    } catch (err) {
+      console.warn('[EXTRACTOR] LlamaParse failed, falling back to pdf-parse:', err.message);
+    }
+  }
+
+  // Fallback to pdf-parse
+  if (!rawText) {
+    try {
+      rawText = await extractWithPdfParse(pdfBuffer);
+      console.log('[EXTRACTOR] Used pdf-parse (local)');
+    } catch (err) {
+      throw new Error('PDF text extraction failed: ' + err.message);
+    }
+  }
+
   const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
 
-  // Step 1b: Detect garbled text (custom font encoding)
-  // Count ratio of recognizable words vs total words
-  const words = rawText.replace(/[^a-zA-ZàâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
-  const knownWords = /facture|invoice|total|montant|client|date|tva|vat|amount|payment|due|paid|net|ttc|ht|société|company|adresse|address|tel|fax|email/i;
-  const recognizable = words.filter(w => knownWords.test(w) || /^[A-Z][a-z]{2,}$/.test(w)).length;
-  const readabilityScore = words.length > 0 ? recognizable / words.length : 0;
-  const isGarbled = words.length > 20 && readabilityScore < 0.02;
+  // Detect garbled text
+  let isGarbled = false;
+  try {
+    const words = rawText.replace(/[^a-zA-ZàâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+    const knownList = ['facture','invoice','total','montant','client','date','tva','vat','amount','payment','due','paid','net','ttc','adresse','address','email','orange','tunisie','telecom','prix','price','service','compte','solde','description'];
+    const recognizable = words.filter(w => knownList.includes(w.toLowerCase())).length;
+    const readabilityScore = words.length > 0 ? recognizable / words.length : 0;
+    isGarbled = words.length > 20 && readabilityScore < 0.05;
+  } catch { isGarbled = false; }
 
   if (isGarbled) {
     return {
       data: { invoiceNumber: null, clientName: null, issueDate: new Date().toISOString().split('T')[0], dueDate: null, totalHT: null, tvaRate: 19, tva: null, totalTTC: null, amount: null, lineItems: [], detectedLanguage: 'unknown', description: null },
       confidence: { clientName: 0, invoiceNumber: 0, issueDate: 0, dueDate: 0, totalHT: 0, tva: 0, totalTTC: 0, overall: 0 },
-      warnings: [{ field: 'document', message: 'Ce PDF utilise des polices encodées que le système ne peut pas lire. Le texte extrait est illisible. Veuillez saisir les données manuellement ou utiliser un PDF avec du texte sélectionnable.' }],
+      warnings: [{ field: 'document', message: usedEngine === 'llamaparse' ? 'LlamaParse could not extract readable text from this PDF. Try manual entry.' : 'Ce PDF utilise des polices encodées non lisibles. Ajoutez LLAMA_CLOUD_API_KEY dans .env pour activer l\'OCR avancé, ou saisissez les données manuellement.' }],
       garbled: true,
+      engine: usedEngine,
       rawText: rawText.substring(0, 500),
-      pageCount: parsed.numpages,
+      pageCount: lines.length > 0 ? Math.ceil(lines.length / 40) : 1,
     };
   }
 
-  // Step 2: Extract fields
+  // Extract fields — wrapped in try/catch for safety (PDF text can contain regex-breaking chars)
+  try {
   const invoiceNumber = extractField(rawText, patterns.invoiceNumber);
   const rawDate = extractField(rawText, patterns.date);
   const rawDueDate = extractField(rawText, patterns.dueDate);
@@ -129,71 +202,46 @@ async function extractInvoiceFromPDF(pdfBuffer) {
   const tvaRaw = extractField(rawText, patterns.tva);
   const totalTTCRaw = extractField(rawText, patterns.totalTTC);
   const amountRaw = extractField(rawText, patterns.amount);
-  const tvaRateMatch = rawText.match(patterns.tvaRate[0]);
-  const tvaRate = tvaRateMatch ? parseInt(tvaRateMatch[1]) : 19; // Default Tunisian TVA
+  let tvaRateMatch = null;
+  try { tvaRateMatch = rawText.match(patterns.tvaRate[0]); } catch {}
+  const tvaRate = tvaRateMatch ? parseInt(tvaRateMatch[1]) : 19;
 
-  // Parse numbers
   let totalHT = parseNumber(totalHTRaw);
   let tva = parseNumber(tvaRaw);
   let totalTTC = parseNumber(totalTTCRaw);
   const fallbackAmount = parseNumber(amountRaw);
 
-  // Step 3: Smart inference
-  // If only one total found, use it
-  if (!totalTTC && !totalHT && fallbackAmount) {
-    totalTTC = fallbackAmount;
-  }
+  if (!totalTTC && !totalHT && fallbackAmount) totalTTC = fallbackAmount;
+  if (totalHT && !tva && !totalTTC) { tva = Math.round(totalHT * tvaRate / 100 * 1000) / 1000; totalTTC = Math.round((totalHT + tva) * 1000) / 1000; }
+  else if (totalTTC && !totalHT) { totalHT = Math.round(totalTTC / (1 + tvaRate / 100) * 1000) / 1000; tva = Math.round((totalTTC - totalHT) * 1000) / 1000; }
+  else if (totalHT && totalTTC && !tva) { tva = Math.round((totalTTC - totalHT) * 1000) / 1000; }
 
-  // Calculate missing values
-  if (totalHT && !tva && !totalTTC) {
-    tva = Math.round(totalHT * tvaRate / 100 * 1000) / 1000;
-    totalTTC = Math.round((totalHT + tva) * 1000) / 1000;
-  } else if (totalTTC && !totalHT) {
-    totalHT = Math.round(totalTTC / (1 + tvaRate / 100) * 1000) / 1000;
-    tva = Math.round((totalTTC - totalHT) * 1000) / 1000;
-  } else if (totalHT && totalTTC && !tva) {
-    tva = Math.round((totalTTC - totalHT) * 1000) / 1000;
-  }
-
-  // Clean client name
   let clientName = clientNameRaw;
   if (clientName) {
     clientName = clientName.replace(/[:\-–]/, '').trim();
-    // Remove trailing numbers or dates
     clientName = clientName.replace(/\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}.*/, '').trim();
-    // Limit to reasonable length
     if (clientName.length > 80) clientName = clientName.substring(0, 80);
   }
 
-  // Parse dates
   const issueDate = parseDate(rawDate);
   const dueDate = parseDate(rawDueDate);
 
-  // Detect language
-  const frWords = (rawText.match(/facture|montant|total|échéance|client|société|hors taxe/gi) || []).length;
-  const enWords = (rawText.match(/invoice|amount|total|due date|bill to|subtotal/gi) || []).length;
+  let frWords = 0, enWords = 0;
+  try { frWords = (rawText.match(/facture|montant|total|client|date|tva/gi) || []).length; } catch {}
+  try { enWords = (rawText.match(/invoice|amount|total|due|bill|subtotal/gi) || []).length; } catch {}
   const detectedLanguage = frWords >= enWords ? 'fr' : 'en';
 
-  // Step 4: Line items extraction (best effort)
   const lineItems = extractLineItems(lines);
 
-  // Step 5: Build result with confidence scores
   const data = {
-    invoiceNumber: invoiceNumber || null,
-    clientName: clientName || null,
+    invoiceNumber, clientName,
     issueDate: issueDate || new Date().toISOString().split('T')[0],
-    dueDate: dueDate || null,
-    totalHT: totalHT || null,
-    tvaRate,
-    tva: tva || null,
-    totalTTC: totalTTC || null,
+    dueDate, totalHT, tvaRate, tva, totalTTC,
     amount: totalTTC || totalHT || fallbackAmount || null,
-    lineItems,
-    detectedLanguage,
+    lineItems, detectedLanguage,
     description: lineItems.length > 0 ? lineItems.map(li => li.description).join(', ') : null,
   };
 
-  // Step 6: Confidence scoring
   const confidence = {
     clientName: clientName ? (clientName.length > 3 ? 0.85 : 0.5) : 0,
     invoiceNumber: invoiceNumber ? 0.9 : 0,
@@ -207,103 +255,80 @@ async function extractInvoiceFromPDF(pdfBuffer) {
   const scores = Object.values(confidence).filter(v => typeof v === 'number' && v > 0);
   confidence.overall = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 100) / 100 : 0;
 
-  // Step 7: Validation & warnings
   const warnings = [];
   if (!clientName) warnings.push({ field: 'clientName', message: 'Client name not detected' });
-  if (!data.amount && !totalTTC && !totalHT) warnings.push({ field: 'amount', message: 'No amount detected' });
+  if (!data.amount) warnings.push({ field: 'amount', message: 'No amount detected' });
   if (!dueDate) warnings.push({ field: 'dueDate', message: 'Due date not detected' });
   if (totalHT && totalTTC && tva) {
     const expected = Math.round((totalHT + tva) * 1000) / 1000;
-    if (Math.abs(expected - totalTTC) > 0.01) {
-      warnings.push({ field: 'totalTTC', message: `Total mismatch: HT(${totalHT}) + TVA(${tva}) = ${expected} ≠ TTC(${totalTTC})` });
-    }
-  }
-  if (tvaRate !== 19 && tvaRate !== 7 && tvaRate !== 13) {
-    warnings.push({ field: 'tvaRate', message: `Unusual TVA rate: ${tvaRate}%` });
+    if (Math.abs(expected - totalTTC) > 0.01) warnings.push({ field: 'totalTTC', message: `Total mismatch: HT(${totalHT}) + TVA(${tva}) = ${expected} ≠ TTC(${totalTTC})` });
   }
 
-  return { data, confidence, warnings, rawText: rawText.substring(0, 2000), pageCount: parsed.numpages };
+  return { data, confidence, warnings, engine: usedEngine, rawText: rawText.substring(0, 2000), pageCount: Math.ceil(lines.length / 40) || 1 };
+  } catch (extractionError) {
+    // If pattern matching fails, return partial result with warning
+    return {
+      data: { invoiceNumber: null, clientName: null, issueDate: new Date().toISOString().split('T')[0], dueDate: null, totalHT: null, tvaRate: 19, tva: null, totalTTC: null, amount: null, lineItems: [], detectedLanguage: 'unknown', description: null },
+      confidence: { clientName: 0, invoiceNumber: 0, issueDate: 0, dueDate: 0, totalHT: 0, tva: 0, totalTTC: 0, overall: 0 },
+      warnings: [{ field: 'document', message: `Extraction partielle — certains champs n'ont pas pu être lus: ${extractionError.message}` }],
+      garbled: false,
+      engine: usedEngine,
+      rawText: rawText.substring(0, 500),
+      pageCount: lines.length > 0 ? Math.ceil(lines.length / 40) : 1,
+    };
+  }
 }
 
-// ── Line items extraction ──────────────────────────────────
 function extractLineItems(lines) {
   const items = [];
-  // Look for lines that contain a quantity and price pattern
   const itemPattern = /^(.+?)\s+(\d+)\s+([\d\s,.]+)\s+([\d\s,.]+)$/;
   const simplePattern = /^(.{5,50})\s+([\d\s,.]+)\s*(?:tnd|dt)?$/i;
 
   for (const line of lines) {
-    const match = line.match(itemPattern);
-    if (match) {
-      items.push({
-        description: match[1].trim(),
-        quantity: parseInt(match[2]),
-        unitPrice: parseNumber(match[3]),
-        total: parseNumber(match[4]),
-      });
-    } else {
+    try {
+      const match = line.match(itemPattern);
+      if (match) {
+        items.push({ description: match[1].trim(), quantity: parseInt(match[2]), unitPrice: parseNumber(match[3]), total: parseNumber(match[4]) });
+        continue;
+      }
       const simple = line.match(simplePattern);
       if (simple && !/(total|tva|sous|montant|date|facture|client)/i.test(line)) {
         const amt = parseNumber(simple[2]);
-        if (amt && amt > 0 && amt < 10000000) {
-          items.push({ description: simple[1].trim(), quantity: 1, unitPrice: amt, total: amt });
-        }
+        if (amt && amt > 0 && amt < 10000000) items.push({ description: simple[1].trim(), quantity: 1, unitPrice: amt, total: amt });
       }
-    }
+    } catch { /* skip */ }
   }
-  return items.slice(0, 20); // Max 20 line items
+  return items.slice(0, 20);
 }
 
-// ── Duplicate detection ──────────────────────────────────
 async function detectDuplicate(extractedData) {
   if (!extractedData.clientName && !extractedData.amount) return null;
-
   const filter = {};
-  if (extractedData.clientName) filter.clientName = { $regex: extractedData.clientName.substring(0, 20), $options: 'i' };
+  if (extractedData.clientName) filter.clientName = { $regex: extractedData.clientName.substring(0, 20).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
   if (extractedData.amount) filter.amount = extractedData.amount;
-
   const existing = await Invoice.find(filter).sort({ createdAt: -1 }).limit(3);
   if (existing.length === 0) return null;
-
   return {
-    possibleDuplicates: existing.map(inv => ({
-      id: inv._id,
-      clientName: inv.clientName,
-      amount: inv.amount,
-      dueDate: inv.dueDate,
-      status: inv.status,
-      createdAt: inv.createdAt,
-    })),
+    possibleDuplicates: existing.map(inv => ({ id: inv._id, clientName: inv.clientName, amount: inv.amount, dueDate: inv.dueDate, status: inv.status, createdAt: inv.createdAt })),
     warning: `Found ${existing.length} existing invoice(s) with similar client/amount`,
   };
 }
 
-// ── Client matching ──────────────────────────────────────
 async function matchClient(clientName) {
   if (!clientName) return [];
-
-  // Check presets
   const presets = await Preset.find({ type: 'client', active: true });
   const matches = [];
-
   for (const p of presets) {
-    const name = p.label_fr.toLowerCase();
-    const input = clientName.toLowerCase();
-    if (name.includes(input) || input.includes(name)) {
+    if (p.label_fr.toLowerCase().includes(clientName.toLowerCase()) || clientName.toLowerCase().includes(p.label_fr.toLowerCase())) {
       matches.push({ value: p.value, label_fr: p.label_fr, label_en: p.label_en, match: 'preset' });
     }
   }
-
-  // Check existing invoices
   const existing = await Invoice.distinct('clientName');
   for (const name of existing) {
     if (name.toLowerCase().includes(clientName.toLowerCase().substring(0, 10))) {
-      if (!matches.find(m => m.label_fr === name)) {
-        matches.push({ value: name, label_fr: name, label_en: name, match: 'existing' });
-      }
+      if (!matches.find(m => m.label_fr === name)) matches.push({ value: name, label_fr: name, label_en: name, match: 'existing' });
     }
   }
-
   return matches.slice(0, 5);
 }
 

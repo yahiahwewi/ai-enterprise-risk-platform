@@ -19,7 +19,7 @@ exports.extractInvoice = (req, res) => {
 
     try {
       // Step 1: Extract from PDF
-      const result = await extractInvoiceFromPDF(req.file.buffer);
+      const result = await extractInvoiceFromPDF(req.file.buffer, req.file.originalname);
 
       // Step 2: Check for duplicates
       const duplicateCheck = await detectDuplicate(result.data);
