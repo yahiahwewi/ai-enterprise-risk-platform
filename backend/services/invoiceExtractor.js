@@ -18,43 +18,57 @@ const Preset = require('../models/Preset');
 // ── Pattern library (FR + EN + Tunisian formats) ──────────
 const patterns = {
   invoiceNumber: [
-    /(?:facture|invoice|fact\.?|inv\.?|n[°o])\s*[:#]?\s*([A-Z0-9][\w\-\/]+)/i,
-    /(?:num[ée]ro|number|ref|r[ée]f[ée]rence)\s*[:#]?\s*([A-Z0-9][\w\-\/]+)/i,
+    // "facture N° : 2011369927" — capture digits after N°
+    /facture\s*n[°o]\s*[:#]?\s*(\d{5,})/i,
+    /(?:invoice|inv\.?)\s*(?:no?\.?|#|n[°o])\s*[:#]?\s*(\d{5,})/i,
+    /n[°o]\s*(?:de\s*)?facture\s*[:#]?\s*(\d{5,})/i,
+    /(?:r[ée]f[ée]rence|ref)\s*[:#]?\s*([A-Z0-9][\w\-\/]{4,})/i,
   ],
   date: [
-    /(?:date\s*(?:de\s*)?(?:facture|[ée]mission|invoice|issue)?\s*[:#]?\s*)(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
-    /(\d{1,2}[\/.]\d{1,2}[\/.]\d{4})/,
+    // "émise le : 01/11/2020"
+    /(?:[ée]mise?\s*le|date\s*(?:de\s*)?(?:[ée]mission|facture|invoice))\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
+    /(?:invoice\s*date|date)\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{4})/i,
     /(\d{4}-\d{2}-\d{2})/,
   ],
   dueDate: [
-    /(?:[ée]ch[ée]ance|due\s*date|date\s*(?:de\s*)?(?:paiement|[ée]ch[ée]ance|limit))\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
-    /(?:payable|[àa]\s*payer)\s*(?:avant|before)?\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
+    // "date limite de paiement 01/12/2020"
+    /(?:date\s*limite\s*(?:de\s*)?paiement)\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
+    /(?:[ée]ch[ée]ance|due\s*date)\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
+    /(?:payable|[àa]\s*payer\s*(?:avant|le)?)\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
+    /(?:limite\s*de\s*paiement)\s*[:#]?\s*(\d{1,2}[\/.]\d{1,2}[\/.]\d{2,4})/i,
   ],
   clientName: [
-    /(?:client|destinataire|bill\s*to|factur[ée]\s*[àa])\s*[:#]?\s*(.+)/i,
-    /(?:soci[ée]t[ée]|company|entreprise|ste\.?)\s*[:#]?\s*(.+)/i,
-    /(?:nom\s*(?:du\s*)?(?:client|destinataire))\s*[:#]?\s*(.+)/i,
+    // "votre compte M. TOUMI NIDAL" — capture the name after honorific
+    /(?:votre\s*compte)\s*(?:M\.|Mme\.?|Mr\.?|Mrs\.?|Mlle\.?)?\s*(.{3,40})/i,
+    // "M. TOUMI NIDAL" standalone on a line
+    /^(?:M\.|Mme\.?|Mr\.?|Mrs\.?)?\s*([A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ][A-ZÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s]{3,30})$/m,
+    /(?:factur[ée]\s*[àa]|bill\s*to|destinataire)\s*[:#]?\s*(.{3,50})/i,
+    /(?:nom\s*(?:du\s*)?client)\s*[:#]?\s*(.{3,50})/i,
+    /(?:soci[ée]t[ée]|company|entreprise)\s*[:#]?\s*(.{3,50})/i,
   ],
   totalHT: [
-    /(?:total\s*(?:hors\s*taxe|ht|h\.t\.|avant\s*taxe|net))\s*[:#]?\s*([\d\s.,]+)/i,
-    /(?:subtotal|sous[- ]?total|montant\s*ht)\s*[:#]?\s*([\d\s.,]+)/i,
     /(?:total\s*hors\s*taxes?)\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:total\s*(?:ht|h\.t\.))\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:subtotal|sous[- ]?total|montant\s*ht)\s*[:#]?\s*([\d\s.,]+)/i,
   ],
   tva: [
-    /(?:tva|taxe|vat|t\.v\.a)\s*[:#]?\s*([\d\s.,]+)/i,
+    // "TVA 07% 1.706" — skip the percentage, capture the amount
+    /(?:tva|t\.v\.a)\s*\d+\s*%?\s*[:#]?\s*([\d\s.,]+)/i,
     /(?:montant\s*(?:de\s*la\s*)?(?:tva|taxe))\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:vat)\s*[:#]?\s*([\d\s.,]+)/i,
   ],
   totalTTC: [
-    /(?:total\s*(?:ttc|t\.t\.c|toutes\s*taxes|net\s*[àa]\s*payer|[àa]\s*payer))\s*[:#]?\s*([\d\s.,]+)/i,
-    /(?:montant\s*(?:total|ttc|net|d[uû]))\s*[:#]?\s*([\d\s.,]+)/i,
-    /(?:net\s*[àa]\s*payer|amount\s*due|total\s*amount)\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:montant\s*ttc)\s*[:#]?\s*([\d\s.,]+)/i,
     /(?:montant\s*[àa]\s*payer)\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:total\s*ttc)\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:net\s*[àa]\s*payer|amount\s*due|total\s*amount)\s*[:#]?\s*([\d\s.,]+)/i,
+    /(?:total\s*(?:toutes\s*taxes|t\.t\.c))\s*[:#]?\s*([\d\s.,]+)/i,
   ],
   amount: [
     /(?:montant|amount|total)\s*[:#]?\s*([\d\s.,]+)\s*(?:tnd|dt|dinars?)?/i,
   ],
   tvaRate: [
-    /(?:tva|vat|taxe)\s*[:#]?\s*(\d+)\s*%/i,
+    /(?:tva|vat|taxe)\s*[:#]?\s*0?(\d{1,2})\s*%/i,
   ],
 };
 
@@ -215,8 +229,15 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     let clientName = clientNameRaw;
     if (clientName) {
       clientName = clientName.replace(/[:\-–]/, '').trim();
+      // Remove dates, client numbers, addresses from name
       clientName = clientName.replace(/\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}.*/, '').trim();
-      if (clientName.length > 80) clientName = clientName.substring(0, 80);
+      clientName = clientName.replace(/N[°o]\s*client.*$/i, '').trim();
+      clientName = clientName.replace(/CNT\d+.*$/i, '').trim();
+      clientName = clientName.replace(/\d+,?\s*rue\s.*$/i, '').trim();
+      // Remove trailing numbers
+      clientName = clientName.replace(/\s+\d+\s*$/, '').trim();
+      if (clientName.length > 60) clientName = clientName.substring(0, 60);
+      if (clientName.length < 2) clientName = null;
     }
 
     const issueDate = parseDate(rawDate);
