@@ -288,15 +288,15 @@ export default function Invoices() {
                           </button>
                         )}
 
-                        <button onClick={(e) => { e.stopPropagation(); downloadPDF(inv._id, inv.clientName); }} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
-                          {lang === 'fr' ? 'Générer PDF' : 'Generate PDF'}
-                        </button>
-
-                        {inv.originalPdf && (
-                          <button onClick={(e) => { e.stopPropagation(); const token = localStorage.getItem('token'); window.open(`http://localhost:5000/api/ai/invoice-pdf/${inv.originalPdf}?token=${token}`, '_blank'); }} className="bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[14px]">attach_file</span>
+                        {inv.originalPdf ? (
+                          <button onClick={(e) => { e.stopPropagation(); const token = localStorage.getItem('token'); window.open(`http://localhost:5000/api/ai/invoice-pdf/${inv.originalPdf}?token=${token}`, '_blank'); }} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
                             {lang === 'fr' ? 'Original PDF' : 'Original PDF'}
+                          </button>
+                        ) : (
+                          <button onClick={(e) => { e.stopPropagation(); downloadPDF(inv._id, inv.clientName); }} className="bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">picture_as_pdf</span>
+                            {lang === 'fr' ? 'Générer PDF' : 'Generate PDF'}
                           </button>
                         )}
 
