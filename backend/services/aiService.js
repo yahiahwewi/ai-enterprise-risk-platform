@@ -242,6 +242,23 @@ async function analyzeRisk() {
   const monthlyLoanPayments = loans.reduce((s, l) => s + l.monthlyPayment, 0);
   const totalAssetValue = assets.reduce((s, a) => s + a.value, 0);
 
+  // ── If database is empty, return neutral zeros ───────
+  const hasData = transactions.length > 0 || invoices.length > 0 || loans.length > 0 || assets.length > 0;
+  if (!hasData) {
+    const emptyMetrics = { totalIncome: 0, totalExpenses: 0, cashFlow: 0, totalInvoices: 0, unpaidInvoices: 0, lateInvoices: 0, totalDebt: 0, monthlyLoanPayments: 0, totalAssetValue: 0 };
+    const emptyBreakdown = { cashFlow: { score: 0, weight: '35%' }, invoices: { score: 0, weight: '25%' }, debt: { score: 0, weight: '25%' }, loanBurden: { score: 0, weight: '15%' } };
+    return {
+      globalScore: 0, level: 'low', confidence: 0,
+      breakdown: emptyBreakdown, metrics: emptyMetrics,
+      trends: { income: { current: 0, previous: 0, change: 0 }, expenses: { current: 0, previous: 0, change: 0 }, cashFlow: { current: 0, previous: 0, change: 0 } },
+      anomalies: [], forecast: { forecast30Days: 0, forecast60Days: 0, breakdown: { projectedIncome: 0, projectedExpenses: 0, pendingInvoiceInflow30: 0, pendingInvoiceInflow60: 0, monthlyLoanPayments: 0 } },
+      explanations: ['No financial data available. Add transactions, invoices, loans or assets to generate a risk analysis.'],
+      predictions: ['Insufficient data for predictions.'],
+      recommendations: ['Start by adding financial data to the system.'],
+      lateInvoicesList: [],
+    };
+  }
+
   // ── Individual risk scores (0-100) ───────────────────
   let cashFlowRisk = 0;
   if (totalIncome === 0) {
