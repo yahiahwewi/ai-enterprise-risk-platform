@@ -163,7 +163,13 @@ export default function ExtractInvoice() {
                         <div><label className={labelCls}>{l.description}</label><input type="text" value={f.description} onChange={(e) => updateForm(item.id, 'description', e.target.value)} className={inputCls} disabled={item.status === 'saved'} /></div>
                         <div>
                           <label className={labelCls}>{lang === 'fr' ? 'Catégorie' : 'Category'} {f.category && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">IA</span>}</label>
-                          <input type="text" value={f.category || ''} onChange={(e) => updateForm(item.id, 'category', e.target.value)} className={inputCls} disabled={item.status === 'saved'} placeholder={lang === 'fr' ? 'Ex: Telecom, IT...' : 'e.g. Telecom, IT...'} />
+                          <select value={f.category || ''} onChange={(e) => updateForm(item.id, 'category', e.target.value)} className={inputCls} disabled={item.status === 'saved'}>
+                            <option value="">{lang === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
+                            {(r?.availableCategories || []).map(c => <option key={c.value} value={lang === 'fr' ? c.label_fr : c.label_en}>{lang === 'fr' ? c.label_fr : c.label_en}</option>)}
+                            {f.category && !(r?.availableCategories || []).some(c => c.label_fr === f.category || c.label_en === f.category) && (
+                              <option value={f.category}>{f.category} (IA)</option>
+                            )}
+                          </select>
                         </div>
                         <div>
                           <label className={labelCls}>{lang === 'fr' ? 'Statut' : 'Status'}</label>

@@ -9,7 +9,8 @@ const inputCls = "w-full bg-surface-container-low dark:bg-slate-700 border-none 
 const labelCls = "block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1";
 
 const tabs = [
-  { key: 'transaction_category', icon: 'category', fr: 'Catégories', en: 'Categories' },
+  { key: 'transaction_category', icon: 'category', fr: 'Catégories Transactions', en: 'Transaction Categories' },
+  { key: 'invoice_category', icon: 'receipt_long', fr: 'Catégories Factures', en: 'Invoice Categories' },
   { key: 'client', icon: 'people', fr: 'Clients', en: 'Clients' },
 ];
 

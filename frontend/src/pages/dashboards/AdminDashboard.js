@@ -148,6 +148,66 @@ export default function AdminDashboard() {
           </tbody></table></div>
         )}
       </div>
+
+      {/* Dev: Reset Data */}
+      <ResetDataSection lang={lang} addToast={addToast} />
+    </div>
+  );
+}
+
+function ResetDataSection({ lang, addToast }) {
+  const [confirming, setConfirming] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleReset = async () => {
+    setResetting(true);
+    try {
+      const { data } = await api.post('/users/reset-data');
+      setResult(data.deleted);
+      setConfirming(false);
+      addToast('success', lang === 'fr' ? 'Données supprimées' : 'Data deleted', '');
+    } catch (err) {
+      addToast('error', 'Error', err.response?.data?.message || 'Failed');
+    }
+    setResetting(false);
+  };
+
+  return (
+    <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-6 mt-10 border border-red-200 dark:border-red-900/30">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="material-symbols-outlined text-red-600 text-[20px]">warning</span>
+        <h3 className="text-base font-bold font-headline text-red-700 dark:text-red-400">
+          {lang === 'fr' ? 'Zone de réinitialisation (Dev)' : 'Reset Zone (Dev)'}
+        </h3>
+      </div>
+      <p className="text-xs text-on-surface-variant mb-4">
+        {lang === 'fr'
+          ? 'Supprime toutes les transactions, factures, prêts, actifs, notifications, logs, rapports et approbations. Les utilisateurs, présets et règles sont conservés.'
+          : 'Deletes all transactions, invoices, loans, assets, notifications, logs, reports and approvals. Users, presets and rules are kept.'}
+      </p>
+
+      {result && (
+        <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-3 mb-4 text-xs text-red-700 dark:text-red-400">
+          {lang === 'fr' ? 'Supprimé' : 'Deleted'}: {Object.entries(result).map(([k, v]) => `${v} ${k}`).join(', ')}
+        </div>
+      )}
+
+      {confirming ? (
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-bold text-red-600">{lang === 'fr' ? 'Confirmer la suppression ?' : 'Confirm deletion?'}</span>
+          <button onClick={handleReset} disabled={resetting} className="bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-1">
+            <span className="material-symbols-outlined text-[14px]">{resetting ? 'hourglass_top' : 'delete_forever'}</span>
+            {resetting ? '...' : (lang === 'fr' ? 'Oui, tout supprimer' : 'Yes, delete all')}
+          </button>
+          <button onClick={() => setConfirming(false)} className="text-xs font-bold text-on-surface-variant px-3 py-2">{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
+        </div>
+      ) : (
+        <button onClick={() => setConfirming(true)} className="bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs font-bold px-4 py-2 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/40 transition-colors flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[14px]">delete_sweep</span>
+          {lang === 'fr' ? 'Réinitialiser les données financières' : 'Reset financial data'}
+        </button>
+      )}
     </div>
   );
 }

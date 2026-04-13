@@ -2,6 +2,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const { extractInvoiceFromPDF, detectDuplicate, matchClient } = require('../services/invoiceExtractor');
+const Preset = require('../models/Preset');
 
 const UPLOAD_DIR = path.resolve(__dirname, '../uploads/invoices');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -41,6 +42,20 @@ exports.extractInvoice = (req, res) => {
       if (result.data.clientName) {
         result.clientMatches = await matchClient(result.data.clientName);
       }
+
+      // Auto-add AI-detected category to presets if new
+      if (result.data.category) {
+        const catValue = result.data.category.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const exists = await Preset.findOne({ type: 'invoice_category', value: catValue });
+        if (!exists) {
+          await Preset.create({ type: 'invoice_category', value: catValue, label_fr: result.data.category, label_en: result.data.category, active: true });
+          console.log(`[EXTRACTOR] New invoice category added to presets: ${result.data.category}`);
+        }
+      }
+
+      // Attach available invoice categories for the frontend
+      const invoiceCategories = await Preset.find({ type: 'invoice_category', active: true }).sort({ label_fr: 1 });
+      result.availableCategories = invoiceCategories.map(p => ({ value: p.value, label_fr: p.label_fr, label_en: p.label_en }));
 
       res.json(result);
     } catch (error) {

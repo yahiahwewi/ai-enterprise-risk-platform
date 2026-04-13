@@ -290,6 +290,7 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     if (groq) {
       try {
         aiVerification = await verifyWithGroq(rawText.substring(0, 3000), data);
+        if (!aiVerification) throw new Error('All models exhausted');
         // Apply AI corrections if confident
         if (aiVerification.corrections) {
           const c = aiVerification.corrections;
@@ -410,13 +411,25 @@ Respond ONLY in valid JSON (no markdown, no explanation):
   "summary": "one line summary of verification"
 }`;
 
-  // Try multiple models in order — fallback on rate limit
-  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it'];
+  // Try up to 10 Groq models — fallback on rate limit, skip LLM if all exhausted
+  const models = [
+    'llama-3.3-70b-versatile',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+    'llama-3.1-8b-instant',
+    'llama-3.1-70b-versatile',
+    'llama3-70b-8192',
+    'llama3-8b-8192',
+    'mixtral-8x7b-32768',
+    'qwen-qwq-32b',
+    'deepseek-r1-distill-llama-70b',
+    'compound-beta',
+  ];
   let raw = '{}';
   let usedModel = '';
 
   for (const model of models) {
     try {
+      console.log(`[EXTRACTOR] Trying Groq model: ${model}`);
       const completion = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
         model,
@@ -426,18 +439,25 @@ Respond ONLY in valid JSON (no markdown, no explanation):
       });
       raw = completion.choices[0]?.message?.content || '{}';
       usedModel = model;
+      console.log(`[EXTRACTOR] Success with model: ${model}`);
       break;
     } catch (modelErr) {
-      const is429 = modelErr?.status === 429 || modelErr?.message?.includes('429');
-      if (is429) {
-        console.warn(`[EXTRACTOR] Model ${model} rate limited, trying next...`);
+      const is429 = modelErr?.status === 429 || modelErr?.message?.includes('429') || modelErr?.message?.includes('rate_limit');
+      const isModelErr = modelErr?.status === 404 || modelErr?.message?.includes('not found') || modelErr?.message?.includes('does not exist');
+      if (is429 || isModelErr) {
+        console.warn(`[EXTRACTOR] Model ${model} ${is429 ? 'rate limited' : 'not available'}, trying next...`);
         continue;
       }
-      throw modelErr; // Non-rate-limit error — don't retry
+      // Non-rate-limit, non-model error — log and skip LLM entirely
+      console.warn(`[EXTRACTOR] Model ${model} error: ${modelErr.message}`);
+      break;
     }
   }
 
-  if (!usedModel) throw new Error('All Groq models rate limited');
+  if (!usedModel) {
+    console.warn('[EXTRACTOR] All 10 Groq models exhausted — skipping LLM verification');
+    return null; // Caller handles null = no AI verification
+  }
 
   const result = JSON.parse(raw);
   result.model = usedModel;

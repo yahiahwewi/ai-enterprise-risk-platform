@@ -143,7 +143,30 @@ async function seed() {
     { type: 'client', value: 'megastore', label_fr: 'MegaStore', label_en: 'MegaStore' },
     { type: 'client', value: 'bigcorp', label_fr: 'BigCorp', label_en: 'BigCorp' },
   ]);
-  console.log('Presets seeded (13 categories + 5 clients)');
+  // Invoice categories
+  await Preset.insertMany([
+    { type: 'invoice_category', value: 'telecom', label_fr: 'Télécom', label_en: 'Telecom' },
+    { type: 'invoice_category', value: 'electricity', label_fr: 'Électricité', label_en: 'Electricity' },
+    { type: 'invoice_category', value: 'water', label_fr: 'Eau', label_en: 'Water' },
+    { type: 'invoice_category', value: 'it_services', label_fr: 'Services IT', label_en: 'IT Services' },
+    { type: 'invoice_category', value: 'consulting', label_fr: 'Conseil', label_en: 'Consulting' },
+    { type: 'invoice_category', value: 'office_supplies', label_fr: 'Fournitures bureau', label_en: 'Office Supplies' },
+    { type: 'invoice_category', value: 'construction', label_fr: 'Construction', label_en: 'Construction' },
+    { type: 'invoice_category', value: 'medical', label_fr: 'Médical', label_en: 'Medical' },
+    { type: 'invoice_category', value: 'insurance', label_fr: 'Assurance', label_en: 'Insurance' },
+    { type: 'invoice_category', value: 'transport', label_fr: 'Transport', label_en: 'Transport' },
+    { type: 'invoice_category', value: 'training', label_fr: 'Formation', label_en: 'Training' },
+    { type: 'invoice_category', value: 'food_beverage', label_fr: 'Alimentation', label_en: 'Food & Beverage' },
+    { type: 'invoice_category', value: 'printing', label_fr: 'Imprimerie', label_en: 'Printing' },
+    { type: 'invoice_category', value: 'security', label_fr: 'Sécurité', label_en: 'Security' },
+    { type: 'invoice_category', value: 'software', label_fr: 'Logiciels', label_en: 'Software' },
+    { type: 'invoice_category', value: 'rent', label_fr: 'Loyer', label_en: 'Rent' },
+    { type: 'invoice_category', value: 'marketing', label_fr: 'Marketing', label_en: 'Marketing' },
+    { type: 'invoice_category', value: 'freelance', label_fr: 'Freelance', label_en: 'Freelance' },
+    { type: 'invoice_category', value: 'import_export', label_fr: 'Import/Export', label_en: 'Import/Export' },
+    { type: 'invoice_category', value: 'other', label_fr: 'Autre', label_en: 'Other' },
+  ]);
+  console.log('Presets seeded (13 tx categories + 5 clients + 20 invoice categories)');
 
   // ── Business Rules ──
   await Rule.insertMany([

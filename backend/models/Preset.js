@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const presetSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['transaction_category', 'transaction_type', 'client'],
+    enum: ['transaction_category', 'transaction_type', 'client', 'invoice_category'],
     required: true,
   },
   value: { type: String, required: true, trim: true },
