@@ -5,6 +5,7 @@ import './index.css';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ExtractionProvider } from './context/ExtractionContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -12,7 +13,9 @@ root.render(
     <LanguageProvider>
       <ThemeProvider>
         <ToastProvider>
-          <App />
+          <ExtractionProvider>
+            <App />
+          </ExtractionProvider>
         </ToastProvider>
       </ThemeProvider>
     </LanguageProvider>
