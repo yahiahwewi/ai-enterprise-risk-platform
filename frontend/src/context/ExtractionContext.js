@@ -7,10 +7,12 @@ export function ExtractionProvider({ children }) {
   const [items, setItems] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const processingRef = useRef(false);
+  const abortRef = useRef(false);
 
   const addFiles = useCallback((fileList) => {
     const pdfs = Array.from(fileList).filter(f => f.type === 'application/pdf');
     if (pdfs.length === 0) return;
+    abortRef.current = false;
 
     const newItems = pdfs.map((f, i) => ({
       id: Date.now() + '_' + i,
@@ -34,13 +36,16 @@ export function ExtractionProvider({ children }) {
 
   const processQueue = async (newOnes) => {
     processingRef.current = true;
+    abortRef.current = false;
     for (const item of newOnes) {
+      if (abortRef.current) break;
       await extractOne(item.id, item.file);
     }
     processingRef.current = false;
   };
 
   const extractOne = async (id, file) => {
+    if (abortRef.current) return;
     setItems(prev => prev.map(it => it.id === id ? { ...it, status: 'extracting' } : it));
 
     try {
@@ -100,6 +105,8 @@ export function ExtractionProvider({ children }) {
   }, []);
 
   const clearAll = useCallback(() => {
+    abortRef.current = true;
+    processingRef.current = false;
     setItems([]);
     setExpandedId(null);
   }, []);

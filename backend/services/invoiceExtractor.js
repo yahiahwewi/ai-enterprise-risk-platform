@@ -410,17 +410,37 @@ Respond ONLY in valid JSON (no markdown, no explanation):
   "summary": "one line summary of verification"
 }`;
 
-  const completion = await groq.chat.completions.create({
-    messages: [{ role: 'user', content: prompt }],
-    model: 'llama-3.3-70b-versatile',
-    temperature: 0.1,
-    max_tokens: 800,
-    response_format: { type: 'json_object' },
-  });
+  // Try multiple models in order — fallback on rate limit
+  const models = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it'];
+  let raw = '{}';
+  let usedModel = '';
 
-  const raw = completion.choices[0]?.message?.content || '{}';
+  for (const model of models) {
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model,
+        temperature: 0.1,
+        max_tokens: 800,
+        response_format: { type: 'json_object' },
+      });
+      raw = completion.choices[0]?.message?.content || '{}';
+      usedModel = model;
+      break;
+    } catch (modelErr) {
+      const is429 = modelErr?.status === 429 || modelErr?.message?.includes('429');
+      if (is429) {
+        console.warn(`[EXTRACTOR] Model ${model} rate limited, trying next...`);
+        continue;
+      }
+      throw modelErr; // Non-rate-limit error — don't retry
+    }
+  }
+
+  if (!usedModel) throw new Error('All Groq models rate limited');
+
   const result = JSON.parse(raw);
-  result.model = 'llama-3.3-70b-versatile';
+  result.model = usedModel;
 
   // Clean corrections — remove nulls and "null" strings
   if (result.corrections) {
