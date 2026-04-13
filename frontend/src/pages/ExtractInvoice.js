@@ -14,95 +14,140 @@ function ConfidenceBadge({ score }) {
 }
 
 export default function ExtractInvoice() {
-  const [file, setFile] = useState(null);
-  const [extracting, setExtracting] = useState(false);
-  const [result, setResult] = useState(null);
-  const [form, setForm] = useState(null);
-  const [saving, setSaving] = useState(false);
+  // Each item: { id, file, status: 'queued'|'extracting'|'done'|'error'|'saved'|'garbled', result, form, error }
+  const [items, setItems] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef();
   const { addToast } = useToast();
   const { lang } = useLang();
 
   const l = lang === 'fr' ? {
-    title: 'Extraction de Facture IA', subtitle: 'Importez un PDF — l\'IA extrait automatiquement les données',
-    dropzone: 'Glissez-déposez un PDF ici', or: 'ou', browse: 'Parcourir les fichiers',
-    maxSize: 'PDF uniquement, max 10 Mo', extracting: 'Extraction en cours...',
-    aiAnalyzing: 'L\'IA analyse le document...', preview: 'Données extraites — Vérifiez et modifiez',
-    client: 'Nom du client', invoiceNo: 'N° de facture', issueDate: 'Date d\'émission',
-    dueDate: 'Date d\'échéance', totalHT: 'Total HT', tvaRate: 'Taux TVA',
-    tva: 'Montant TVA', totalTTC: 'Total TTC', description: 'Description',
-    confirm: 'Confirmer et enregistrer', cancel: 'Annuler', retry: 'Réessayer',
-    warnings: 'Avertissements', duplicates: 'Doublons potentiels', confidence: 'Confiance globale',
-    detected: 'Langue détectée', pages: 'Pages', saved: 'Facture enregistrée avec succès',
-    lowConfidence: 'Champs à faible confiance — vérifiez attentivement',
-    clientMatch: 'Clients similaires trouvés',
+    title: 'Extraction de Factures IA', subtitle: 'Importez un ou plusieurs PDF — l\'IA extrait automatiquement les données',
+    dropzone: 'Glissez-déposez des fichiers PDF ici', or: 'ou', browse: 'Parcourir',
+    maxSize: 'PDF uniquement, max 10 Mo par fichier · Import multiple autorisé',
+    extracting: 'Extraction...', done: 'Extrait', error: 'Erreur', saved: 'Enregistré', queued: 'En attente',
+    garbled: 'Non lisible', confirm: 'Confirmer', confirmAll: 'Tout enregistrer', cancel: 'Retirer',
+    client: 'Client', invoiceNo: 'N° facture', totalTTC: 'Total TTC', issueDate: 'Émission',
+    dueDate: 'Échéance', description: 'Description', totalHT: 'Total HT', tva: 'TVA',
+    warnings: 'Avertissements', progress: 'Progression', of: 'sur', manualEntry: 'Saisie manuelle',
+    retry: 'Réessayer', verified: 'Vérifié par IA', confidence: 'Confiance',
+    savedMsg: 'Facture enregistrée', clearAll: 'Tout effacer',
   } : {
-    title: 'AI Invoice Extraction', subtitle: 'Upload a PDF — AI automatically extracts the data',
-    dropzone: 'Drag & drop a PDF here', or: 'or', browse: 'Browse files',
-    maxSize: 'PDF only, max 10MB', extracting: 'Extracting...',
-    aiAnalyzing: 'AI is analyzing the document...', preview: 'Extracted data — Review and edit',
-    client: 'Client name', invoiceNo: 'Invoice number', issueDate: 'Issue date',
-    dueDate: 'Due date', totalHT: 'Total excl. tax', tvaRate: 'VAT rate',
-    tva: 'VAT amount', totalTTC: 'Total incl. tax', description: 'Description',
-    confirm: 'Confirm & Save', cancel: 'Cancel', retry: 'Retry',
-    warnings: 'Warnings', duplicates: 'Potential duplicates', confidence: 'Overall confidence',
-    detected: 'Detected language', pages: 'Pages', saved: 'Invoice saved successfully',
-    lowConfidence: 'Low confidence fields — review carefully',
-    clientMatch: 'Similar clients found',
+    title: 'AI Invoice Extraction', subtitle: 'Upload one or multiple PDFs — AI extracts data automatically',
+    dropzone: 'Drag & drop PDF files here', or: 'or', browse: 'Browse',
+    maxSize: 'PDF only, max 10MB per file · Multiple upload supported',
+    extracting: 'Extracting...', done: 'Extracted', error: 'Error', saved: 'Saved', queued: 'Queued',
+    garbled: 'Unreadable', confirm: 'Confirm', confirmAll: 'Save All', cancel: 'Remove',
+    client: 'Client', invoiceNo: 'Invoice No.', totalTTC: 'Total TTC', issueDate: 'Issue Date',
+    dueDate: 'Due Date', description: 'Description', totalHT: 'Total HT', tva: 'VAT',
+    warnings: 'Warnings', progress: 'Progress', of: 'of', manualEntry: 'Manual entry',
+    retry: 'Retry', verified: 'AI Verified', confidence: 'Confidence',
+    savedMsg: 'Invoice saved', clearAll: 'Clear all',
   };
 
-  const handleFile = (f) => {
-    if (f && f.type === 'application/pdf') {
-      setFile(f);
-      setResult(null);
-      setForm(null);
-      extract(f);
+  const statusIcon = { queued: 'schedule', extracting: 'hourglass_top', done: 'check_circle', error: 'error', saved: 'task_alt', garbled: 'warning' };
+  const statusColor = { queued: 'text-slate-400', extracting: 'text-blue-500 animate-pulse', done: 'text-green-600', error: 'text-red-600', saved: 'text-green-700', garbled: 'text-amber-600' };
+  const statusLabel = { queued: l.queued, extracting: l.extracting, done: l.done, error: l.error, saved: l.saved, garbled: l.garbled };
+
+  // Handle multiple files
+  const handleFiles = (fileList) => {
+    const pdfs = Array.from(fileList).filter(f => f.type === 'application/pdf');
+    if (pdfs.length === 0) return;
+
+    const newItems = pdfs.map((f, i) => ({
+      id: Date.now() + '_' + i,
+      file: f,
+      status: 'queued',
+      result: null,
+      form: null,
+      error: null,
+    }));
+
+    setItems(prev => [...prev, ...newItems]);
+
+    // Process each sequentially
+    processQueue([...items, ...newItems].filter(it => it.status === 'queued'), newItems);
+  };
+
+  const processQueue = async (allItems, newOnes) => {
+    for (const item of newOnes) {
+      await extractOne(item.id, item.file);
     }
   };
 
-  const extract = async (pdfFile) => {
-    setExtracting(true);
+  const extractOne = async (id, file) => {
+    setItems(prev => prev.map(it => it.id === id ? { ...it, status: 'extracting' } : it));
+
     try {
       const formData = new FormData();
-      formData.append('file', pdfFile);
+      formData.append('file', file);
       const { data } = await api.post('/ai/extract-invoice', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setResult(data);
-      setForm({
-        clientName: data.data.clientName || '',
-        amount: data.data.amount || data.data.totalTTC || '',
-        issueDate: data.data.issueDate || '',
-        dueDate: data.data.dueDate || '',
-        description: data.data.description || '',
-        reference: data.data.invoiceNumber || '',
-        status: 'pending',
-      });
+
+      if (data.garbled) {
+        setItems(prev => prev.map(it => it.id === id ? { ...it, status: 'garbled', result: data } : it));
+      } else {
+        setItems(prev => prev.map(it => it.id === id ? {
+          ...it, status: 'done', result: data,
+          form: {
+            clientName: data.data.clientName || '',
+            amount: data.data.amount || data.data.totalTTC || '',
+            issueDate: data.data.issueDate || '',
+            dueDate: data.data.dueDate || '',
+            description: data.data.description || '',
+            reference: data.data.invoiceNumber || '',
+            status: 'pending',
+          },
+        } : it));
+      }
     } catch (err) {
-      addToast('error', 'Error', err.response?.data?.message || 'Extraction failed');
+      setItems(prev => prev.map(it => it.id === id ? { ...it, status: 'error', error: err.response?.data?.message || 'Failed' } : it));
     }
-    setExtracting(false);
   };
 
-  const startManualEntry = () => {
-    setResult({ data: {}, confidence: { overall: 0 }, warnings: [], garbled: false });
-    setForm({ clientName: '', amount: '', issueDate: new Date().toISOString().split('T')[0], dueDate: '', description: '', reference: '', status: 'pending' });
+  const updateForm = (id, field, value) => {
+    setItems(prev => prev.map(it => it.id === id ? { ...it, form: { ...it.form, [field]: value } } : it));
   };
 
-  const confirmAndSave = async () => {
-    setSaving(true);
+  const saveOne = async (id) => {
+    const item = items.find(it => it.id === id);
+    if (!item?.form) return;
+
     try {
-      await api.post('/invoices', { ...form, amount: Number(form.amount) });
-      addToast('success', l.saved, form.clientName);
-      setFile(null);
-      setResult(null);
-      setForm(null);
+      await api.post('/invoices', { ...item.form, amount: Number(item.form.amount) });
+      setItems(prev => prev.map(it => it.id === id ? { ...it, status: 'saved' } : it));
+      addToast('success', l.savedMsg, item.form.clientName);
     } catch (err) {
-      addToast('error', 'Error', err.response?.data?.message || 'Save failed');
+      addToast('error', 'Error', err.response?.data?.message || 'Failed');
     }
-    setSaving(false);
   };
 
-  const reset = () => { setFile(null); setResult(null); setForm(null); };
+  const saveAll = async () => {
+    const toSave = items.filter(it => it.status === 'done' && it.form?.clientName && it.form?.amount);
+    for (const item of toSave) {
+      await saveOne(item.id);
+    }
+  };
+
+  const removeItem = (id) => { setItems(prev => prev.filter(it => it.id !== id)); };
+  const clearAll = () => { setItems([]); setExpandedId(null); };
+
+  const retryOne = (id) => {
+    const item = items.find(it => it.id === id);
+    if (item) extractOne(id, item.file);
+  };
+
+  const startManual = (id) => {
+    setItems(prev => prev.map(it => it.id === id ? {
+      ...it, status: 'done', result: { data: {}, confidence: { overall: 0 }, warnings: [] },
+      form: { clientName: '', amount: '', issueDate: new Date().toISOString().split('T')[0], dueDate: '', description: '', reference: '', status: 'pending' },
+    } : it));
+    setExpandedId(id);
+  };
+
+  const doneCount = items.filter(it => it.status === 'done' || it.status === 'saved').length;
+  const savedCount = items.filter(it => it.status === 'saved').length;
+  const extractingCount = items.filter(it => it.status === 'extracting').length;
 
   return (
     <div>
@@ -111,203 +156,195 @@ export default function ExtractInvoice() {
         <p className="text-on-surface-variant mt-2">{l.subtitle}</p>
       </section>
 
-      {/* Step 1: Upload zone */}
-      {!result && !extracting && (
-        <div
-          className={`bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-12 text-center border-2 border-dashed transition-colors cursor-pointer ${dragOver ? 'border-primary bg-blue-50 dark:bg-blue-900/10' : 'border-surface-container-high dark:border-slate-600 hover:border-primary/50'}`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]); }}
-          onClick={() => fileRef.current?.click()}
-        >
-          <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
-          <span className="material-symbols-outlined text-5xl text-slate-300 dark:text-slate-600 block mb-4">upload_file</span>
-          <p className="text-sm font-bold text-on-surface dark:text-slate-200 mb-1">{l.dropzone}</p>
-          <p className="text-xs text-on-surface-variant mb-4">{l.or} <span className="text-primary font-bold cursor-pointer hover:underline">{l.browse}</span></p>
-          <p className="text-[10px] text-on-surface-variant">{l.maxSize}</p>
-        </div>
-      )}
+      {/* Upload zone — always visible */}
+      <div
+        className={`bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-8 text-center border-2 border-dashed transition-colors cursor-pointer mb-8 ${dragOver ? 'border-primary bg-blue-50 dark:bg-blue-900/10' : 'border-surface-container-high dark:border-slate-600 hover:border-primary/50'}`}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+        onClick={() => fileRef.current?.click()}
+      >
+        <input ref={fileRef} type="file" accept="application/pdf" multiple className="hidden" onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }} />
+        <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-600 block mb-3">upload_file</span>
+        <p className="text-sm font-bold text-on-surface dark:text-slate-200 mb-1">{l.dropzone}</p>
+        <p className="text-xs text-on-surface-variant mb-2">{l.or} <span className="text-primary font-bold">{l.browse}</span></p>
+        <p className="text-[10px] text-on-surface-variant">{l.maxSize}</p>
+      </div>
 
-      {/* Step 2: Extracting loader */}
-      {extracting && (
-        <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary-fixed dark:bg-blue-900/30 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="material-symbols-outlined text-primary text-[32px] filled">auto_awesome</span>
+      {/* Progress bar + batch actions */}
+      {items.length > 0 && (
+        <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-4 mb-6 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-bold text-on-surface dark:text-slate-200">
+              {doneCount} {l.of} {items.length} {l.done.toLowerCase()}
+            </span>
+            {extractingCount > 0 && (
+              <span className="text-xs text-blue-600 flex items-center gap-1 animate-pulse">
+                <span className="material-symbols-outlined text-[14px]">hourglass_top</span>
+                {extractingCount} {l.extracting.toLowerCase()}
+              </span>
+            )}
+            {savedCount > 0 && (
+              <span className="text-xs text-green-600 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                {savedCount} {l.saved.toLowerCase()}
+              </span>
+            )}
           </div>
-          <p className="text-sm font-bold text-on-surface dark:text-slate-200 mb-1">{l.extracting}</p>
-          <p className="text-xs text-on-surface-variant">{l.aiAnalyzing}</p>
-        </div>
-      )}
-
-      {/* Step 2b: Garbled PDF detected */}
-      {result?.garbled && (
-        <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-10 text-center">
-          <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mx-auto mb-4">
-            <span className="material-symbols-outlined text-amber-600 text-[32px]">warning</span>
-          </div>
-          <h3 className="text-lg font-bold font-headline text-on-surface dark:text-slate-200 mb-2">
-            {lang === 'fr' ? 'PDF non lisible par l\'IA' : 'PDF not readable by AI'}
-          </h3>
-          <p className="text-sm text-on-surface-variant mb-2 max-w-md mx-auto">
-            {lang === 'fr'
-              ? 'Ce PDF utilise des polices encodées (fréquent avec les factures Orange, Tunisie Telecom, etc.). Le texte extrait est illisible.'
-              : 'This PDF uses encoded fonts (common with Orange, Telecom invoices). The extracted text is unreadable.'}
-          </p>
-          <p className="text-xs text-on-surface-variant mb-6 max-w-md mx-auto">
-            {lang === 'fr'
-              ? 'Vous pouvez saisir les données manuellement ci-dessous, ou réessayer avec un PDF contenant du texte sélectionnable.'
-              : 'You can enter the data manually below, or retry with a PDF that contains selectable text.'}
-          </p>
-          <div className="flex items-center justify-center gap-3">
-            <button onClick={startManualEntry} className="executive-gradient text-white text-sm font-bold px-6 py-2.5 rounded-lg hover:opacity-90 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">edit</span>
-              {lang === 'fr' ? 'Saisie manuelle' : 'Manual entry'}
-            </button>
-            <button onClick={reset} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-sm font-bold px-6 py-2.5 rounded-lg hover:bg-surface-container-highest transition-colors">
-              {lang === 'fr' ? 'Essayer un autre PDF' : 'Try another PDF'}
+          <div className="flex items-center gap-2">
+            {items.some(it => it.status === 'done') && (
+              <button onClick={saveAll} className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[14px]">save</span>{l.confirmAll}
+              </button>
+            )}
+            <button onClick={clearAll} className="text-xs font-bold text-on-surface-variant hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              {l.clearAll}
             </button>
           </div>
         </div>
       )}
 
-      {/* Step 3: Review & Edit */}
-      {result && !result.garbled && form && (
-        <div className="space-y-6">
-          {/* Meta bar */}
-          <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary-fixed dark:bg-blue-900/30 rounded-lg">
-                <span className="material-symbols-outlined text-primary filled">auto_awesome</span>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-on-surface dark:text-slate-200">{l.preview}</p>
-                <p className="text-xs text-on-surface-variant">{file?.name} · {result.pageCount} {l.pages} · {l.detected}: {result.data.detectedLanguage?.toUpperCase()}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-on-surface-variant">{l.confidence}:</span>
-              <ConfidenceBadge score={result.confidence.overall} />
-            </div>
-          </div>
+      {/* Invoice list */}
+      <div className="space-y-3">
+        {items.map((item) => {
+          const isOpen = expandedId === item.id;
+          const r = item.result;
+          const f = item.form;
 
-          {/* Warnings */}
-          {result.warnings.length > 0 && (
-            <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-4">
-              <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">{l.warnings}</p>
-              <div className="space-y-1.5">
-                {result.warnings.map((w, i) => (
-                  <div key={i} className="flex items-start gap-2 text-xs">
-                    <span className="material-symbols-outlined text-amber-600 text-[14px] mt-0.5 shrink-0">warning</span>
-                    <span className="text-amber-700 dark:text-amber-400">{w.message}</span>
+          return (
+            <div key={item.id} className={`bg-surface-container-low dark:bg-slate-700/50 rounded-xl overflow-hidden transition-all ${item.status === 'saved' ? 'opacity-60' : ''}`}>
+              {/* Summary row — clickable */}
+              <div
+                className="flex items-center justify-between p-4 cursor-pointer hover:bg-surface-container-highest dark:hover:bg-slate-700 transition-colors"
+                onClick={() => setExpandedId(isOpen ? null : item.id)}
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className={`material-symbols-outlined text-[20px] ${statusColor[item.status]}`}>{statusIcon[item.status]}</span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold text-on-surface dark:text-slate-200 truncate">{item.file.name}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.status === 'done' ? 'bg-green-100 text-green-700' : item.status === 'saved' ? 'bg-green-100 text-green-800' : item.status === 'error' ? 'bg-red-100 text-red-700' : item.status === 'garbled' ? 'bg-amber-100 text-amber-700' : item.status === 'extracting' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                        {statusLabel[item.status]}
+                      </span>
+                      {r?.aiVerification?.verified && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">verified</span>{l.verified}</span>}
+                    </div>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {f?.clientName && `${f.clientName} · `}{f?.amount && `${Number(f.amount).toLocaleString('en-US', { minimumFractionDigits: 3 })} TND`}
+                      {item.status === 'error' && item.error}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Duplicates */}
-          {result.duplicates && (
-            <div className="border-l-4 border-amber-400 bg-amber-50 dark:bg-amber-900/10 p-4 rounded-r-xl">
-              <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-2">{l.duplicates}</p>
-              {result.duplicates.possibleDuplicates.map((d, i) => (
-                <p key={i} className="text-xs text-amber-600">{d.clientName} — {d.amount?.toLocaleString()} TND — {d.status} ({new Date(d.createdAt).toLocaleDateString()})</p>
-              ))}
-            </div>
-          )}
-
-          {/* Editable form */}
-          <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-6">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div>
-                <label className={labelCls}>{l.client} <ConfidenceBadge score={result.confidence.clientName} /></label>
-                <input type="text" value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} className={`${inputCls} ${result.confidence.clientName < 0.5 ? 'ring-2 ring-amber-400' : ''}`} />
-                {result.clientMatches?.length > 0 && (
-                  <div className="mt-1 space-y-0.5">
-                    <p className="text-[9px] text-on-surface-variant">{l.clientMatch}:</p>
-                    {result.clientMatches.map((m, i) => (
-                      <button key={i} type="button" onClick={() => setForm({ ...form, clientName: m.label_fr })} className="block text-[10px] text-primary hover:underline">{m.label_fr}</button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className={labelCls}>{l.invoiceNo} <ConfidenceBadge score={result.confidence.invoiceNumber} /></label>
-                <input type="text" value={form.reference} onChange={(e) => setForm({ ...form, reference: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{l.totalTTC} (TND) <ConfidenceBadge score={result.confidence.totalTTC} /></label>
-                <input type="number" step="0.001" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className={`${inputCls} ${result.confidence.totalTTC < 0.5 ? 'ring-2 ring-amber-400' : ''}`} />
-              </div>
-              <div>
-                <label className={labelCls}>{l.issueDate} <ConfidenceBadge score={result.confidence.issueDate} /></label>
-                <input type="date" value={form.issueDate} onChange={(e) => setForm({ ...form, issueDate: e.target.value })} className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>{l.dueDate} <ConfidenceBadge score={result.confidence.dueDate} /></label>
-                <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className={`${inputCls} ${result.confidence.dueDate < 0.5 ? 'ring-2 ring-amber-400' : ''}`} />
-              </div>
-              <div>
-                <label className={labelCls}>{l.description}</label>
-                <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={inputCls} />
-              </div>
-            </div>
-
-            {/* Breakdown (read-only info) */}
-            {(result.data.totalHT || result.data.tva) && (
-              <div className="mt-4 pt-4 border-t border-surface-container-high dark:border-slate-600 grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{l.totalHT}</p>
-                  <p className="text-sm font-bold text-on-surface dark:text-slate-200">{result.data.totalHT?.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{l.tva} ({result.data.tvaRate}%)</p>
-                  <p className="text-sm font-bold text-on-surface dark:text-slate-200">{result.data.tva?.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">{l.totalTTC}</p>
-                  <p className="text-sm font-bold text-on-surface dark:text-slate-200">{result.data.totalTTC?.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p>
+
+                <div className="flex items-center gap-2 shrink-0 pl-3">
+                  {r?.confidence?.overall > 0 && <ConfidenceBadge score={r.confidence.overall} />}
+                  <span className={`material-symbols-outlined text-[18px] text-on-surface-variant transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
                 </div>
               </div>
-            )}
 
-            {/* Line items */}
-            {result.data.lineItems?.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-surface-container-high dark:border-slate-600">
-                <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-2">{lang === 'fr' ? 'Lignes détectées' : 'Detected line items'}</p>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead><tr><th className="text-left text-[9px] text-on-surface-variant uppercase pb-2">Description</th><th className="text-right text-[9px] text-on-surface-variant uppercase pb-2">Qty</th><th className="text-right text-[9px] text-on-surface-variant uppercase pb-2">{lang === 'fr' ? 'P.U.' : 'Unit'}</th><th className="text-right text-[9px] text-on-surface-variant uppercase pb-2">Total</th></tr></thead>
-                    <tbody>
-                      {result.data.lineItems.map((li, i) => (
-                        <tr key={i} className="border-t border-surface-container-high dark:border-slate-600">
-                          <td className="py-1.5 text-on-surface dark:text-slate-300">{li.description}</td>
-                          <td className="py-1.5 text-right">{li.quantity}</td>
-                          <td className="py-1.5 text-right">{li.unitPrice?.toLocaleString()}</td>
-                          <td className="py-1.5 text-right font-bold">{li.total?.toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {/* Expanded detail */}
+              {isOpen && (
+                <div className="px-4 pb-4 border-t border-surface-container-high dark:border-slate-600">
+
+                  {/* Error state */}
+                  {item.status === 'error' && (
+                    <div className="py-4 text-center">
+                      <p className="text-sm text-red-600 mb-3">{item.error}</p>
+                      <button onClick={() => retryOne(item.id)} className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg">{l.retry}</button>
+                    </div>
+                  )}
+
+                  {/* Garbled state */}
+                  {item.status === 'garbled' && (
+                    <div className="py-4 text-center">
+                      <p className="text-sm text-amber-600 mb-3">{r?.warnings?.[0]?.message}</p>
+                      <div className="flex items-center justify-center gap-2">
+                        <button onClick={() => startManual(item.id)} className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">edit</span>{l.manualEntry}</button>
+                        <button onClick={() => removeItem(item.id)} className="text-xs font-bold text-on-surface-variant px-3 py-2">{l.cancel}</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Extracting state */}
+                  {item.status === 'extracting' && (
+                    <div className="py-6 text-center">
+                      <span className="material-symbols-outlined text-3xl text-blue-500 animate-pulse block mb-2">auto_awesome</span>
+                      <p className="text-xs text-on-surface-variant">{l.extracting}</p>
+                    </div>
+                  )}
+
+                  {/* Done / Saved — editable form */}
+                  {(item.status === 'done' || item.status === 'saved') && f && (
+                    <div className="pt-4 space-y-4">
+                      {/* Warnings */}
+                      {r?.warnings?.length > 0 && (
+                        <div className="space-y-1">
+                          {r.warnings.map((w, i) => (
+                            <div key={i} className="flex items-start gap-1.5 text-xs text-amber-600"><span className="material-symbols-outlined text-[12px] mt-0.5">warning</span>{w.message}</div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Form grid */}
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className={labelCls}>{l.client} <ConfidenceBadge score={r?.confidence?.clientName} /></label>
+                          <input type="text" value={f.clientName} onChange={(e) => updateForm(item.id, 'clientName', e.target.value)} className={`${inputCls} ${(r?.confidence?.clientName || 0) < 0.5 ? 'ring-2 ring-amber-400' : ''}`} disabled={item.status === 'saved'} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{l.invoiceNo} <ConfidenceBadge score={r?.confidence?.invoiceNumber} /></label>
+                          <input type="text" value={f.reference} onChange={(e) => updateForm(item.id, 'reference', e.target.value)} className={inputCls} disabled={item.status === 'saved'} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{l.totalTTC} (TND) <ConfidenceBadge score={r?.confidence?.totalTTC} /></label>
+                          <input type="number" step="0.001" value={f.amount} onChange={(e) => updateForm(item.id, 'amount', e.target.value)} className={`${inputCls} ${(r?.confidence?.totalTTC || 0) < 0.5 ? 'ring-2 ring-amber-400' : ''}`} disabled={item.status === 'saved'} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{l.issueDate}</label>
+                          <input type="date" value={f.issueDate} onChange={(e) => updateForm(item.id, 'issueDate', e.target.value)} className={inputCls} disabled={item.status === 'saved'} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{l.dueDate}</label>
+                          <input type="date" value={f.dueDate} onChange={(e) => updateForm(item.id, 'dueDate', e.target.value)} className={inputCls} disabled={item.status === 'saved'} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{l.description}</label>
+                          <input type="text" value={f.description} onChange={(e) => updateForm(item.id, 'description', e.target.value)} className={inputCls} disabled={item.status === 'saved'} />
+                        </div>
+                      </div>
+
+                      {/* HT/TVA/TTC breakdown */}
+                      {(r?.data?.totalHT || r?.data?.tva) && (
+                        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-surface-container-high dark:border-slate-600">
+                          <div><p className="text-[9px] font-bold text-on-surface-variant uppercase">{l.totalHT}</p><p className="text-xs font-bold">{r.data.totalHT?.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p></div>
+                          <div><p className="text-[9px] font-bold text-on-surface-variant uppercase">{l.tva} ({r.data.tvaRate}%)</p><p className="text-xs font-bold">{r.data.tva?.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p></div>
+                          <div><p className="text-[9px] font-bold text-on-surface-variant uppercase">{l.totalTTC}</p><p className="text-xs font-bold">{r.data.totalTTC?.toLocaleString('en-US', { minimumFractionDigits: 3 })} TND</p></div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      {item.status === 'done' && (
+                        <div className="flex items-center gap-2 pt-3 border-t border-surface-container-high dark:border-slate-600">
+                          <button onClick={(e) => { e.stopPropagation(); saveOne(item.id); }} disabled={!f.clientName || !f.amount} className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">check</span>{l.confirm}
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }} className="text-xs font-bold text-on-surface-variant hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            {l.cancel}
+                          </button>
+                        </div>
+                      )}
+                      {item.status === 'saved' && (
+                        <div className="flex items-center gap-1 pt-2 text-green-600 text-xs font-bold">
+                          <span className="material-symbols-outlined text-[14px]">task_alt</span>{l.savedMsg}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex items-center gap-3 mt-6 pt-4 border-t border-surface-container-high dark:border-slate-600">
-              <button onClick={confirmAndSave} disabled={saving || !form.clientName || !form.amount} className="executive-gradient text-white text-sm font-bold px-6 py-2.5 rounded-lg hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">{saving ? 'hourglass_top' : 'check'}</span>
-                {saving ? '...' : l.confirm}
-              </button>
-              <button onClick={reset} className="bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 text-sm font-bold px-6 py-2.5 rounded-lg hover:bg-surface-container-highest transition-colors">
-                {l.cancel}
-              </button>
-              <button onClick={() => extract(file)} className="text-sm text-primary font-bold hover:underline ml-auto flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">refresh</span>{l.retry}
-              </button>
+              )}
             </div>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

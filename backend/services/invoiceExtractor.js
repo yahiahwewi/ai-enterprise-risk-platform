@@ -9,11 +9,15 @@
 
 const Tesseract = require('tesseract.js');
 const puppeteer = require('puppeteer');
+const Groq = require('groq-sdk');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const Invoice = require('../models/Invoice');
 const Preset = require('../models/Preset');
+
+const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
+const groq = GROQ_API_KEY ? new Groq({ apiKey: GROQ_API_KEY }) : null;
 
 // ── Pattern library (FR + EN + Tunisian formats) ──────────
 const patterns = {
@@ -281,7 +285,61 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
       if (Math.abs(expected - totalTTC) > 1) warnings.push({ field: 'totalTTC', message: `Total mismatch: HT(${totalHT}) + TVA(${tva}) = ${expected} ≠ TTC(${totalTTC})` });
     }
 
-    return { data, confidence, warnings, engine: 'tesseract-ocr', rawText: rawText.substring(0, 2000), pageCount: imageBuffers.length };
+    // Step 4: AI Verification via Groq LLM
+    let aiVerification = null;
+    if (groq) {
+      try {
+        aiVerification = await verifyWithGroq(rawText.substring(0, 3000), data);
+        // Apply AI corrections if confident
+        if (aiVerification.corrections) {
+          const c = aiVerification.corrections;
+          if (c.clientName && (!data.clientName || aiVerification.fieldConfidence?.clientName > confidence.clientName)) {
+            data.clientName = c.clientName;
+            confidence.clientName = 0.95;
+          }
+          if (c.invoiceNumber && (!data.invoiceNumber || aiVerification.fieldConfidence?.invoiceNumber > confidence.invoiceNumber)) {
+            data.invoiceNumber = c.invoiceNumber;
+            confidence.invoiceNumber = 0.95;
+          }
+          if (c.totalTTC && (!data.totalTTC || aiVerification.fieldConfidence?.totalTTC > confidence.totalTTC)) {
+            data.totalTTC = c.totalTTC;
+            data.amount = c.totalTTC;
+            confidence.totalTTC = 0.95;
+          }
+          if (c.totalHT && (!data.totalHT || aiVerification.fieldConfidence?.totalHT > confidence.totalHT)) {
+            data.totalHT = c.totalHT;
+            confidence.totalHT = 0.95;
+          }
+          if (c.tva != null && (!data.tva || aiVerification.fieldConfidence?.tva > confidence.tva)) {
+            data.tva = c.tva;
+            confidence.tva = 0.95;
+          }
+          if (c.dueDate && !data.dueDate) {
+            data.dueDate = c.dueDate;
+            confidence.dueDate = 0.9;
+          }
+          if (c.issueDate && confidence.issueDate < 0.5) {
+            data.issueDate = c.issueDate;
+            confidence.issueDate = 0.9;
+          }
+          if (c.tvaRate) data.tvaRate = c.tvaRate;
+        }
+        // Recalculate overall confidence
+        const scores = Object.values(confidence).filter(v => typeof v === 'number' && v > 0);
+        confidence.overall = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 100) / 100 : 0;
+
+        // Add AI validation notes to warnings
+        if (aiVerification.issues?.length > 0) {
+          aiVerification.issues.forEach(issue => {
+            warnings.push({ field: 'ai_check', message: `🤖 ${issue}` });
+          });
+        }
+      } catch (aiErr) {
+        console.warn('[EXTRACTOR] Groq verification failed:', aiErr.message);
+      }
+    }
+
+    return { data, confidence, warnings, engine: groq ? 'tesseract-ocr + groq-ai' : 'tesseract-ocr', aiVerification: aiVerification ? { verified: true, model: aiVerification.model } : null, rawText: rawText.substring(0, 2000), pageCount: imageBuffers.length };
   } catch (extractionError) {
     return {
       data: { invoiceNumber: null, clientName: null, issueDate: new Date().toISOString().split('T')[0], dueDate: null, totalHT: null, tvaRate: 19, tva: null, totalTTC: null, amount: null, lineItems: [], detectedLanguage: 'unknown', description: null },
@@ -293,6 +351,78 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
       pageCount: imageBuffers.length,
     };
   }
+}
+
+// ── AI Verification via Groq LLM ──────────────────────────
+async function verifyWithGroq(ocrText, extractedData) {
+  const prompt = `You are an invoice data extraction validator. Analyze the OCR text below and verify/correct the extracted data.
+
+OCR TEXT:
+${ocrText}
+
+EXTRACTED DATA:
+- Client Name: ${extractedData.clientName || 'NOT FOUND'}
+- Invoice Number: ${extractedData.invoiceNumber || 'NOT FOUND'}
+- Issue Date: ${extractedData.issueDate || 'NOT FOUND'}
+- Due Date: ${extractedData.dueDate || 'NOT FOUND'}
+- Total HT: ${extractedData.totalHT || 'NOT FOUND'}
+- TVA Rate: ${extractedData.tvaRate || 'NOT FOUND'}%
+- TVA Amount: ${extractedData.tva || 'NOT FOUND'}
+- Total TTC: ${extractedData.totalTTC || 'NOT FOUND'}
+
+INSTRUCTIONS:
+1. Verify each field against the OCR text
+2. Correct any wrong extractions
+3. Find any missing fields
+4. Check if TTC = HT + TVA
+5. Identify the TVA rate used
+
+Respond ONLY in valid JSON (no markdown, no explanation):
+{
+  "corrections": {
+    "clientName": "corrected name or null if original is correct",
+    "invoiceNumber": "corrected number or null",
+    "issueDate": "YYYY-MM-DD or null",
+    "dueDate": "YYYY-MM-DD or null",
+    "totalHT": number or null,
+    "tva": number or null,
+    "totalTTC": number or null,
+    "tvaRate": number or null
+  },
+  "fieldConfidence": {
+    "clientName": 0.0-1.0,
+    "invoiceNumber": 0.0-1.0,
+    "totalTTC": 0.0-1.0,
+    "totalHT": 0.0-1.0,
+    "tva": 0.0-1.0
+  },
+  "issues": ["list of problems found"],
+  "summary": "one line summary of verification"
+}`;
+
+  const completion = await groq.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
+    model: 'llama-3.3-70b-versatile',
+    temperature: 0.1,
+    max_tokens: 800,
+    response_format: { type: 'json_object' },
+  });
+
+  const raw = completion.choices[0]?.message?.content || '{}';
+  const result = JSON.parse(raw);
+  result.model = 'llama-3.3-70b-versatile';
+
+  // Clean corrections — remove nulls and "null" strings
+  if (result.corrections) {
+    for (const [k, v] of Object.entries(result.corrections)) {
+      if (v === null || v === 'null' || v === 'NOT FOUND' || v === '') {
+        delete result.corrections[k];
+      }
+    }
+  }
+
+  console.log('[EXTRACTOR] Groq AI verification:', result.summary);
+  return result;
 }
 
 function extractLineItems(lines) {
