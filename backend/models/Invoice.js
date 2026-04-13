@@ -13,6 +13,9 @@ const invoiceSchema = new mongoose.Schema({
   description: { type: String, trim: true, default: '' },
   reference: { type: String, trim: true, default: '' },
   notes: { type: String, trim: true, default: '' },
+  category: { type: String, trim: true, default: '' },
+  originalPdf: { type: String, default: '' },  // filename of uploaded PDF
+  extractedBy: { type: String, enum: ['manual', 'ai', ''], default: '' },
   workflowStatus: { type: String, enum: ['draft', 'pending_approval', 'approved', 'rejected', 'locked'], default: 'draft' },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvalDate: { type: Date },

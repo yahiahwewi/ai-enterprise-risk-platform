@@ -14,8 +14,9 @@ function ConfidenceBadge({ score }) {
 }
 
 export default function ExtractInvoice() {
-  const { items, expandedId, setExpandedId, addFiles, updateForm, saveOne, saveAll, removeItem, clearAll, retryOne, startManual } = useExtraction();
+  const { items, expandedId, setExpandedId, addFiles, updateForm, saveOne, saveAll, removeItem, clearAll, retryOne, startManual, setBulkInvoiceStatus } = useExtraction();
   const [dragOver, setDragOver] = useState(false);
+  const [showWarnings, setShowWarnings] = useState({});
   const fileRef = useRef();
   const { addToast } = useToast();
   const { lang } = useLang();
@@ -87,7 +88,18 @@ export default function ExtractInvoice() {
             {extractingCount > 0 && <span className="text-xs text-blue-600 flex items-center gap-1 animate-pulse"><span className="material-symbols-outlined text-[14px]">hourglass_top</span>{extractingCount}</span>}
             {savedCount > 0 && <span className="text-xs text-green-600 flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">task_alt</span>{savedCount} {l.saved.toLowerCase()}</span>}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Bulk status selector */}
+            {items.some(it => it.status === 'done') && (
+              <div className="flex items-center gap-1">
+                <span className="text-[10px] text-on-surface-variant font-bold">{lang === 'fr' ? 'Statut pour tous:' : 'Status for all:'}</span>
+                {['pending', 'paid'].map(s => (
+                  <button key={s} onClick={() => setBulkInvoiceStatus(s)} className="text-[10px] font-bold px-2.5 py-1 rounded-lg transition-colors bg-surface-container-high dark:bg-slate-600 text-on-surface dark:text-slate-200 hover:bg-surface-container-highest">
+                    {s === 'pending' ? (lang === 'fr' ? 'En attente' : 'Pending') : (lang === 'fr' ? 'Payée' : 'Paid')}
+                  </button>
+                ))}
+              </div>
+            )}
             {items.some(it => it.status === 'done') && (
               <button onClick={handleSaveAll} className="executive-gradient text-white text-xs font-bold px-4 py-2 rounded-lg hover:opacity-90 flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">save</span>{l.confirmAll}</button>
             )}
@@ -114,7 +126,7 @@ export default function ExtractInvoice() {
                       {r?.aiVerification?.verified && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-0.5"><span className="material-symbols-outlined text-[10px]">verified</span>{l.verified}</span>}
                     </div>
                     <p className="text-xs text-on-surface-variant truncate">
-                      {f?.clientName && `${f.clientName} · `}{f?.amount && `${Number(f.amount).toLocaleString('en-US', { minimumFractionDigits: 3 })} TND`}
+                      {f?.clientName && `${f.clientName} · `}{f?.amount && `${Number(f.amount).toLocaleString('en-US', { minimumFractionDigits: 3 })} TND`}{f?.category && ` · ${f.category}`}
                       {item.status === 'error' && item.error}
                     </p>
                   </div>
@@ -132,7 +144,16 @@ export default function ExtractInvoice() {
                   {item.status === 'extracting' && <div className="py-6 text-center"><span className="material-symbols-outlined text-3xl text-blue-500 animate-pulse block mb-2">auto_awesome</span><p className="text-xs text-on-surface-variant">{l.extracting}</p></div>}
                   {(item.status === 'done' || item.status === 'saved') && f && (
                     <div className="pt-4 space-y-4">
-                      {r?.warnings?.length > 0 && <div className="space-y-1">{r.warnings.map((w, i) => <div key={i} className="flex items-start gap-1.5 text-xs text-amber-600"><span className="material-symbols-outlined text-[12px] mt-0.5">warning</span>{w.message}</div>)}</div>}
+                      {r?.warnings?.length > 0 && (
+                        <div>
+                          <button type="button" onClick={() => setShowWarnings(prev => ({ ...prev, [item.id]: !prev[item.id] }))} className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:text-amber-700 transition-colors">
+                            <span className="material-symbols-outlined text-[14px]">{showWarnings[item.id] ? 'expand_less' : 'expand_more'}</span>
+                            <span className="material-symbols-outlined text-[12px]">warning</span>
+                            {r.warnings.length} {lang === 'fr' ? 'avertissement(s)' : 'warning(s)'}
+                          </button>
+                          {showWarnings[item.id] && <div className="space-y-1 mt-2 pl-5">{r.warnings.map((w, i) => <div key={i} className="flex items-start gap-1.5 text-xs text-amber-600"><span className="material-symbols-outlined text-[12px] mt-0.5">warning</span>{w.message}</div>)}</div>}
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <div><label className={labelCls}>{l.client} <ConfidenceBadge score={r?.confidence?.clientName} /></label><input type="text" value={f.clientName} onChange={(e) => updateForm(item.id, 'clientName', e.target.value)} className={`${inputCls} ${(r?.confidence?.clientName || 0) < 0.5 ? 'ring-2 ring-amber-400' : ''}`} disabled={item.status === 'saved'} /></div>
                         <div><label className={labelCls}>{l.invoiceNo} <ConfidenceBadge score={r?.confidence?.invoiceNumber} /></label><input type="text" value={f.reference} onChange={(e) => updateForm(item.id, 'reference', e.target.value)} className={inputCls} disabled={item.status === 'saved'} /></div>
@@ -140,6 +161,17 @@ export default function ExtractInvoice() {
                         <div><label className={labelCls}>{l.issueDate}</label><input type="date" value={f.issueDate} onChange={(e) => updateForm(item.id, 'issueDate', e.target.value)} className={inputCls} disabled={item.status === 'saved'} /></div>
                         <div><label className={labelCls}>{l.dueDate}</label><input type="date" value={f.dueDate} onChange={(e) => updateForm(item.id, 'dueDate', e.target.value)} className={inputCls} disabled={item.status === 'saved'} /></div>
                         <div><label className={labelCls}>{l.description}</label><input type="text" value={f.description} onChange={(e) => updateForm(item.id, 'description', e.target.value)} className={inputCls} disabled={item.status === 'saved'} /></div>
+                        <div>
+                          <label className={labelCls}>{lang === 'fr' ? 'Catégorie' : 'Category'} {f.category && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 ml-1">IA</span>}</label>
+                          <input type="text" value={f.category || ''} onChange={(e) => updateForm(item.id, 'category', e.target.value)} className={inputCls} disabled={item.status === 'saved'} placeholder={lang === 'fr' ? 'Ex: Telecom, IT...' : 'e.g. Telecom, IT...'} />
+                        </div>
+                        <div>
+                          <label className={labelCls}>{lang === 'fr' ? 'Statut' : 'Status'}</label>
+                          <select value={f.status} onChange={(e) => updateForm(item.id, 'status', e.target.value)} className={inputCls} disabled={item.status === 'saved'}>
+                            <option value="pending">{lang === 'fr' ? 'En attente' : 'Pending'}</option>
+                            <option value="paid">{lang === 'fr' ? 'Payée' : 'Paid'}</option>
+                          </select>
+                        </div>
                       </div>
                       {(r?.data?.totalHT || r?.data?.tva) && (
                         <div className="grid grid-cols-3 gap-3 pt-3 border-t border-surface-container-high dark:border-slate-600">

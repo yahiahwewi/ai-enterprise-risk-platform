@@ -324,6 +324,11 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
           }
           if (c.tvaRate) data.tvaRate = c.tvaRate;
         }
+        // Apply AI-detected category
+        if (aiVerification.category) {
+          data.category = aiVerification.category;
+        }
+
         // Recalculate overall confidence
         const scores = Object.values(confidence).filter(v => typeof v === 'number' && v > 0);
         confidence.overall = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 100) / 100 : 0;
@@ -376,6 +381,10 @@ INSTRUCTIONS:
 3. Find any missing fields
 4. Check if TTC = HT + TVA
 5. Identify the TVA rate used
+6. Classify the invoice into one category from this list:
+   Telecom, Electricity, Water, IT Services, Consulting, Office Supplies,
+   Construction, Medical, Insurance, Transport, Training, Food & Beverage,
+   Printing, Security, Software, Rent, Marketing, Freelance, Import/Export, Other
 
 Respond ONLY in valid JSON (no markdown, no explanation):
 {
@@ -389,6 +398,7 @@ Respond ONLY in valid JSON (no markdown, no explanation):
     "totalTTC": number or null,
     "tvaRate": number or null
   },
+  "category": "one of the categories above",
   "fieldConfidence": {
     "clientName": 0.0-1.0,
     "invoiceNumber": 0.0-1.0,

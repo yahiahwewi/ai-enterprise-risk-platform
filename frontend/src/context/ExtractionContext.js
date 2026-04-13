@@ -60,6 +60,9 @@ export function ExtractionProvider({ children }) {
             dueDate: data.data.dueDate || '',
             description: data.data.description || '',
             reference: data.data.invoiceNumber || '',
+            category: data.data.category || data.aiVerification?.corrections?.category || '',
+            originalPdf: data.originalPdf || '',
+            extractedBy: 'ai',
             status: 'pending',
           },
         } : it));
@@ -114,10 +117,18 @@ export function ExtractionProvider({ children }) {
     setExpandedId(id);
   }, []);
 
+  const setBulkInvoiceStatus = useCallback((invoiceStatus) => {
+    setItems(prev => prev.map(it => it.status === 'done' && it.form ? { ...it, form: { ...it.form, status: invoiceStatus } } : it));
+  }, []);
+
+  const selectAllToggle = useCallback(() => {
+    // Not really "select" — just a helper. We handle it in the UI.
+  }, []);
+
   return (
     <ExtractionContext.Provider value={{
       items, expandedId, setExpandedId,
-      addFiles, updateForm, saveOne, saveAll, removeItem, clearAll, retryOne, startManual,
+      addFiles, updateForm, saveOne, saveAll, removeItem, clearAll, retryOne, startManual, setBulkInvoiceStatus,
     }}>
       {children}
     </ExtractionContext.Provider>
