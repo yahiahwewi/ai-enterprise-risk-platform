@@ -619,7 +619,7 @@ function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr
 
   return (
     <div
-      className={`relative rounded-2xl border-2 transition-all duration-200 overflow-hidden
+      className={`relative rounded-2xl border-2 transition-all duration-200
         ${disabled
           ? 'border-outline-variant/20 dark:border-slate-700/40 bg-surface-container/60 dark:bg-slate-800/30'
           : selected
