@@ -12,13 +12,31 @@ const fmtRatio = (n, isFr) =>
   (Math.round(n * 10) / 10) + '%';
 
 // ─── Category → API endpoint + filter ───────────────────────
-function getEntityFetch(category, suggestionId) {
+// `s` is the full suggestion object — entityFilter tells us how to slice the data
+function getEntityFetch(category, s) {
+  const ef = s?.entityFilter || {};
   switch (category) {
-    case 'invoices':     return { path: '/invoices',     filter: d => d.filter(i => i.status !== 'paid').sort((a,b) => b.amount - a.amount).slice(0,8) };
-    case 'loans':        return { path: '/loans',        filter: d => d.slice(0,8) };
-    case 'transactions': return { path: '/transactions', filter: d => d.sort((a,b) => b.amount - a.amount).slice(0,8) };
-    case 'assets':       return { path: '/assets',       filter: d => d.slice(0,8) };
-    default:             return null;
+    case 'invoices':
+      return {
+        path: '/invoices',
+        filter: d => d.filter(i => i.status !== 'paid').sort((a, b) => b.amount - a.amount).slice(0, 8),
+      };
+    case 'loans':
+      return { path: '/loans', filter: d => d.slice(0, 8) };
+    case 'transactions':
+      return {
+        path: '/transactions',
+        filter: d => {
+          let arr = d;
+          if (ef.type)     arr = arr.filter(t => t.type === ef.type);
+          if (ef.category) arr = arr.filter(t => t.category === ef.category);
+          return arr.sort((a, b) => b.amount - a.amount).slice(0, 8);
+        },
+      };
+    case 'assets':
+      return { path: '/assets', filter: d => d.slice(0, 8) };
+    default:
+      return null;
   }
 }
 
@@ -201,7 +219,7 @@ function SuggestionCard({ s, category, isFr }) {
     const next = !open;
     setOpen(next);
     if (next && entities === null) {
-      const cfg = getEntityFetch(category, s.id);
+      const cfg = getEntityFetch(category, s);
       if (!cfg) return;
       setLoading(true);
       try {
@@ -523,8 +541,8 @@ export default function Goals() {
     analyzeBtn:   "Analyser avec l'IA",
     analyzing:    'Analyse en cours...',
     changeScenario: 'Changer de scénario',
-    currentScore: 'Score actuel',
-    targetScore:  'Score cible',
+    currentScore: 'Santé financière',
+    targetScore:  'Objectif santé',
     timeframe:    'Horizon',
     cashFlow:     'Flux de trésorerie',
     lateInv:      'Factures en retard',
@@ -542,8 +560,8 @@ export default function Goals() {
     analyzeBtn:   'Analyse with AI',
     analyzing:    'Analysing...',
     changeScenario: 'Change scenario',
-    currentScore: 'Current score',
-    targetScore:  'Target score',
+    currentScore: 'Financial health',
+    targetScore:  'Health target',
     timeframe:    'Timeframe',
     cashFlow:     'Cash flow',
     lateInv:      'Late invoices',
@@ -681,20 +699,43 @@ export default function Goals() {
                 </div>
               </div>
               <div className="flex items-center gap-5 flex-wrap">
-                <div className="text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">{l.currentScore}</div>
-                  <div className="text-3xl font-extrabold font-headline">{result.currentMetrics?.score ?? '—'}</div>
+                {/* Score block */}
+                <div className="flex items-center gap-3">
+                  <div className="text-center">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-white/60 mb-0.5">{l.currentScore}</div>
+                    <div className="text-3xl font-extrabold font-headline leading-none">
+                      {result.currentMetrics?.score ?? '—'}
+                    </div>
+                    <div className="text-[9px] text-white/40 mt-0.5">/ 100</div>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="material-symbols-outlined text-[18px] text-white/40">arrow_forward</span>
+                    {/* Progress bar */}
+                    {result.currentMetrics?.score != null && result.targetScore != null && (
+                      <div className="w-14 h-1 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white/70 rounded-full"
+                          style={{ width: `${Math.min(100, (result.currentMetrics.score / result.targetScore) * 100)}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[9px] font-bold uppercase tracking-widest text-white/60 mb-0.5">{l.targetScore}</div>
+                    <div className="text-3xl font-extrabold font-headline leading-none">
+                      {result.targetScore ?? '—'}
+                    </div>
+                    <div className="text-[9px] text-white/40 mt-0.5 flex items-center gap-0.5 justify-center">
+                      <span className="material-symbols-outlined text-[9px]">arrow_upward</span>
+                      {isFr ? 'meilleur' : 'better'}
+                    </div>
+                  </div>
                 </div>
-                <span className="material-symbols-outlined text-[22px] text-white/40">arrow_forward</span>
-                <div className="text-center">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">{l.targetScore}</div>
-                  <div className="text-3xl font-extrabold font-headline">{result.targetScore ?? '—'}</div>
-                </div>
-                <div className="text-center ml-2 border-l border-white/20 pl-5">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">{l.timeframe}</div>
+                <div className="text-center border-l border-white/20 pl-5">
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-white/60 mb-0.5">{l.timeframe}</div>
                   <div className="text-sm font-bold">{result.timeframe ?? '—'}</div>
                 </div>
-                <div className="bg-white/20 rounded-full px-3 py-1 text-xs font-bold ml-2">{totalSugg} {l.totalSugg}</div>
+                <div className="bg-white/20 rounded-full px-3 py-1 text-xs font-bold">{totalSugg} {l.totalSugg}</div>
               </div>
             </div>
             {result.headline && (

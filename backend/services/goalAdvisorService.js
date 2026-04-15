@@ -295,20 +295,40 @@ function buildGrowth(m, lang) {
   // 2. Loans
   const loanSuggestions = [];
   if (m.debtToAsset < 0.5 && m.cashFlow >= 0) {
-    loanSuggestions.push({
-      id: 'loan-strategic-expansion',
-      priority: 'medium',
-      title: isFr ? 'Contracter un prêt stratégique de croissance' : 'Take a strategic growth loan',
-      description: isFr
-        ? `Votre ratio dette/actifs est de ${fmtDebtRatio(m.debtToAsset, lang)} — un niveau sain. Avec une trésorerie positive (${fmt(m.cashFlow)}), vous avez la capacité d'emprunter pour financer une expansion commerciale.`
-        : `Your debt-to-asset ratio is ${fmtDebtRatio(m.debtToAsset, lang)} — a healthy level. With positive cash flow (${fmt(m.cashFlow)}), you have borrowing capacity to finance a commercial expansion.`,
-      impact: isFr
-        ? `Un financement bien structuré peut accélérer la croissance sans compromettre la solvabilité`
-        : `Well-structured financing can accelerate growth without compromising solvency`,
-      actionLabel: t.addLoan,
-      actionLink: '/loans',
-      metric: { label: t.debtRatio, value: `${fmtDebtRatio(m.debtToAsset, lang)}` },
-    });
+    if (m.cashFlow > 150000) {
+      // Ample cash surplus — prioritize deploying existing cash before taking on debt
+      loanSuggestions.push({
+        id: 'loan-deploy-surplus-first',
+        priority: 'medium',
+        title: isFr
+          ? 'Déployez votre surplus avant de recourir à l\'emprunt'
+          : 'Deploy your cash surplus before borrowing',
+        description: isFr
+          ? `Avec ${fmt(m.cashFlow)} de trésorerie disponible et un ratio dette/actifs sain (${fmtDebtRatio(m.debtToAsset, 'fr')}), votre surplus actuel est suffisant pour financer une première phase d'expansion sans nouvel endettement. Réservez votre capacité d'emprunt pour des opportunités d'acquisition stratégiques plus importantes.`
+          : `With ${fmt(m.cashFlow)} in available cash and a healthy debt-to-asset ratio (${fmtDebtRatio(m.debtToAsset, 'en')}), your current surplus is sufficient to fund an initial expansion phase without new debt. Reserve your borrowing capacity for larger strategic acquisition opportunities.`,
+        impact: isFr
+          ? `Croissance autofinancée : économie de ${r1(m.avgInterestRate > 0 ? m.avgInterestRate : 7)}% de coût du capital et préservation intégrale de la solvabilité`
+          : `Self-funded growth: saves ${r1(m.avgInterestRate > 0 ? m.avgInterestRate : 7)}% in cost of capital and fully preserves solvency`,
+        actionLabel: t.viewLoans,
+        actionLink: '/loans',
+        metric: { label: t.cashFlow, value: fmt(m.cashFlow) },
+      });
+    } else {
+      loanSuggestions.push({
+        id: 'loan-strategic-expansion',
+        priority: 'medium',
+        title: isFr ? 'Contracter un prêt stratégique de croissance' : 'Take a strategic growth loan',
+        description: isFr
+          ? `Votre ratio dette/actifs est de ${fmtDebtRatio(m.debtToAsset, lang)} — un niveau sain. Avec une trésorerie positive (${fmt(m.cashFlow)}), vous avez la capacité d'emprunter pour financer une expansion commerciale.`
+          : `Your debt-to-asset ratio is ${fmtDebtRatio(m.debtToAsset, lang)} — a healthy level. With positive cash flow (${fmt(m.cashFlow)}), you have borrowing capacity to finance a commercial expansion.`,
+        impact: isFr
+          ? `Un financement bien structuré peut accélérer la croissance sans compromettre la solvabilité`
+          : `Well-structured financing can accelerate growth without compromising solvency`,
+        actionLabel: t.addLoan,
+        actionLink: '/loans',
+        metric: { label: t.debtRatio, value: `${fmtDebtRatio(m.debtToAsset, lang)}` },
+      });
+    }
   } else if (m.debtToAsset >= 0.5) {
     loanSuggestions.push({
       id: 'loan-stabilize-first',
@@ -354,6 +374,7 @@ function buildGrowth(m, lang) {
     trxSuggestions.push({
       id: 'trx-reinvest-surplus',
       priority: 'high',
+      entityFilter: { type: 'income' },
       title: isFr ? 'Réinvestir le surplus de trésorerie' : 'Reinvest cash surplus',
       description: isFr
         ? `Votre ratio dépenses/revenus est de ${fmtExpRatio(m.expenseRatio, lang)} — excellent. Vous dégagez un surplus de ${fmt(surplus)}. Allouez-le à l'acquisition de clients, à la R&D ou à de nouveaux marchés.`
@@ -371,6 +392,7 @@ function buildGrowth(m, lang) {
     trxSuggestions.push({
       id: 'trx-focus-income-category',
       priority: 'medium',
+      entityFilter: { type: 'income', category: top.cat },
       title: isFr
         ? `Développer la catégorie de revenus "${top.cat}"`
         : `Grow the "${top.cat}" income category`,
@@ -389,6 +411,7 @@ function buildGrowth(m, lang) {
     trxSuggestions.push({
       id: 'trx-record-income',
       priority: 'medium',
+      entityFilter: { type: 'income' },
       title: isFr ? 'Enregistrer vos flux de revenus' : 'Record your income streams',
       description: isFr
         ? `Aucune transaction de revenus enregistrée. Documentez vos sources de revenus pour piloter votre stratégie de croissance.`
@@ -469,13 +492,9 @@ function buildGrowth(m, lang) {
     ? `Votre position financière actuelle (trésorerie : ${fmt(m.cashFlow)}, ratio dette/actifs : ${fmtDebtRatio(m.debtToAsset, 'fr')}) ${healthyForGrowth ? "offre une base solide pour la croissance" : "nécessite un assainissement avant d'accélérer"}. Concentrez-vous sur la récupération des ${fmt(m.lateInvoiceAmount)} de créances en retard pour libérer des liquidités. Un plan d'expansion structuré sur 6 à 12 mois peut significativement augmenter vos revenus.`
     : `Your current financial position (cash flow: ${fmt(m.cashFlow)}, debt-to-asset: ${fmtDebtRatio(m.debtToAsset, 'en')}) ${healthyForGrowth ? 'provides a solid foundation for growth' : 'requires stabilisation before accelerating'}. Focus on recovering ${fmt(m.lateInvoiceAmount)} in overdue receivables to free up liquidity. A structured 6–12 month expansion plan can significantly increase your revenues.`;
 
-  // targetScore must reflect true financial health — penalise negative cashFlow and extreme expense ratio
-  const targetScore = Math.max(25, 60
-    - (m.lateRate > 20 ? 10 : 0)
-    - (m.debtToAsset === null || m.debtToAsset > 0.6 ? 10 : 0)
-    - (m.cashFlow < 0 ? 15 : 0)
-    - (m.expenseRatio === null || m.expenseRatio > 1 ? 10 : 0)
-  );
+  const currentHealth = computeHealthScore(m);
+  // Growth: modest health gain — growing adds controlled risk, so target is realistic
+  const targetScore = Math.min(95, Math.max(currentHealth + 5, Math.round(currentHealth * 1.07)));
 
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_growth : T.en.tf_growth };
 }
@@ -564,6 +583,7 @@ function buildStability(m, lang) {
     trxSuggestions.push({
       id: 'stab-trx-cut-expenses',
       priority: 'high',
+      entityFilter: { type: 'expense' },
       title: isFr
         ? `Réduire le ratio de dépenses à 70% (actuellement ${fmtExpRatio(m.expenseRatio, lang)})`
         : `Reduce expense ratio to 70% (currently ${fmtExpRatio(m.expenseRatio, lang)})`,
@@ -581,6 +601,7 @@ function buildStability(m, lang) {
     trxSuggestions.push({
       id: 'stab-trx-maintain-ratio',
       priority: 'low',
+      entityFilter: { type: 'expense' },
       title: isFr ? 'Maintenir le ratio de dépenses actuel' : 'Maintain current expense ratio',
       description: isFr
         ? `Votre ratio de ${fmtExpRatio(m.expenseRatio, lang)} est dans une zone saine. Continuez à monitorer mensuellement pour détecter toute dérive.`
@@ -596,6 +617,7 @@ function buildStability(m, lang) {
   trxSuggestions.push({
     id: 'stab-trx-reserve',
     priority: 'medium',
+    entityFilter: { type: 'income' },
     title: isFr ? 'Constituer une réserve de 3 mois de charges' : 'Build a 3-month expense reserve',
     description: isFr
       ? `${m.monthlyExpenses > 0 ? `Vos charges mensuelles moyennes sont de ${fmt(m.monthlyExpenses)}. Une réserve cible de ${fmt(m.monthlyExpenses * 3)} vous protégera des imprévus.` : `Commencez à enregistrer vos dépenses pour calculer la réserve recommandée.`}`
@@ -636,7 +658,9 @@ function buildStability(m, lang) {
     ? `Votre objectif de stabilisation requiert de contrôler le ratio de dépenses (actuellement ${fmtExpRatio(m.expenseRatio, lang)}) et de maintenir le taux de retard sous 10% (actuellement ${r1(m.lateRate)}%). Avec ${fmt(m.cashFlow)} de trésorerie nette et ${fmt(m.totalDebt)} de dette, la priorité est de consolider ces fondamentaux avant d'envisager une croissance.`
     : `Your stabilisation goal requires controlling the expense ratio (currently ${fmtExpRatio(m.expenseRatio, lang)}) and keeping the late rate below 10% (currently ${r1(m.lateRate)}%). With ${fmt(m.cashFlow)} in net cash flow and ${fmt(m.totalDebt)} in debt, the priority is consolidating these fundamentals before considering growth.`;
 
-  const targetScore = Math.max(25, 45 - (m.lateRate > 15 ? 5 : 0) - (m.expenseRatio > 0.8 ? 5 : 0));
+  const currentHealth = computeHealthScore(m);
+  // Stability: solid health improvement by controlling expense and late rates
+  const targetScore = Math.min(90, Math.max(currentHealth + 10, Math.round(currentHealth * 1.12)));
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_stability : T.en.tf_stability };
 }
 
@@ -746,6 +770,7 @@ function buildDebtReduction(m, lang) {
     trxSuggestions.push({
       id: 'debt-trx-cut-top-expense',
       priority: 'high',
+      entityFilter: { type: 'expense', category: topExp.cat },
       title: isFr
         ? `Réduire les dépenses "${topExp.cat}" de 20%`
         : `Cut "${topExp.cat}" expenses by 20%`,
@@ -763,6 +788,7 @@ function buildDebtReduction(m, lang) {
   trxSuggestions.push({
     id: 'debt-trx-redirect-surplus',
     priority: 'high',
+    entityFilter: { type: 'income' },
     title: isFr ? 'Allouer 30% du surplus mensuel à la dette' : 'Allocate 30% of monthly surplus to debt',
     description: isFr
       ? `${m.cashFlow > 0 ? `Votre trésorerie nette est de ${fmt(m.cashFlow)}. Diriger ${fmt(m.cashFlow * 0.3)} par mois supplémentaire vers la dette réduirait significativement les intérêts totaux.` : `Votre trésorerie est négative (${fmt(m.cashFlow)}). La réduction des dépenses est prioritaire avant tout remboursement accéléré.`}`
@@ -820,7 +846,9 @@ function buildDebtReduction(m, lang) {
     ? `Pour réduire votre dette de ${fmt(m.totalDebt)}, appliquez la méthode avalanche en priorisant le prêt à ${m.highestRateLoan ? r1(m.highestRateLoan.interestRate) + '%' : 'taux le plus élevé'}. Récupérez en urgence ${fmt(m.lateInvoiceAmount)} de créances impayées pour alimenter les remboursements. En maintenant cette discipline, un désendettement significatif est atteignable en 12 à 24 mois.`
     : `To reduce your debt of ${fmt(m.totalDebt)}, apply the avalanche method by prioritising the ${m.highestRateLoan ? r1(m.highestRateLoan.interestRate) + '%' : 'highest rate'} loan. Urgently recover ${fmt(m.lateInvoiceAmount)} in unpaid receivables to fund repayments. With this discipline, significant debt reduction is achievable in 12–24 months.`;
 
-  const targetScore = Math.max(20, 50 - (m.debtToAsset > 0.7 ? 15 : 0) - (m.lateRate > 20 ? 10 : 0));
+  const currentHealth = computeHealthScore(m);
+  // Debt reduction: significant health gain from reducing debt burden
+  const targetScore = Math.min(92, Math.max(currentHealth + 18, Math.round(currentHealth * 1.2)));
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_debt : T.en.tf_debt };
 }
 
@@ -895,6 +923,7 @@ function buildRevenueOptimization(m, lang) {
     trxSuggestions.push({
       id: 'rev-trx-top-income',
       priority: 'high',
+      entityFilter: { type: 'income', category: topInc.cat },
       title: isFr
         ? `Maximiser la catégorie de revenus "${topInc.cat}"`
         : `Maximise the "${topInc.cat}" income category`,
@@ -913,6 +942,7 @@ function buildRevenueOptimization(m, lang) {
     trxSuggestions.push({
       id: 'rev-trx-margin-optimize',
       priority: 'medium',
+      entityFilter: { type: 'expense' },
       title: isFr ? 'Optimiser la marge bénéficiaire nette' : 'Optimise net profit margin',
       description: isFr
         ? `Avec un ratio de ${fmtExpRatio(m.expenseRatio, lang)}, votre marge est de ${m.expenseRatio !== null ? r1((1 - m.expenseRatio) * 100) + '%' : 'N/A'}. ${m.topExpenseCategories.length > 0 ? `Réduire "${m.topExpenseCategories[0].cat}" (${fmt(m.topExpenseCategories[0].total)}) augmenterait directement cette marge.` : ''}`
@@ -929,6 +959,7 @@ function buildRevenueOptimization(m, lang) {
     trxSuggestions.push({
       id: 'rev-trx-track',
       priority: 'medium',
+      entityFilter: { type: 'income' },
       title: isFr ? 'Suivre toutes les sources de revenus' : 'Track all income sources',
       description: isFr
         ? `Enregistrez chaque transaction de revenu par catégorie pour identifier vos segments les plus rentables.`
@@ -1017,7 +1048,9 @@ function buildRevenueOptimization(m, lang) {
     ? `Votre potentiel d'optimisation des revenus est concret : ${m.topIncomeCategories.length > 0 ? `"${m.topIncomeCategories[0].cat}" génère déjà ${fmt(m.topIncomeCategories[0].total)}` : 'identifiez vos meilleures sources de revenus'}. Récupérez ${fmt(m.unpaidAmount)} de créances en attente pour améliorer la trésorerie disponible. Un focus sur vos meilleurs clients et le refinancement potentiel de votre dette peut libérer ${fmt(m.monthlyPayments > 0 ? m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100 : 0)} par an.`
     : `Your revenue optimisation potential is concrete: ${m.topIncomeCategories.length > 0 ? `"${m.topIncomeCategories[0].cat}" already generates ${fmt(m.topIncomeCategories[0].total)}` : 'identify your best income sources'}. Recover ${fmt(m.unpaidAmount)} in outstanding receivables to improve available cash flow. Focusing on your best clients and potential debt refinancing can free ${fmt(m.monthlyPayments > 0 ? m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100 : 0)} per year.`;
 
-  const targetScore = Math.max(20, 40 - (m.lateRate > 15 ? 8 : 0) - (m.avgInterestRate > 12 ? 8 : 0));
+  const currentHealth = computeHealthScore(m);
+  // Revenue optimization: moderate gain from improved margins and collections
+  const targetScore = Math.min(88, Math.max(currentHealth + 10, Math.round(currentHealth * 1.10)));
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_revenue : T.en.tf_revenue };
 }
 
@@ -1121,6 +1154,7 @@ function buildRecovery(m, lang) {
     trxSuggestions.push({
       id: 'rec-trx-emergency-cut',
       priority: 'critical',
+      entityFilter: { type: 'expense' },
       title: isFr
         ? `CRITIQUE : Réduire les dépenses immédiatement (trésorerie : ${fmt(m.cashFlow)})`
         : `CRITICAL: Cut expenses immediately (cash flow: ${fmt(m.cashFlow)})`,
@@ -1140,6 +1174,7 @@ function buildRecovery(m, lang) {
     trxSuggestions.push({
       id: 'rec-trx-cut-biggest',
       priority: 'critical',
+      entityFilter: { type: 'expense', category: worst.cat },
       title: isFr
         ? `Réduire "${worst.cat}" de 30% minimum`
         : `Cut "${worst.cat}" by at least 30%`,
@@ -1158,6 +1193,7 @@ function buildRecovery(m, lang) {
     trxSuggestions.push({
       id: 'rec-trx-audit',
       priority: 'critical',
+      entityFilter: {},
       title: isFr ? 'Auditer toutes les dépenses immédiatement' : 'Audit all expenses immediately',
       description: isFr
         ? `Aucune transaction enregistrée. Documentez immédiatement toutes vos dépenses pour identifier les leviers de réduction.`
@@ -1197,7 +1233,9 @@ function buildRecovery(m, lang) {
     ? `Situation de redressement d'urgence : trésorerie ${fmt(m.cashFlow)}, ${m.lateInvoiceCount} factures en retard (${fmt(m.lateInvoiceAmount)}), mensualités à ${r1(m.paymentToIncome)}% des revenus. Priorisez le recouvrement immédiat des créances et la réduction des dépenses non essentielles. Chaque jour compte — agissez dans les 72 heures sur les leviers les plus critiques.`
     : `Emergency recovery situation: cash flow ${fmt(m.cashFlow)}, ${m.lateInvoiceCount} overdue invoices (${fmt(m.lateInvoiceAmount)}), monthly payments at ${r1(m.paymentToIncome)}% of income. Prioritise immediate receivables collection and non-essential expense reduction. Every day counts — act within 72 hours on the most critical levers.`;
 
-  const targetScore = Math.max(30, 65 - (m.cashFlow < 0 ? 10 : 0) - (m.lateRate > 20 ? 10 : 0) - (m.paymentToIncome > 40 ? 10 : 0));
+  const currentHealth = computeHealthScore(m);
+  // Recovery: emergency improvement target (1-3 months window, so realistic not aspirational)
+  const targetScore = Math.min(65, Math.max(currentHealth + 20, 35));
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_recovery : T.en.tf_recovery };
 }
 
@@ -1287,6 +1325,7 @@ function buildExcellence(m, lang) {
     trxSuggestions.push({
       id: 'exc-trx-ratio',
       priority: 'medium',
+      entityFilter: { type: 'expense' },
       title: isFr
         ? `Viser un ratio de dépenses ≤ 65% (actuellement ${fmtExpRatio(m.expenseRatio, lang)})`
         : `Target expense ratio ≤ 65% (currently ${fmtExpRatio(m.expenseRatio, lang)})`,
@@ -1304,6 +1343,7 @@ function buildExcellence(m, lang) {
   trxSuggestions.push({
     id: 'exc-trx-benchmark',
     priority: 'low',
+    entityFilter: {},
     title: isFr ? 'Comparer les ratios aux standards sectoriels' : 'Benchmark ratios against industry standards',
     description: isFr
       ? `${m.income > 0 ? `Votre ratio actuel de ${fmtExpRatio(m.expenseRatio, lang)} et une trésorerie de ${fmt(m.cashFlow)} doivent être comparés aux benchmarks de votre secteur pour évaluer la performance réelle.` : 'Enregistrez des transactions pour établir vos ratios de référence.'}`
@@ -1344,7 +1384,9 @@ function buildExcellence(m, lang) {
     ? `Votre entreprise vise l'excellence opérationnelle : ratio de dépenses à ${fmtExpRatio(m.expenseRatio, 'fr')} (cible : 65%), taux de retard à ${r1(m.lateRate)}% (cible : 5%), et trésorerie de ${fmt(m.cashFlow)}. Les ajustements recommandés sont ciblés et progressifs — l'excellence se construit par l'amélioration continue de chaque indicateur.`
     : `Your company targets operational excellence: expense ratio at ${fmtExpRatio(m.expenseRatio, lang)} (target: 65%), late rate at ${r1(m.lateRate)}% (target: 5%), and cash flow of ${fmt(m.cashFlow)}. The recommended adjustments are targeted and progressive — excellence is built through the continuous improvement of each metric.`;
 
-  const targetScore = Math.max(15, 35 - (m.lateRate > 10 ? 5 : 0) - (m.expenseRatio > 0.7 ? 5 : 0));
+  const currentHealth = computeHealthScore(m);
+  // Excellence: highest achievable health — continuous improvement to near-perfection
+  const targetScore = Math.min(97, Math.max(currentHealth + 12, 82));
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_excellence : T.en.tf_excellence };
 }
 
@@ -1407,6 +1449,11 @@ function computeRecommendedScenario(m) {
   return 'growth';
 }
 
+/** Health score: 0-100 where 100 = perfect financial health (inverse of risk score) */
+function computeHealthScore(m) {
+  return 100 - computeApproxScore(m);
+}
+
 // ── Scenario alignment check ─────────────────────────────────
 function computeScenarioWarning(scenario, m, lang) {
   const isFr = lang === 'fr';
@@ -1439,7 +1486,8 @@ async function getGoalAdvice(scenario, language = 'fr') {
   const m = await collectMetrics();
 
   // Compute approximate current risk score using the same weighted formula as scenarioEngine
-  const approxScore = computeApproxScore(m);
+  const approxRiskScore = computeApproxScore(m);
+  const approxScore     = 100 - approxRiskScore; // health score: higher = better
 
   const currentMetrics = {
     score:            approxScore,
