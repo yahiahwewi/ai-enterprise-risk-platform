@@ -519,24 +519,109 @@ function GoalsSkeleton({ isFr, sc }) {
 
 // ─── Scenario catalogue ──────────────────────────────────────
 const SCENARIOS = [
-  { id: 'growth',               icon: 'rocket_launch',    gradient: 'from-emerald-500 to-teal-600',   ring: 'ring-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20',  badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-800/40 dark:text-emerald-300',  labelFr: 'Croissance Rapide',         labelEn: 'Rapid Growth',            tagFr: 'Expansion',    tagEn: 'Expansion',    descFr: 'Maximisez vos revenus, investissez intelligemment et développez votre portefeuille clients.',            descEn: 'Maximize revenue, invest smartly and grow your client portfolio.' },
-  { id: 'stability',            icon: 'shield',           gradient: 'from-blue-500 to-indigo-600',    ring: 'ring-blue-400',    bg: 'bg-blue-50 dark:bg-blue-900/20',        badge: 'bg-blue-100 text-blue-700 dark:bg-blue-800/40 dark:text-blue-300',              labelFr: 'Stabilisation',             labelEn: 'Stabilization',           tagFr: 'Équilibre',    tagEn: 'Balance',      descFr: 'Sécurisez votre trésorerie, réduisez le risque et maintenez un équilibre financier durable.',           descEn: 'Secure your cash flow, reduce risk and maintain a durable financial balance.' },
-  { id: 'debt_reduction',       icon: 'savings',          gradient: 'from-violet-500 to-purple-600',  ring: 'ring-violet-400',  bg: 'bg-violet-50 dark:bg-violet-900/20',    badge: 'bg-violet-100 text-violet-700 dark:bg-violet-800/40 dark:text-violet-300',     labelFr: 'Désendettement',            labelEn: 'Debt Reduction',          tagFr: 'Remboursement',tagEn: 'Repayment',    descFr: "Réduisez votre endettement méthodiquement et libérez votre capacité d'investissement.",                  descEn: 'Methodically reduce your debt and free up your investment capacity.' },
-  { id: 'revenue_optimization', icon: 'trending_up',      gradient: 'from-amber-500 to-orange-500',   ring: 'ring-amber-400',   bg: 'bg-amber-50 dark:bg-amber-900/20',      badge: 'bg-amber-100 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300',         labelFr: 'Optimisation Revenus',      labelEn: 'Revenue Optimization',    tagFr: 'Rentabilité',  tagEn: 'Profitability',descFr: 'Optimisez vos flux de facturation, accélérez les encaissements et amplifiez vos meilleures sources.',   descEn: 'Optimize your billing flows, accelerate collections and amplify your best revenue sources.' },
-  { id: 'recovery',             icon: 'emergency',        gradient: 'from-red-500 to-rose-600',       ring: 'ring-red-400',     bg: 'bg-red-50 dark:bg-red-900/20',          badge: 'bg-red-100 text-red-700 dark:bg-red-800/40 dark:text-red-300',                 labelFr: 'Redressement',              labelEn: 'Emergency Recovery',      tagFr: 'Urgent',       tagEn: 'Urgent',       descFr: "Mode urgence : actions immédiates pour stabiliser la trésorerie et éviter la cessation de paiement.",   descEn: 'Emergency mode: immediate actions to stabilize cash flow and avoid payment default.' },
-  { id: 'excellence',           icon: 'workspace_premium',gradient: 'from-slate-600 to-slate-800',    ring: 'ring-slate-400',   bg: 'bg-slate-50 dark:bg-slate-800/40',      badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',            labelFr: 'Excellence Opérationnelle', labelEn: 'Operational Excellence',  tagFr: 'Équilibré',    tagEn: 'Balanced',     descFr: 'Optimisation équilibrée de toutes les dimensions financières pour une performance maximale.',            descEn: 'Balanced optimization of all financial dimensions for peak performance.' },
+  {
+    id: 'growth', icon: 'rocket_launch',
+    gradient: 'from-emerald-500 to-teal-600', ring: 'ring-emerald-400',
+    bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+    badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-800/40 dark:text-emerald-300',
+    chipCls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+    labelFr: 'Croissance Rapide', labelEn: 'Rapid Growth',
+    tagFr: 'Expansion', tagEn: 'Expansion',
+    descFr: 'Maximisez vos revenus, investissez intelligemment et développez votre portefeuille clients.',
+    descEn: 'Maximize revenue, invest smartly and grow your client portfolio.',
+    exampleFr: 'Idéal si votre trésorerie est solide (> 3 mois de charges), votre dette est maîtrisée, et vous voulez accélérer : nouveaux marchés, embauches, ou lancement de produits. L\'IA analyse vos meilleurs clients et catégories de revenus pour cibler où réinvestir.',
+    exampleEn: 'Ideal when your cash is strong (> 3 months of expenses), debt is under control, and you want to accelerate: new markets, hiring, or product launches. The AI analyses your top clients and revenue categories to target where to reinvest.',
+    bulletsFr: ['Réinvestir le surplus dans vos meilleures sources de revenus', 'Amplifier les clients top-3 par chiffre d\'affaires', 'Optimiser votre structure fiscale pour libérer du capital'],
+    bulletsEn: ['Reinvest surplus into your best revenue sources', 'Amplify top-3 clients by turnover', 'Optimise tax structure to free up capital'],
+  },
+  {
+    id: 'stability', icon: 'shield',
+    gradient: 'from-blue-500 to-indigo-600', ring: 'ring-blue-400',
+    bg: 'bg-blue-50 dark:bg-blue-900/20',
+    badge: 'bg-blue-100 text-blue-700 dark:bg-blue-800/40 dark:text-blue-300',
+    chipCls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+    labelFr: 'Stabilisation', labelEn: 'Stabilization',
+    tagFr: 'Équilibre', tagEn: 'Balance',
+    descFr: 'Sécurisez votre trésorerie, réduisez le risque et maintenez un équilibre financier durable.',
+    descEn: 'Secure your cash flow, reduce risk and maintain a durable financial balance.',
+    exampleFr: 'Idéal si vos revenus fluctuent, votre trésorerie est tendue ou si vous sortez d\'un trimestre difficile. L\'IA cible vos dépenses volatiles et vos créances lentes pour rétablir une base prévisible.',
+    exampleEn: 'Ideal when your revenue fluctuates, cash is tight, or you\'re coming out of a tough quarter. The AI targets your volatile expenses and slow receivables to rebuild a predictable base.',
+    bulletsFr: ['Constituer une réserve équivalente à 3 mois de charges', 'Identifier et supprimer les dépenses non essentielles', 'Réduire la variance mensuelle des revenus'],
+    bulletsEn: ['Build a reserve equal to 3 months of expenses', 'Identify and cut non-essential spending', 'Reduce monthly revenue variance'],
+  },
+  {
+    id: 'debt_reduction', icon: 'savings',
+    gradient: 'from-violet-500 to-purple-600', ring: 'ring-violet-400',
+    bg: 'bg-violet-50 dark:bg-violet-900/20',
+    badge: 'bg-violet-100 text-violet-700 dark:bg-violet-800/40 dark:text-violet-300',
+    chipCls: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+    labelFr: 'Désendettement', labelEn: 'Debt Reduction',
+    tagFr: 'Remboursement', tagEn: 'Repayment',
+    descFr: "Réduisez votre endettement méthodiquement et libérez votre capacité d'investissement.",
+    descEn: 'Methodically reduce your debt and free up your investment capacity.',
+    exampleFr: 'Idéal si vos mensualités d\'emprunts dépassent 30% de vos revenus ou si votre ratio dette/actifs est > 60%. L\'IA classe vos prêts par taux d\'intérêt et propose un plan de remboursement accéléré sur les plus coûteux.',
+    exampleEn: 'Ideal when your loan payments exceed 30% of your income or your debt-to-assets ratio is > 60%. The AI ranks your loans by interest rate and proposes an accelerated repayment plan on the most expensive.',
+    bulletsFr: ['Cibler en priorité le prêt au taux le plus élevé', 'Renégocier ou refinancer les dettes à taux variables', 'Bloquer tout nouvel endettement jusqu\'à stabilisation'],
+    bulletsEn: ['Prioritise the loan with the highest interest rate', 'Renegotiate or refinance variable-rate debts', 'Block any new borrowing until stabilisation'],
+  },
+  {
+    id: 'revenue_optimization', icon: 'trending_up',
+    gradient: 'from-amber-500 to-orange-500', ring: 'ring-amber-400',
+    bg: 'bg-amber-50 dark:bg-amber-900/20',
+    badge: 'bg-amber-100 text-amber-700 dark:bg-amber-800/40 dark:text-amber-300',
+    chipCls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+    labelFr: 'Optimisation Revenus', labelEn: 'Revenue Optimization',
+    tagFr: 'Rentabilité', tagEn: 'Profitability',
+    descFr: 'Optimisez vos flux de facturation, accélérez les encaissements et amplifiez vos meilleures sources.',
+    descEn: 'Optimize your billing flows, accelerate collections and amplify your best revenue sources.',
+    exampleFr: 'Idéal si votre activité génère des ventes saines mais vos encaissements tardent : factures en retard, clients lents, marges compressées par les délais. L\'IA pointe les clients à relancer et les sources de revenu sous-exploitées.',
+    exampleEn: 'Ideal when your sales are healthy but collections are slow: late invoices, slow-paying clients, margins squeezed by delays. The AI highlights clients to chase and under-exploited revenue sources.',
+    bulletsFr: ['Relancer immédiatement les factures en retard > 30 jours', 'Raccourcir les délais de paiement standard à 15 jours', 'Dupliquer la stratégie de vos 3 meilleures catégories'],
+    bulletsEn: ['Immediately chase invoices overdue > 30 days', 'Shorten standard payment terms to 15 days', 'Replicate the strategy of your top 3 revenue categories'],
+  },
+  {
+    id: 'recovery', icon: 'emergency',
+    gradient: 'from-red-500 to-rose-600', ring: 'ring-red-400',
+    bg: 'bg-red-50 dark:bg-red-900/20',
+    badge: 'bg-red-100 text-red-700 dark:bg-red-800/40 dark:text-red-300',
+    chipCls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300',
+    labelFr: 'Redressement', labelEn: 'Emergency Recovery',
+    tagFr: 'Urgent', tagEn: 'Urgent',
+    descFr: "Mode urgence : actions immédiates pour stabiliser la trésorerie et éviter la cessation de paiement.",
+    descEn: 'Emergency mode: immediate actions to stabilize cash flow and avoid payment default.',
+    exampleFr: 'À activer si votre trésorerie est négative ou si le ratio dépenses/revenus dépasse 150%. L\'IA identifie les coupes immédiates, les créances à recouvrer en urgence, et les négociations à ouvrir pour éviter le défaut de paiement.',
+    exampleEn: 'Activate if your cash flow is negative or your expense/revenue ratio exceeds 150%. The AI identifies immediate cuts, receivables to collect urgently, and negotiations to open to avoid payment default.',
+    bulletsFr: ['Geler toutes les dépenses non-critiques cette semaine', 'Recouvrer en urgence toutes les factures en retard', 'Négocier des délais avec fournisseurs et créanciers'],
+    bulletsEn: ['Freeze all non-critical expenses this week', 'Urgently collect all overdue invoices', 'Negotiate extensions with suppliers and creditors'],
+  },
+  {
+    id: 'excellence', icon: 'workspace_premium',
+    gradient: 'from-slate-600 to-slate-800', ring: 'ring-slate-400',
+    bg: 'bg-slate-50 dark:bg-slate-800/40',
+    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+    chipCls: 'bg-slate-100 text-slate-700 dark:bg-slate-700/60 dark:text-slate-300',
+    labelFr: 'Excellence Opérationnelle', labelEn: 'Operational Excellence',
+    tagFr: 'Équilibré', tagEn: 'Balanced',
+    descFr: 'Optimisation équilibrée de toutes les dimensions financières pour une performance maximale.',
+    descEn: 'Balanced optimization of all financial dimensions for peak performance.',
+    exampleFr: 'Idéal si votre entreprise est déjà saine (santé > 70) et que vous cherchez à atteindre le top 10% du secteur. L\'IA ajuste chaque indicateur au centième près : ratios, marges, délais, diversification.',
+    exampleEn: 'Ideal when your business is already healthy (health > 70) and you aim to reach the top 10% of your sector. The AI fine-tunes every indicator: ratios, margins, delays, diversification.',
+    bulletsFr: ['Viser un ratio dépenses < 65% par catégorie', 'Réduire le taux de retard des factures sous 5%', 'Diversifier pour qu\'aucun client ne dépasse 20% du CA'],
+    bulletsEn: ['Target an expense ratio < 65% per category', 'Reduce invoice late rate below 5%', 'Diversify so no single client exceeds 20% of revenue'],
+  },
 ];
 
 // ─── Scenario picker card ────────────────────────────────────
 function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr }) {
   const sc = SCENARIOS.find(s => s.id === scenario.id) || SCENARIOS[0];
+  const [detailOpen, setDetailOpen] = useState(false);
+  const bullets = (isFr ? sc.bulletsFr : sc.bulletsEn) || [];
+
   return (
-    <button
-      onClick={() => !disabled && onClick(scenario.id)}
-      disabled={disabled}
-      className={`relative w-full text-left p-5 rounded-2xl border-2 transition-all duration-200
+    <div
+      className={`relative rounded-2xl border-2 transition-all duration-200 overflow-hidden
         ${disabled
-          ? 'border-outline-variant/20 dark:border-slate-700/40 bg-surface-container/60 dark:bg-slate-800/30 cursor-not-allowed'
+          ? 'border-outline-variant/20 dark:border-slate-700/40 bg-surface-container/60 dark:bg-slate-800/30'
           : selected
             ? `border-transparent ring-2 ${sc.ring} ${sc.bg} shadow-lg scale-[1.02]`
             : recommended
@@ -546,7 +631,7 @@ function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr
     >
       {/* Recommended flag */}
       {recommended && !selected && !disabled && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10 goals-pop">
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap z-20 goals-pop">
           <span className="material-symbols-outlined text-[11px]">recommend</span>
           {isFr ? 'Recommandé pour vous' : 'Recommended for you'}
         </div>
@@ -554,7 +639,7 @@ function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr
 
       {/* Not-suitable badge */}
       {disabled && (
-        <div className="absolute top-3 right-3 flex items-center gap-1 bg-slate-200/90 dark:bg-slate-700/80 rounded-full px-2 py-0.5 z-10">
+        <div className="absolute top-3 right-3 flex items-center gap-1 bg-slate-200/90 dark:bg-slate-700/80 rounded-full px-2 py-0.5 z-20">
           <span className="material-symbols-outlined text-[11px] text-on-surface-variant/60 dark:text-slate-400">block</span>
           <span className="text-[8px] font-bold text-on-surface-variant/60 dark:text-slate-500 uppercase tracking-wide">
             {isFr ? 'Non adapté' : 'Not suitable'}
@@ -562,31 +647,94 @@ function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr
         </div>
       )}
 
-      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${sc.gradient} flex items-center justify-center mb-3 shadow-sm ${disabled ? 'opacity-30' : ''}`}>
-        <span className="material-symbols-outlined text-white text-[20px]">{sc.icon}</span>
-      </div>
-      <div className={`${disabled ? 'opacity-35' : ''}`}>
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${sc.badge}`}>
-            {isFr ? sc.tagFr : sc.tagEn}
-          </span>
-          {selected && !disabled && <span className="ml-auto material-symbols-outlined text-[16px] text-primary">check_circle</span>}
-          {recommended && selected && !disabled && (
-            <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-              <span className="material-symbols-outlined text-[12px]">recommend</span>
-              {isFr ? 'Recommandé' : 'Recommended'}
+      {/* Main clickable area — selects the scenario */}
+      <button
+        type="button"
+        onClick={() => !disabled && onClick(scenario.id)}
+        disabled={disabled}
+        className={`w-full text-left p-5 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${sc.gradient} flex items-center justify-center mb-3 shadow-sm ${disabled ? 'opacity-30' : ''}`}>
+          <span className="material-symbols-outlined text-white text-[20px]">{sc.icon}</span>
+        </div>
+        <div className={`${disabled ? 'opacity-35' : ''} pr-6`}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${sc.badge}`}>
+              {isFr ? sc.tagFr : sc.tagEn}
             </span>
+            {selected && !disabled && <span className="ml-auto material-symbols-outlined text-[16px] text-primary">check_circle</span>}
+          </div>
+          <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{isFr ? sc.labelFr : sc.labelEn}</h3>
+          <p className="text-[11px] text-on-surface-variant dark:text-slate-400 leading-snug">{isFr ? sc.descFr : sc.descEn}</p>
+          {disabled && (
+            <p className="text-[10px] text-on-surface-variant/50 dark:text-slate-600 mt-2 italic">
+              {isFr ? 'Stabilisez d\'abord votre situation financière.' : 'Stabilise your finances first.'}
+            </p>
           )}
         </div>
-        <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{isFr ? sc.labelFr : sc.labelEn}</h3>
-        <p className="text-[11px] text-on-surface-variant dark:text-slate-400 leading-snug">{isFr ? sc.descFr : sc.descEn}</p>
-        {disabled && (
-          <p className="text-[10px] text-on-surface-variant/50 dark:text-slate-600 mt-2 italic">
-            {isFr ? 'Stabilisez d\'abord votre situation financière.' : 'Stabilise your finances first.'}
-          </p>
-        )}
-      </div>
-    </button>
+      </button>
+
+      {/* Info toggle button (top-right, absolute) */}
+      {!disabled && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setDetailOpen(o => !o); }}
+          aria-label={isFr ? 'Voir un exemple' : 'See example'}
+          className={`absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center z-20 transition-all
+            ${detailOpen
+              ? `bg-gradient-to-br ${sc.gradient} text-white shadow-md`
+              : 'bg-white/80 dark:bg-slate-700/80 text-on-surface-variant dark:text-slate-400 hover:bg-white dark:hover:bg-slate-600 hover:shadow-sm backdrop-blur-sm'
+            }`}
+        >
+          <span className="material-symbols-outlined text-[14px]">{detailOpen ? 'close' : 'info'}</span>
+        </button>
+      )}
+
+      {/* Expandable detail panel — CSS grid trick for smooth height animation */}
+      {!disabled && (
+        <div
+          className="grid transition-all duration-300 ease-out"
+          style={{ gridTemplateRows: detailOpen ? '1fr' : '0fr' }}
+        >
+          <div style={{ minHeight: 0, overflow: 'hidden' }}>
+            <div className="border-t border-outline-variant/20 dark:border-slate-700/60 mx-5" />
+            <div className="px-5 pt-3.5 pb-4 space-y-3">
+              {/* Example scenario */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <span className="material-symbols-outlined text-[13px] text-primary dark:text-blue-400">lightbulb</span>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
+                    {isFr ? 'Exemple concret' : 'Real example'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-on-surface dark:text-slate-300 leading-relaxed">
+                  {isFr ? sc.exampleFr : sc.exampleEn}
+                </p>
+              </div>
+
+              {/* Key actions */}
+              {bullets.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="material-symbols-outlined text-[13px] text-primary dark:text-blue-400">checklist</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
+                      {isFr ? 'Actions-clés' : 'Key actions'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {bullets.map((b, i) => (
+                      <span key={i} className={`text-[10px] font-medium px-2 py-1 rounded-lg leading-tight ${sc.chipCls}`}>
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -710,7 +858,7 @@ export default function Goals() {
             <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{l.chooseTitle}</h3>
             <p className="text-xs text-on-surface-variant dark:text-slate-400">{l.chooseHint}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 pt-2 items-start">
             {SCENARIOS.map(scenario => (
               <ScenarioCard
                 key={scenario.id}
