@@ -320,12 +320,15 @@ function SuggestionCard({ s, category, isFr }) {
 }
 
 // ─── Section block ───────────────────────────────────────────
-function SectionBlock({ section, isFr }) {
+function SectionBlock({ section, isFr, index = 0 }) {
   const catMeta = CAT_ICON[section.category] || { icon: 'lightbulb', color: 'text-primary' };
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="bg-surface-container-lowest dark:bg-slate-800/50 rounded-2xl">
+    <div
+      className="bg-surface-container-lowest dark:bg-slate-800/50 rounded-2xl goals-enter"
+      style={{ animationDelay: `${index * 75 + 80}ms` }}
+    >
       {/* section header */}
       <button
         onClick={() => setCollapsed(c => !c)}
@@ -467,7 +470,7 @@ function ScenarioCard({ scenario, selected, recommended, onClick, isFr }) {
     >
       {/* Recommended flag */}
       {recommended && !selected && (
-        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10 goals-pop">
           <span className="material-symbols-outlined text-[11px]">recommend</span>
           {isFr ? 'Recommandé pour vous' : 'Recommended for you'}
         </div>
@@ -499,6 +502,7 @@ export default function Goals() {
   const [selectedScenario,   setSelectedScenario]   = useState(null);
   const [result,             setResult]             = useState(null);
   const [loading,            setLoading]            = useState(false);
+  const [resultKey,          setResultKey]          = useState(0);
   const [recommendedScenario,setRecommendedScenario] = useState(null);
   const { addToast } = useToast();
   const { lang }    = useLang();
@@ -553,21 +557,25 @@ export default function Goals() {
 
   const analyse = useCallback(async (scenarioId) => {
     if (!scenarioId) return;
+    setSelectedScenario(scenarioId);
     setLoading(true);
-    setResult(null);
+    // Don't clear result immediately when switching — keep old result visible
+    // under the switching overlay. Only clear when there's no previous result.
+    if (!result) setResult(null);
     try {
       const { data } = await api.get(`/ai/goals/${scenarioId}?language=${lang}`);
       setResult(data);
-      // Sync recommended scenario from result (keeps it up to date)
+      setResultKey(k => k + 1); // trigger re-mount + enter animation
       if (data?.recommendedScenario) setRecommendedScenario(data.recommendedScenario);
     } catch {
+      setResult(null); // clear on error so picker reappears
       addToast('error', isFr ? 'Erreur' : 'Error', isFr ? 'Analyse impossible' : 'Analysis failed');
     } finally {
       setLoading(false);
     }
-  }, [lang, isFr, addToast]);
+  }, [lang, isFr, addToast, result]);
 
-  const handleScenarioClick = id => { setSelectedScenario(id); setResult(null); };
+  const handleScenarioClick = id => { setSelectedScenario(id); setResult(null); setResultKey(0); };
 
   const sc           = selectedScenario ? SCENARIOS.find(s => s.id === selectedScenario) : null;
   const totalSugg    = result ? result.sections.reduce((a, s) => a + (s.suggestions?.length || 0), 0) : 0;
@@ -588,8 +596,8 @@ export default function Goals() {
         </div>
         {result && (
           <button
-            onClick={() => { setResult(null); }}
-            className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-200 transition-colors"
+            onClick={() => { setResult(null); setResultKey(0); }}
+            className="flex items-center gap-1.5 text-sm font-medium text-on-surface-variant dark:text-slate-400 hover:text-on-surface dark:hover:text-slate-200 transition-colors goals-fade"
           >
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
             {l.changeScenario}
@@ -598,8 +606,8 @@ export default function Goals() {
       </section>
 
       {/* ── Scenario picker ─────────────────────────────────── */}
-      {!result && (
-        <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6">
+      {!result && !loading && (
+        <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6 goals-enter">
           <div className="mb-5">
             <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{l.chooseTitle}</h3>
             <p className="text-xs text-on-surface-variant dark:text-slate-400">{l.chooseHint}</p>
@@ -635,12 +643,28 @@ export default function Goals() {
         </div>
       )}
 
-      {/* ── Loading skeleton ────────────────────────────────── */}
-      {loading && <GoalsSkeleton isFr={isFr} sc={sc} />}
+      {/* ── Loading skeleton — only for first analysis (no existing result to overlay) ── */}
+      {loading && !result && (
+        <div className="goals-enter">
+          <GoalsSkeleton isFr={isFr} sc={sc} />
+        </div>
+      )}
 
       {/* ── Results ─────────────────────────────────────────── */}
-      {result && sc && !loading && (
-        <div className="space-y-5">
+      {result && sc && (
+        <div className="relative space-y-5 goals-enter" key={resultKey}>
+
+          {/* Switching overlay — visible while loading a new scenario over an existing result */}
+          {loading && (
+            <div className="absolute inset-0 z-40 rounded-2xl bg-white/30 dark:bg-slate-950/40 backdrop-blur-[3px] flex items-start justify-center pt-10 goals-fade pointer-events-none">
+              <div className="flex items-center gap-2 bg-white dark:bg-slate-800 rounded-full px-5 py-2.5 shadow-xl border border-outline-variant/20 pointer-events-auto">
+                <span className="material-symbols-outlined text-[17px] text-primary animate-spin">progress_activity</span>
+                <span className="text-xs font-bold text-primary dark:text-blue-400">
+                  {isFr ? 'Changement de scénario...' : 'Switching scenario...'}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Hero banner */}
           <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${sc.gradient} p-6 text-white shadow-lg`}>
@@ -683,7 +707,7 @@ export default function Goals() {
 
           {/* Scenario alignment warning */}
           {result.scenarioWarning?.show && (
-            <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4">
+            <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50 rounded-xl p-4 goals-slide-down">
               <span className="material-symbols-outlined text-[20px] text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">warning</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">
@@ -694,12 +718,8 @@ export default function Goals() {
                 </p>
                 {result.scenarioWarning.suggestedScenario && (
                   <button
-                    onClick={() => {
-                      const id = result.scenarioWarning.suggestedScenario;
-                      setSelectedScenario(id);
-                      setResult(null);
-                      setTimeout(() => analyse(id), 50);
-                    }}
+                    onClick={() => analyse(result.scenarioWarning.suggestedScenario)}
+                    disabled={loading}
                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300 hover:underline"
                   >
                     <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
@@ -721,8 +741,11 @@ export default function Goals() {
                 { label: l.lateInv,   value: result.currentMetrics.lateInvoiceCount + (isFr ? ' facture(s)' : ' invoice(s)'), icon: 'warning', good: result.currentMetrics.lateInvoiceCount === 0 },
                 { label: l.totalDebt, value: fmtTND(result.currentMetrics.totalDebt),      icon: 'account_balance',        good: result.currentMetrics.debtToAsset !== null && result.currentMetrics.debtToAsset < 0.5 },
                 { label: l.expRatio,  value: fmtRatio(result.currentMetrics.expenseRatio !== null ? result.currentMetrics.expenseRatio * 100 : null, isFr), icon: 'pie_chart', good: result.currentMetrics.expenseRatio !== null && result.currentMetrics.expenseRatio < 0.7 },
-              ].map(({ label, value, icon, good }) => (
-                <div key={label} className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-3.5 flex items-center gap-3">
+              ].map(({ label, value, icon, good }, i) => (
+                <div key={label}
+                  className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-3.5 flex items-center gap-3 goals-enter"
+                  style={{ animationDelay: `${i * 55}ms` }}
+                >
                   <span className={`material-symbols-outlined text-[20px] ${good ? 'text-emerald-500' : 'text-amber-500'}`}>{icon}</span>
                   <div className="min-w-0">
                     <div className="text-[10px] text-on-surface-variant dark:text-slate-400 font-medium truncate">{label}</div>
@@ -734,13 +757,14 @@ export default function Goals() {
           )}
 
           {/* Scenario switcher pills */}
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap goals-fade" style={{ animationDelay: '60ms' }}>
             <span className="text-xs text-on-surface-variant dark:text-slate-400 font-medium shrink-0">{l.activeScenario}</span>
             {SCENARIOS.map(s => (
               <button
                 key={s.id}
-                onClick={() => { setSelectedScenario(s.id); setResult(null); setTimeout(() => analyse(s.id), 50); }}
-                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all ${
+                disabled={loading}
+                onClick={() => analyse(s.id)}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all disabled:opacity-50 ${
                   s.id === selectedScenario
                     ? `bg-gradient-to-r ${s.gradient} text-white shadow-sm`
                     : 'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-600'
@@ -753,19 +777,19 @@ export default function Goals() {
 
           {/* Suggestion sections — single column, full width, collapsible */}
           <div className="flex flex-col gap-4">
-            {(result.sections || []).map(section => (
-              <SectionBlock key={section.category} section={section} isFr={isFr} />
+            {(result.sections || []).map((section, i) => (
+              <SectionBlock key={section.category} section={section} isFr={isFr} index={i} />
             ))}
           </div>
 
           {/* Bottom CTA */}
-          <div className="flex items-center justify-between rounded-2xl bg-surface-container-lowest dark:bg-slate-800 p-5 flex-wrap gap-4">
+          <div className="flex items-center justify-between rounded-2xl bg-surface-container-lowest dark:bg-slate-800 p-5 flex-wrap gap-4 goals-enter" style={{ animationDelay: '380ms' }}>
             <div>
               <p className="text-sm font-bold text-on-surface dark:text-slate-100">{l.compareCTA}</p>
               <p className="text-xs text-on-surface-variant dark:text-slate-400">{l.compareHint}</p>
             </div>
             <button
-              onClick={() => setResult(null)}
+              onClick={() => { setResult(null); setResultKey(0); }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-surface-container dark:bg-slate-700 text-sm font-bold text-on-surface dark:text-slate-200 hover:bg-surface-container-high dark:hover:bg-slate-600 transition-all"
             >
               <span className="material-symbols-outlined text-[16px]">refresh</span>

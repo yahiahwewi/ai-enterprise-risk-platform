@@ -101,18 +101,43 @@
 
       /* ── Page transition ── */
       @keyframes pageEnter {
-        from {
-          opacity: 0;
-          transform: translateY(12px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
       }
       .page-enter {
         animation: pageEnter 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
       }
+
+      /* ── Goals / Stratégie fine-grained transitions ── */
+      @keyframes goalsEnter {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes goalsFade {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes goalsSlideDown {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes goalsPulseIn {
+        0%   { opacity: 0; transform: scale(0.95); }
+        60%  { opacity: 1; transform: scale(1.01); }
+        100% { transform: scale(1); }
+      }
+      .goals-enter      { animation: goalsEnter    0.32s cubic-bezier(0.4, 0, 0.2, 1) both; }
+      .goals-fade       { animation: goalsFade      0.22s ease both; }
+      .goals-slide-down { animation: goalsSlideDown 0.2s  ease both; }
+      .goals-pop        { animation: goalsPulseIn   0.28s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+      /* Stagger delay helpers */
+      .d-0   { animation-delay:   0ms; }
+      .d-60  { animation-delay:  60ms; }
+      .d-120 { animation-delay: 120ms; }
+      .d-180 { animation-delay: 180ms; }
+      .d-240 { animation-delay: 240ms; }
+      .d-300 { animation-delay: 300ms; }
+      .d-360 { animation-delay: 360ms; }
 
       /* ── Sidebar nav link hover ── */
       nav a {
