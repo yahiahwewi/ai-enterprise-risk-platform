@@ -1426,6 +1426,41 @@ function computeApproxScore(m) {
   return Math.round(cashFlow * 0.35 + invoices * 0.25 + debtRisk * 0.25 + loanBurden * 0.15);
 }
 
+// ── Valid scenarios for current financial state ───────────────
+/**
+ * Returns the list of scenario IDs that are logically appropriate
+ * for the company's current financial health.
+ * Invalid scenarios are shown as disabled/greyed out in the UI.
+ */
+function computeValidScenarios(m) {
+  const isCritical  = m.cashFlow < 0 && (m.expenseRatio === null || m.expenseRatio > 1.5);
+  const isStressed  = m.cashFlow < 0 || (m.expenseRatio !== null && m.expenseRatio > 1);
+  const highDebt    = m.debtToAsset === null || m.debtToAsset > 0.65;
+  const highLate    = m.lateRate > 25;
+  const lowHealth   = computeApproxScore(m) > 60; // risk > 60 → health < 40
+
+  // Critical: only emergency recovery makes sense
+  if (isCritical) return ['recovery'];
+
+  // Stressed + high debt: no growth/excellence
+  if (isStressed && highDebt) return ['recovery', 'stability', 'debt_reduction'];
+
+  // Stressed only: no growth/excellence
+  if (isStressed) return ['recovery', 'stability', 'debt_reduction', 'revenue_optimization'];
+
+  // Heavy debt but cashflow OK: debt-focused scenarios only
+  if (highDebt) return ['stability', 'debt_reduction', 'revenue_optimization', 'excellence'];
+
+  // Poor health score but cashflow OK: stabilise first
+  if (lowHealth) return ['stability', 'debt_reduction', 'recovery', 'revenue_optimization'];
+
+  // High late rate: revenue optimization takes priority over growth
+  if (highLate) return ['stability', 'revenue_optimization', 'debt_reduction', 'excellence', 'recovery'];
+
+  // Healthy: all scenarios available
+  return ['growth', 'stability', 'debt_reduction', 'revenue_optimization', 'recovery', 'excellence'];
+}
+
 // ── Best scenario recommendation ─────────────────────────────
 /**
  * Compute which scenario best matches the company's current financial state.
@@ -1524,6 +1559,7 @@ async function getGoalAdvice(scenario, language = 'fr') {
   return {
     scenario,
     recommendedScenario: computeRecommendedScenario(m),
+    validScenarios:      computeValidScenarios(m),
     currentMetrics,
     scenarioWarning,
     sections:     built.sections,
@@ -1541,6 +1577,7 @@ async function getRecommendedScenario() {
   const m = await collectMetrics();
   return {
     recommendedScenario: computeRecommendedScenario(m),
+    validScenarios:      computeValidScenarios(m),
     score: computeApproxScore(m),
   };
 }

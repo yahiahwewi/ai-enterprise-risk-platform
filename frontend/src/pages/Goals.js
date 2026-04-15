@@ -197,23 +197,54 @@ const CAT_ICON = {
   assets:       { icon: 'inventory_2',     color: 'text-amber-500'   },
 };
 
+// ─── Urgency config per priority level ───────────────────────
+const URGENCY = {
+  critical: {
+    icon: 'emergency', bar: 'bg-red-500',
+    bannerCls: 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-800/30',
+    iconCls: 'text-red-500',
+    fr: 'Intervention immédiate requise — chaque jour d\'inaction aggrave la situation.',
+    en: 'Immediate action required — every day of inaction worsens the situation.',
+  },
+  high: {
+    icon: 'priority_high', bar: 'bg-orange-500',
+    bannerCls: 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-800/30',
+    iconCls: 'text-orange-500',
+    fr: 'Action prioritaire cette semaine — fort impact sur votre performance financière.',
+    en: 'Priority action this week — high impact on your financial performance.',
+  },
+  medium: {
+    icon: 'schedule', bar: 'bg-amber-400',
+    bannerCls: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-800/30',
+    iconCls: 'text-amber-500',
+    fr: 'À planifier ce mois — contribue directement à l\'atteinte de votre objectif.',
+    en: 'Plan this month — directly contributes to reaching your target.',
+  },
+  low: {
+    icon: 'info', bar: 'bg-slate-400',
+    bannerCls: 'bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-700',
+    iconCls: 'text-slate-400',
+    fr: 'Amélioration continue — optimise votre position à long terme.',
+    en: 'Continuous improvement — strengthens your long-term position.',
+  },
+};
+
+// ─── Split description into action steps ─────────────────────
+function descToSteps(desc) {
+  if (!desc) return [];
+  const parts = desc.split(/(?<=[.!?])\s+(?=[A-ZÁÀÂÉÈÊÎÏÔÙÛÜÇ])/u).filter(p => p.trim().length > 12);
+  return parts.length >= 2 ? parts : [desc];
+}
+
 // ─── Expandable suggestion card ──────────────────────────────
 function SuggestionCard({ s, category, isFr }) {
   const [open, setOpen]         = useState(false);
   const [entities, setEntities] = useState(null);
-  const [loading, setLoading]   = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  const actionL = isFr ? {
-    invoices:     'Voir les factures',
-    loans:        'Voir les prêts',
-    transactions: 'Voir les transactions',
-    assets:       'Voir les actifs',
-  } : {
-    invoices:     'View invoices',
-    loans:        'View loans',
-    transactions: 'View transactions',
-    assets:       'View assets',
-  };
+  const steps   = descToSteps(s.description);
+  const p       = PRIORITY[s.priority] || PRIORITY.low;
+  const urgency = URGENCY[s.priority]  || URGENCY.low;
 
   const toggle = useCallback(async () => {
     const next = !open;
@@ -221,7 +252,7 @@ function SuggestionCard({ s, category, isFr }) {
     if (next && entities === null) {
       const cfg = getEntityFetch(category, s);
       if (!cfg) return;
-      setLoading(true);
+      setDataLoading(true);
       try {
         const { data } = await api.get(cfg.path);
         const arr = Array.isArray(data) ? data : (data.data || data.invoices || data.loans || data.transactions || data.assets || []);
@@ -229,48 +260,31 @@ function SuggestionCard({ s, category, isFr }) {
       } catch {
         setEntities([]);
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     }
-  }, [open, entities, category, s.id]);
-
-  const p = PRIORITY[s.priority] || PRIORITY.low;
+  }, [open, entities, category, s]);
 
   return (
-    <div
-      className={`rounded-xl border-2 transition-all duration-200
-        ${open ? 'border-primary/40 dark:border-blue-500/40 shadow-lg' : `${p.border} hover:shadow-md`}
-        bg-white dark:bg-slate-800/80`}
+    <div className={`rounded-xl border-2 transition-all duration-200 bg-white dark:bg-slate-800/80
+      ${open ? 'border-primary/30 dark:border-blue-500/30 shadow-lg' : `${p.border} hover:shadow-md`}`}
     >
-      {/* ── Card header (always visible) ── */}
-      <button
-        className="w-full text-left p-4 flex items-start gap-3 group"
-        onClick={toggle}
-      >
-        {/* priority dot */}
-        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${p.dot}`} />
-
+      {/* ── Card header ── */}
+      <button className="w-full text-left p-4 flex items-start gap-3" onClick={toggle}>
+        <span className={`w-2 h-2 rounded-full mt-2 shrink-0 ${p.dot}`} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${p.cls}`}>
-              {p.label[isFr ? 'fr' : 'en']}
-            </span>
-          </div>
-          <p className="text-sm font-semibold text-on-surface dark:text-slate-100 leading-tight">{s.title}</p>
+          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${p.cls}`}>
+            {p.label[isFr ? 'fr' : 'en']}
+          </span>
+          <p className="text-sm font-semibold text-on-surface dark:text-slate-100 leading-tight mt-1">{s.title}</p>
         </div>
-
-        {/* optional metric pill */}
         {s.metric && (
           <div className="shrink-0 text-right">
             <div className="text-xs font-bold text-on-surface dark:text-slate-100">{s.metric.value}</div>
             <div className="text-[9px] text-on-surface-variant dark:text-slate-400">{s.metric.label}</div>
           </div>
         )}
-
-        {/* expand chevron */}
-        <span
-          className={`material-symbols-outlined text-[18px] text-on-surface-variant dark:text-slate-400 shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
-        >
+        <span className={`material-symbols-outlined text-[18px] text-on-surface-variant dark:text-slate-400 shrink-0 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
           expand_more
         </span>
       </button>
@@ -278,59 +292,100 @@ function SuggestionCard({ s, category, isFr }) {
       {/* ── Always-visible body ── */}
       <div className="px-4 pb-3 pl-9">
         <p className="text-xs text-on-surface-variant dark:text-slate-400 leading-relaxed mb-2">{s.description}</p>
-
-        {s.impact && (
-          <div className="flex items-center gap-1.5 mb-3">
-            <span className="material-symbols-outlined text-[13px] text-primary">auto_awesome</span>
-            <span className="text-[11px] text-primary dark:text-blue-400 font-medium italic">{s.impact}</span>
-          </div>
-        )}
-
-        {/* action button — triggers expand */}
-        <button
-          onClick={toggle}
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-blue-400 hover:underline"
-        >
-          <span className="material-symbols-outlined text-[14px]">
-            {open ? 'keyboard_arrow_up' : 'arrow_forward'}
-          </span>
-          {open
-            ? (isFr ? 'Réduire' : 'Collapse')
-            : (s.actionLabel || actionL[category] || (isFr ? 'Voir les détails' : 'See details'))
-          }
+        <button onClick={toggle} className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-blue-400 hover:underline">
+          <span className="material-symbols-outlined text-[14px]">{open ? 'keyboard_arrow_up' : 'analytics'}</span>
+          {open ? (isFr ? 'Masquer l\'analyse' : 'Hide analysis') : (isFr ? 'Voir l\'analyse détaillée' : 'View detailed analysis')}
         </button>
       </div>
 
-      {/* ── Expand panel ── */}
+      {/* ── Insight + Data expand panel ── */}
       <ExpandPanel open={open}>
-        <div className="border-t border-outline-variant/20 dark:border-slate-700 mx-4 mt-1" />
-        <div className="px-4 pt-3 pb-5 pl-9">
-          {loading ? (
-            <div className="flex items-center gap-2 py-5 justify-center">
-              <span className="material-symbols-outlined text-[22px] text-primary animate-spin">progress_activity</span>
-              <span className="text-xs text-on-surface-variant dark:text-slate-400">
-                {isFr ? 'Chargement des données...' : 'Loading data...'}
-              </span>
-            </div>
-          ) : entities !== null ? (
-            <div>
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className="material-symbols-outlined text-[13px] text-emerald-500">circle</span>
-                <p className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
-                  {isFr ? 'Données en temps réel' : 'Live data'}
-                  <span className="ml-2 normal-case font-normal text-on-surface-variant dark:text-slate-500">
-                    · {entities.length} {isFr ? 'entrée(s)' : 'entries'}
-                  </span>
-                </p>
+        <div className="border-t border-outline-variant/15 dark:border-slate-700/60 mx-4" />
+        <div className="px-4 pt-4 pb-5 pl-9 space-y-4">
+
+          {/* ── Section 1: Urgency banner ── */}
+          <div className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 ${urgency.bannerCls}`}>
+            <span className={`material-symbols-outlined text-[16px] shrink-0 mt-0.5 ${urgency.iconCls}`}>{urgency.icon}</span>
+            <p className={`text-[11px] font-semibold leading-snug ${urgency.iconCls}`}>
+              {isFr ? urgency.fr : urgency.en}
+            </p>
+          </div>
+
+          {/* ── Section 2: Action plan ── */}
+          {steps.length > 0 && (
+            <div className="bg-surface-container-low dark:bg-slate-700/30 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="material-symbols-outlined text-[14px] text-primary dark:text-blue-400">checklist</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-slate-400">
+                  {isFr ? 'Plan d\'action' : 'Action plan'}
+                </span>
               </div>
-              <div className="overflow-x-auto rounded-lg">
+              {steps.map((step, i) => (
+                <div key={i} className="flex items-start gap-2.5 goals-enter" style={{ animationDelay: `${i * 55}ms` }}>
+                  <div className="w-5 h-5 rounded-full bg-primary/10 dark:bg-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[9px] font-extrabold text-primary dark:text-blue-400">{i + 1}</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface dark:text-slate-200 leading-relaxed">{step}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Section 3: Impact + Metric row ── */}
+          {(s.impact || s.metric) && (
+            <div className="grid grid-cols-1 gap-2.5" style={{ gridTemplateColumns: s.impact && s.metric ? '1fr auto' : '1fr' }}>
+              {s.impact && (
+                <div className="flex items-start gap-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 rounded-lg px-3 py-2.5">
+                  <span className="material-symbols-outlined text-[14px] text-emerald-500 shrink-0 mt-0.5">trending_up</span>
+                  <div>
+                    <p className="text-[8px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-0.5">
+                      {isFr ? 'Impact attendu' : 'Expected impact'}
+                    </p>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-300 leading-snug">{s.impact}</p>
+                  </div>
+                </div>
+              )}
+              {s.metric && (
+                <div className="flex flex-col justify-center border-l-2 border-primary/20 dark:border-blue-500/20 pl-3 min-w-[80px]">
+                  <p className="text-[8px] text-on-surface-variant dark:text-slate-500 uppercase tracking-wider font-medium whitespace-nowrap">{s.metric.label}</p>
+                  <p className="text-lg font-extrabold font-headline text-on-surface dark:text-slate-100 leading-none mt-0.5">{s.metric.value}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Section 4: Live entity data ── */}
+          <div className="pt-1">
+            <div className="flex items-center gap-1.5 mb-2.5">
+              <span className="material-symbols-outlined text-[13px] text-on-surface-variant dark:text-slate-500">table_view</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-on-surface-variant dark:text-slate-500">
+                {isFr ? 'Données associées' : 'Related data'}
+              </span>
+              {entities !== null && (
+                <span className="ml-auto text-[9px] text-on-surface-variant dark:text-slate-500 font-medium">
+                  {entities.length} {isFr ? 'entrée(s)' : 'entries'}
+                </span>
+              )}
+            </div>
+            {dataLoading ? (
+              <div className="flex items-center gap-2 py-4 justify-center">
+                <span className="material-symbols-outlined text-[20px] text-primary animate-spin">progress_activity</span>
+                <span className="text-xs text-on-surface-variant dark:text-slate-400">
+                  {isFr ? 'Chargement...' : 'Loading...'}
+                </span>
+              </div>
+            ) : entities !== null && entities.length > 0 ? (
+              <div className="overflow-x-auto rounded-lg border border-outline-variant/10 dark:border-slate-700/50">
                 {category === 'invoices'     && <InvoiceRows     items={entities} isFr={isFr} />}
                 {category === 'loans'        && <LoanRows        items={entities} isFr={isFr} />}
                 {category === 'transactions' && <TransactionRows items={entities} isFr={isFr} />}
                 {category === 'assets'       && <AssetRows       items={entities} isFr={isFr} />}
               </div>
-            </div>
-          ) : null}
+            ) : entities !== null ? (
+              <EmptyEntities isFr={isFr} />
+            ) : null}
+          </div>
+
         </div>
       </ExpandPanel>
     </div>
@@ -473,44 +528,64 @@ const SCENARIOS = [
 ];
 
 // ─── Scenario picker card ────────────────────────────────────
-function ScenarioCard({ scenario, selected, recommended, onClick, isFr }) {
+function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr }) {
   const sc = SCENARIOS.find(s => s.id === scenario.id) || SCENARIOS[0];
   return (
     <button
-      onClick={() => onClick(scenario.id)}
+      onClick={() => !disabled && onClick(scenario.id)}
+      disabled={disabled}
       className={`relative w-full text-left p-5 rounded-2xl border-2 transition-all duration-200
-        ${selected
-          ? `border-transparent ring-2 ${sc.ring} ${sc.bg} shadow-lg scale-[1.02]`
-          : recommended
-            ? `border-transparent ring-2 ring-emerald-400 dark:ring-emerald-500 ${sc.bg} shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800`
-            : 'border-outline-variant/30 dark:border-slate-700 hover:border-outline-variant dark:hover:border-slate-600 hover:shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800'
+        ${disabled
+          ? 'border-outline-variant/20 dark:border-slate-700/40 bg-surface-container/60 dark:bg-slate-800/30 cursor-not-allowed'
+          : selected
+            ? `border-transparent ring-2 ${sc.ring} ${sc.bg} shadow-lg scale-[1.02]`
+            : recommended
+              ? `border-transparent ring-2 ring-emerald-400 dark:ring-emerald-500 ${sc.bg} shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800`
+              : 'border-outline-variant/30 dark:border-slate-700 hover:border-outline-variant dark:hover:border-slate-600 hover:shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800'
         }`}
     >
       {/* Recommended flag */}
-      {recommended && !selected && (
+      {recommended && !selected && !disabled && (
         <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10 goals-pop">
           <span className="material-symbols-outlined text-[11px]">recommend</span>
           {isFr ? 'Recommandé pour vous' : 'Recommended for you'}
         </div>
       )}
 
-      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${sc.gradient} flex items-center justify-center mb-3 shadow-sm`}>
+      {/* Not-suitable badge */}
+      {disabled && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 bg-slate-200/90 dark:bg-slate-700/80 rounded-full px-2 py-0.5 z-10">
+          <span className="material-symbols-outlined text-[11px] text-on-surface-variant/60 dark:text-slate-400">block</span>
+          <span className="text-[8px] font-bold text-on-surface-variant/60 dark:text-slate-500 uppercase tracking-wide">
+            {isFr ? 'Non adapté' : 'Not suitable'}
+          </span>
+        </div>
+      )}
+
+      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${sc.gradient} flex items-center justify-center mb-3 shadow-sm ${disabled ? 'opacity-30' : ''}`}>
         <span className="material-symbols-outlined text-white text-[20px]">{sc.icon}</span>
       </div>
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${sc.badge}`}>
-          {isFr ? sc.tagFr : sc.tagEn}
-        </span>
-        {selected && <span className="ml-auto material-symbols-outlined text-[16px] text-primary">check_circle</span>}
-        {recommended && selected && (
-          <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-            <span className="material-symbols-outlined text-[12px]">recommend</span>
-            {isFr ? 'Recommandé' : 'Recommended'}
+      <div className={`${disabled ? 'opacity-35' : ''}`}>
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-widest ${sc.badge}`}>
+            {isFr ? sc.tagFr : sc.tagEn}
           </span>
+          {selected && !disabled && <span className="ml-auto material-symbols-outlined text-[16px] text-primary">check_circle</span>}
+          {recommended && selected && !disabled && (
+            <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="material-symbols-outlined text-[12px]">recommend</span>
+              {isFr ? 'Recommandé' : 'Recommended'}
+            </span>
+          )}
+        </div>
+        <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{isFr ? sc.labelFr : sc.labelEn}</h3>
+        <p className="text-[11px] text-on-surface-variant dark:text-slate-400 leading-snug">{isFr ? sc.descFr : sc.descEn}</p>
+        {disabled && (
+          <p className="text-[10px] text-on-surface-variant/50 dark:text-slate-600 mt-2 italic">
+            {isFr ? 'Stabilisez d\'abord votre situation financière.' : 'Stabilise your finances first.'}
+          </p>
         )}
       </div>
-      <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{isFr ? sc.labelFr : sc.labelEn}</h3>
-      <p className="text-[11px] text-on-surface-variant dark:text-slate-400 leading-snug">{isFr ? sc.descFr : sc.descEn}</p>
     </button>
   );
 }
@@ -522,15 +597,19 @@ export default function Goals() {
   const [loading,            setLoading]            = useState(false);
   const [resultKey,          setResultKey]          = useState(0);
   const [recommendedScenario,setRecommendedScenario] = useState(null);
+  const [validScenarios,     setValidScenarios]     = useState(null); // null = all valid (not yet loaded)
   const { addToast } = useToast();
   const { lang }    = useLang();
   const isFr        = lang === 'fr';
 
-  // Fetch recommended scenario on mount (lightweight call, no user action required)
+  // Fetch recommended scenario + valid scenarios on mount
   useEffect(() => {
     api.get('/ai/goals/recommended')
-      .then(({ data }) => { if (data?.recommendedScenario) setRecommendedScenario(data.recommendedScenario); })
-      .catch(() => {/* silently ignore — flag is optional */});
+      .then(({ data }) => {
+        if (data?.recommendedScenario) setRecommendedScenario(data.recommendedScenario);
+        if (data?.validScenarios)      setValidScenarios(data.validScenarios);
+      })
+      .catch(() => {/* silently ignore — flags are optional */});
   }, []);
 
   const l = isFr ? {
@@ -585,6 +664,7 @@ export default function Goals() {
       setResult(data);
       setResultKey(k => k + 1); // trigger re-mount + enter animation
       if (data?.recommendedScenario) setRecommendedScenario(data.recommendedScenario);
+      if (data?.validScenarios)      setValidScenarios(data.validScenarios);
     } catch {
       setResult(null); // clear on error so picker reappears
       addToast('error', isFr ? 'Erreur' : 'Error', isFr ? 'Analyse impossible' : 'Analysis failed');
@@ -637,6 +717,7 @@ export default function Goals() {
                 scenario={scenario}
                 selected={selectedScenario === scenario.id}
                 recommended={scenario.id === recommendedScenario}
+                disabled={validScenarios !== null && !validScenarios.includes(scenario.id)}
                 onClick={handleScenarioClick}
                 isFr={isFr}
               />
@@ -800,20 +881,27 @@ export default function Goals() {
           {/* Scenario switcher pills */}
           <div className="flex items-center gap-2 flex-wrap goals-fade" style={{ animationDelay: '60ms' }}>
             <span className="text-xs text-on-surface-variant dark:text-slate-400 font-medium shrink-0">{l.activeScenario}</span>
-            {SCENARIOS.map(s => (
-              <button
-                key={s.id}
-                disabled={loading}
-                onClick={() => analyse(s.id)}
-                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all disabled:opacity-50 ${
-                  s.id === selectedScenario
-                    ? `bg-gradient-to-r ${s.gradient} text-white shadow-sm`
-                    : 'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-600'
-                }`}
-              >
-                {isFr ? s.labelFr : s.labelEn}
-              </button>
-            ))}
+            {SCENARIOS.map(s => {
+              const isValid = !validScenarios || validScenarios.includes(s.id);
+              const isActive = s.id === selectedScenario;
+              return (
+                <button
+                  key={s.id}
+                  disabled={loading || !isValid}
+                  onClick={() => isValid && analyse(s.id)}
+                  title={!isValid ? (isFr ? 'Non adapté à votre situation actuelle' : 'Not suitable for your current situation') : undefined}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all
+                    ${isActive
+                      ? `bg-gradient-to-r ${s.gradient} text-white shadow-sm`
+                      : !isValid
+                        ? 'bg-surface-container/50 dark:bg-slate-800/50 text-on-surface-variant/30 dark:text-slate-700 cursor-not-allowed line-through decoration-1'
+                        : 'bg-surface-container dark:bg-slate-700 text-on-surface-variant dark:text-slate-400 hover:bg-surface-container-high dark:hover:bg-slate-600 disabled:opacity-50'
+                    }`}
+                >
+                  {isFr ? s.labelFr : s.labelEn}
+                </button>
+              );
+            })}
           </div>
 
           {/* Suggestion sections — single column, full width, collapsible */}
