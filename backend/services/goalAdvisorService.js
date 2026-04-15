@@ -1384,6 +1384,29 @@ function computeApproxScore(m) {
   return Math.round(cashFlow * 0.35 + invoices * 0.25 + debtRisk * 0.25 + loanBurden * 0.15);
 }
 
+// ── Best scenario recommendation ─────────────────────────────
+/**
+ * Compute which scenario best matches the company's current financial state.
+ * Uses the same metrics as computeScenarioWarning + computeApproxScore.
+ */
+function computeRecommendedScenario(m) {
+  const isCritical = m.cashFlow < 0 && (m.expenseRatio === null || m.expenseRatio > 1.5);
+  const isStressed = m.cashFlow < 0 || (m.expenseRatio !== null && m.expenseRatio > 1);
+  const highDebt   = m.debtToAsset === null || m.debtToAsset > 0.65;
+  const highLate   = m.lateRate > 25;
+
+  if (isCritical)                    return 'recovery';
+  if (isStressed && highDebt)        return 'debt_reduction';
+  if (isStressed)                    return 'stability';
+  if (highDebt)                      return 'debt_reduction';
+  if (highLate)                      return 'revenue_optimization';
+
+  const score = computeApproxScore(m);
+  if (score < 35)                    return 'stability';
+  if (score < 50)                    return 'excellence';
+  return 'growth';
+}
+
 // ── Scenario alignment check ─────────────────────────────────
 function computeScenarioWarning(scenario, m, lang) {
   const isFr = lang === 'fr';
@@ -1452,6 +1475,7 @@ async function getGoalAdvice(scenario, language = 'fr') {
 
   return {
     scenario,
+    recommendedScenario: computeRecommendedScenario(m),
     currentMetrics,
     scenarioWarning,
     sections:     built.sections,
@@ -1461,4 +1485,16 @@ async function getGoalAdvice(scenario, language = 'fr') {
   };
 }
 
-module.exports = { getGoalAdvice };
+/**
+ * Lightweight endpoint: returns only the recommended scenario for the current company state.
+ * Used by Goals.js on mount to show the flag before the user runs an analysis.
+ */
+async function getRecommendedScenario() {
+  const m = await collectMetrics();
+  return {
+    recommendedScenario: computeRecommendedScenario(m),
+    score: computeApproxScore(m),
+  };
+}
+
+module.exports = { getGoalAdvice, getRecommendedScenario };

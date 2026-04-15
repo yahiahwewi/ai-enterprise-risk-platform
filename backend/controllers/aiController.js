@@ -1,5 +1,5 @@
 const { analyzeRisk } = require('../services/aiService');
-const { getGoalAdvice } = require('../services/goalAdvisorService');
+const { getGoalAdvice, getRecommendedScenario } = require('../services/goalAdvisorService');
 const { generateFinalDecision } = require('../services/decisionEngine');
 const { checkAndNotifyRiskAlerts, checkOverdueInvoices, checkNegativeCashFlow } = require('../services/notificationService');
 const { calculateHealthIndex } = require('../services/healthIndex');
@@ -68,6 +68,15 @@ exports.suggestCat = async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getRecommendedScenario = async (req, res) => {
+  try {
+    const result = await getRecommendedScenario();
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 

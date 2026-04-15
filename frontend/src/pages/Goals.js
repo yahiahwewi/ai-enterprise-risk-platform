@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LanguageContext';
@@ -363,7 +363,7 @@ const SCENARIOS = [
 ];
 
 // ─── Scenario picker card ────────────────────────────────────
-function ScenarioCard({ scenario, selected, onClick, isFr }) {
+function ScenarioCard({ scenario, selected, recommended, onClick, isFr }) {
   const sc = SCENARIOS.find(s => s.id === scenario.id) || SCENARIOS[0];
   return (
     <button
@@ -371,9 +371,19 @@ function ScenarioCard({ scenario, selected, onClick, isFr }) {
       className={`relative w-full text-left p-5 rounded-2xl border-2 transition-all duration-200
         ${selected
           ? `border-transparent ring-2 ${sc.ring} ${sc.bg} shadow-lg scale-[1.02]`
-          : 'border-outline-variant/30 dark:border-slate-700 hover:border-outline-variant dark:hover:border-slate-600 hover:shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800'
+          : recommended
+            ? `border-transparent ring-2 ring-emerald-400 dark:ring-emerald-500 ${sc.bg} shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800`
+            : 'border-outline-variant/30 dark:border-slate-700 hover:border-outline-variant dark:hover:border-slate-600 hover:shadow-md hover:scale-[1.01] bg-surface-container-lowest dark:bg-slate-800'
         }`}
     >
+      {/* Recommended flag */}
+      {recommended && !selected && (
+        <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-emerald-500 text-white text-[9px] font-bold px-2.5 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
+          <span className="material-symbols-outlined text-[11px]">recommend</span>
+          {isFr ? 'Recommandé pour vous' : 'Recommended for you'}
+        </div>
+      )}
+
       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${sc.gradient} flex items-center justify-center mb-3 shadow-sm`}>
         <span className="material-symbols-outlined text-white text-[20px]">{sc.icon}</span>
       </div>
@@ -382,6 +392,12 @@ function ScenarioCard({ scenario, selected, onClick, isFr }) {
           {isFr ? sc.tagFr : sc.tagEn}
         </span>
         {selected && <span className="ml-auto material-symbols-outlined text-[16px] text-primary">check_circle</span>}
+        {recommended && selected && (
+          <span className="ml-auto flex items-center gap-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
+            <span className="material-symbols-outlined text-[12px]">recommend</span>
+            {isFr ? 'Recommandé' : 'Recommended'}
+          </span>
+        )}
       </div>
       <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{isFr ? sc.labelFr : sc.labelEn}</h3>
       <p className="text-[11px] text-on-surface-variant dark:text-slate-400 leading-snug">{isFr ? sc.descFr : sc.descEn}</p>
@@ -391,12 +407,20 @@ function ScenarioCard({ scenario, selected, onClick, isFr }) {
 
 // ─── Main page ────────────────────────────────────────────────
 export default function Goals() {
-  const [selectedScenario, setSelectedScenario] = useState(null);
-  const [result,           setResult]           = useState(null);
-  const [loading,          setLoading]          = useState(false);
+  const [selectedScenario,   setSelectedScenario]   = useState(null);
+  const [result,             setResult]             = useState(null);
+  const [loading,            setLoading]            = useState(false);
+  const [recommendedScenario,setRecommendedScenario] = useState(null);
   const { addToast } = useToast();
   const { lang }    = useLang();
   const isFr        = lang === 'fr';
+
+  // Fetch recommended scenario on mount (lightweight call, no user action required)
+  useEffect(() => {
+    api.get('/ai/goals/recommended')
+      .then(({ data }) => { if (data?.recommendedScenario) setRecommendedScenario(data.recommendedScenario); })
+      .catch(() => {/* silently ignore — flag is optional */});
+  }, []);
 
   const l = isFr ? {
     title:        'Stratégie',
@@ -445,6 +469,8 @@ export default function Goals() {
     try {
       const { data } = await api.get(`/ai/goals/${scenarioId}?language=${lang}`);
       setResult(data);
+      // Sync recommended scenario from result (keeps it up to date)
+      if (data?.recommendedScenario) setRecommendedScenario(data.recommendedScenario);
     } catch {
       addToast('error', isFr ? 'Erreur' : 'Error', isFr ? 'Analyse impossible' : 'Analysis failed');
     } finally {
@@ -489,9 +515,16 @@ export default function Goals() {
             <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-1">{l.chooseTitle}</h3>
             <p className="text-xs text-on-surface-variant dark:text-slate-400">{l.chooseHint}</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 pt-2">
             {SCENARIOS.map(scenario => (
-              <ScenarioCard key={scenario.id} scenario={scenario} selected={selectedScenario === scenario.id} onClick={handleScenarioClick} isFr={isFr} />
+              <ScenarioCard
+                key={scenario.id}
+                scenario={scenario}
+                selected={selectedScenario === scenario.id}
+                recommended={scenario.id === recommendedScenario}
+                onClick={handleScenarioClick}
+                isFr={isFr}
+              />
             ))}
           </div>
           <div className="flex justify-center">
