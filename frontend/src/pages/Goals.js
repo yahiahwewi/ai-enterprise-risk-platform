@@ -352,6 +352,95 @@ function SectionBlock({ section, isFr }) {
   );
 }
 
+// ─── Skeleton components ─────────────────────────────────────
+function Sk({ className }) {
+  return <div className={`animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700 ${className}`} />;
+}
+
+function GoalsSkeleton({ isFr, sc }) {
+  return (
+    <div className="space-y-5">
+      {/* Hero banner skeleton */}
+      <div className={`rounded-2xl p-6 ${sc ? `bg-gradient-to-br ${sc.gradient} opacity-60` : 'bg-slate-200 dark:bg-slate-700 animate-pulse'}`}>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-white/20 animate-pulse" />
+            <div className="space-y-2">
+              <Sk className="h-2.5 w-20 bg-white/30" />
+              <Sk className="h-5 w-36 bg-white/30" />
+            </div>
+          </div>
+          <div className="flex items-center gap-5">
+            {[1, 2].map(i => (
+              <div key={i} className="text-center space-y-1.5">
+                <Sk className="h-2 w-16 mx-auto bg-white/25" />
+                <Sk className="h-8 w-10 mx-auto bg-white/25" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-5 pt-5 border-t border-white/20 space-y-2">
+          <Sk className="h-3 w-full bg-white/20" />
+          <Sk className="h-3 w-3/4 bg-white/20" />
+        </div>
+      </div>
+
+      {/* Metrics strip skeleton */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-3.5 flex items-center gap-3">
+            <Sk className="w-7 h-7 rounded-lg shrink-0" />
+            <div className="space-y-1.5 flex-1">
+              <Sk className="h-2 w-14" />
+              <Sk className="h-3.5 w-20" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Scenario pills skeleton */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Sk className="h-3 w-20" />
+        {[1, 2, 3, 4, 5, 6].map(i => <Sk key={i} className="h-6 w-20 rounded-full" />)}
+      </div>
+
+      {/* Section blocks skeleton */}
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl">
+          {/* section header */}
+          <div className="flex items-center gap-2.5 p-5 pb-4">
+            <Sk className="w-5 h-5 rounded" />
+            <Sk className="h-4 w-40 flex-1" />
+            <Sk className="h-3 w-16" />
+            <Sk className="w-5 h-5 rounded" />
+          </div>
+          {/* suggestion cards */}
+          <div className="px-5 pb-5 space-y-3">
+            {Array.from({ length: i < 3 ? 2 : 1 }).map((_, j) => (
+              <div key={j} className="rounded-xl border-2 border-outline-variant/20 dark:border-slate-700 p-4">
+                <div className="flex items-start gap-3">
+                  <Sk className="w-2 h-2 rounded-full mt-2 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Sk className="h-2.5 w-16 rounded-full" />
+                    <Sk className="h-4 w-4/5" />
+                    <Sk className="h-3 w-full" />
+                    <Sk className="h-3 w-2/3" />
+                    <Sk className="h-3 w-24 mt-1" />
+                  </div>
+                  <div className="shrink-0 space-y-1 text-right">
+                    <Sk className="h-4 w-16" />
+                    <Sk className="h-2.5 w-12" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Scenario catalogue ──────────────────────────────────────
 const SCENARIOS = [
   { id: 'growth',               icon: 'rocket_launch',    gradient: 'from-emerald-500 to-teal-600',   ring: 'ring-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20',  badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-800/40 dark:text-emerald-300',  labelFr: 'Croissance Rapide',         labelEn: 'Rapid Growth',            tagFr: 'Expansion',    tagEn: 'Expansion',    descFr: 'Maximisez vos revenus, investissez intelligemment et développez votre portefeuille clients.',            descEn: 'Maximize revenue, invest smartly and grow your client portfolio.' },
@@ -547,18 +636,7 @@ export default function Goals() {
       )}
 
       {/* ── Loading skeleton ────────────────────────────────── */}
-      {loading && (
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6 animate-pulse">
-              <div className="h-4 w-40 bg-slate-200 dark:bg-slate-700 rounded mb-5" />
-              <div className="space-y-3">
-                {[1, 2].map(j => <div key={j} className="h-24 bg-slate-100 dark:bg-slate-700 rounded-xl" />)}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {loading && <GoalsSkeleton isFr={isFr} sc={sc} />}
 
       {/* ── Results ─────────────────────────────────────────── */}
       {result && sc && !loading && (
