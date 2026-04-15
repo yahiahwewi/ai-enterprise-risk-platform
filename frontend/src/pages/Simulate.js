@@ -28,40 +28,144 @@ const PRESETS = [
   {
     id: 'recession',
     iconFr: 'Récession économique', iconEn: 'Economic Recession',
-    icon: 'trending_down', color: 'text-red-600',
+    icon: 'trending_down', color: 'text-red-600', chipCls: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    descFr: 'Simule un choc économique sévère : les revenus s\'effondrent, les charges augmentent, les clients paient en retard et les taux d\'intérêt montent.',
+    descEn: 'Simulates a severe economic shock: revenue collapses, costs rise, clients pay late and interest rates climb.',
+    chips: [
+      { icon: 'arrow_downward', labelFr: 'Revenus −30%', labelEn: 'Revenue −30%' },
+      { icon: 'arrow_upward',   labelFr: 'Charges +10%', labelEn: 'Costs +10%' },
+      { icon: 'schedule',       labelFr: '+5 retards',   labelEn: '+5 late' },
+      { icon: 'percent',        labelFr: 'Taux +3%',     labelEn: 'Rate +3%' },
+    ],
     params: { incomeChange: -30, expenseChange: 10, lateInvoiceCount: 5, collectionImprovement: -20, rateIncrease: 3, newLoanAmount: 0, assetChange: -15 },
   },
   {
     id: 'growth',
     iconFr: 'Croissance rapide', iconEn: 'Strong Growth',
-    icon: 'rocket_launch', color: 'text-emerald-600',
+    icon: 'rocket_launch', color: 'text-emerald-600', chipCls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    descFr: 'Scénario d\'expansion optimiste : revenus en forte hausse, recouvrement amélioré, valorisation des actifs.',
+    descEn: 'Optimistic expansion: strong revenue surge, improved collections, rising asset values.',
+    chips: [
+      { icon: 'arrow_upward',   labelFr: 'Revenus +40%',      labelEn: 'Revenue +40%' },
+      { icon: 'arrow_upward',   labelFr: 'Actifs +30%',       labelEn: 'Assets +30%' },
+      { icon: 'check_circle',   labelFr: 'Recouvrement +20%', labelEn: 'Collection +20%' },
+    ],
     params: { incomeChange: 40, expenseChange: 15, lateInvoiceCount: 0, collectionImprovement: 20, rateIncrease: 0, newLoanAmount: 0, assetChange: 30 },
   },
   {
     id: 'debt_crisis',
-    iconFr: 'Crise d\'endettement', iconEn: 'Debt Crisis',
-    icon: 'account_balance', color: 'text-orange-600',
+    iconFr: "Crise d'endettement", iconEn: 'Debt Crisis',
+    icon: 'account_balance', color: 'text-orange-600', chipCls: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    descFr: 'Accumulation de dettes, hausse des taux et pression sur la trésorerie — situation financière critique.',
+    descEn: 'Mounting debt, rising interest rates and cash-flow pressure — a critical financial situation.',
+    chips: [
+      { icon: 'account_balance', labelFr: '+150 000 TND', labelEn: '+150,000 TND' },
+      { icon: 'percent',         labelFr: 'Taux +5%',     labelEn: 'Rate +5%' },
+      { icon: 'arrow_upward',    labelFr: 'Charges +20%', labelEn: 'Costs +20%' },
+    ],
     params: { incomeChange: -10, expenseChange: 20, lateInvoiceCount: 3, collectionImprovement: -10, rateIncrease: 5, newLoanAmount: 150000, assetChange: 0 },
   },
   {
     id: 'collection',
     iconFr: 'Effort de recouvrement', iconEn: 'Collection Drive',
-    icon: 'payments', color: 'text-blue-600',
+    icon: 'payments', color: 'text-blue-600', chipCls: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    descFr: 'Effort ciblé sur l\'encaissement des créances clients : amélioration du taux de recouvrement et réduction légère des charges.',
+    descEn: 'Focused effort on collecting receivables: collection rate improved significantly, slight cost reduction.',
+    chips: [
+      { icon: 'payments',     labelFr: 'Recouvrement +40%', labelEn: 'Collection +40%' },
+      { icon: 'arrow_downward', labelFr: 'Charges −5%',     labelEn: 'Costs −5%' },
+      { icon: 'check_circle', labelFr: '0 retard ajouté',   labelEn: '0 added late' },
+    ],
     params: { incomeChange: 0, expenseChange: -5, lateInvoiceCount: 0, collectionImprovement: 40, rateIncrease: 0, newLoanAmount: 0, assetChange: 0 },
   },
   {
     id: 'austerity',
-    iconFr: 'Plan d\'austérité', iconEn: 'Austerity Plan',
-    icon: 'savings', color: 'text-purple-600',
+    iconFr: "Plan d'austérité", iconEn: 'Austerity Plan',
+    icon: 'savings', color: 'text-purple-600', chipCls: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    descFr: 'Réduction drastique des coûts pour préserver la trésorerie : gel des investissements et optimisation des dépenses.',
+    descEn: 'Drastic cost-cutting to preserve cash: investment freeze and spending optimisation.',
+    chips: [
+      { icon: 'arrow_downward', labelFr: 'Charges −30%', labelEn: 'Costs −30%' },
+      { icon: 'arrow_downward', labelFr: 'Actifs −10%',  labelEn: 'Assets −10%' },
+      { icon: 'savings',        labelFr: 'Sans emprunt', labelEn: 'No new debt' },
+    ],
     params: { incomeChange: -5, expenseChange: -30, lateInvoiceCount: 0, collectionImprovement: 10, rateIncrease: 0, newLoanAmount: 0, assetChange: -10 },
   },
   {
     id: 'expansion',
     iconFr: 'Expansion financée', iconEn: 'Debt-Financed Growth',
-    icon: 'construction', color: 'text-indigo-600',
+    icon: 'construction', color: 'text-indigo-600', chipCls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    descFr: 'Croissance financée par emprunt : revenus et actifs en hausse, mais charges et endettement augmentent aussi.',
+    descEn: 'Debt-funded growth: revenue and assets rise, but costs and debt increase too.',
+    chips: [
+      { icon: 'arrow_upward',    labelFr: 'Revenus +25%',    labelEn: 'Revenue +25%' },
+      { icon: 'account_balance', labelFr: '+200 000 TND',    labelEn: '+200,000 TND' },
+      { icon: 'arrow_upward',    labelFr: 'Actifs +50%',     labelEn: 'Assets +50%' },
+    ],
     params: { incomeChange: 25, expenseChange: 30, lateInvoiceCount: 0, collectionImprovement: 0, rateIncrease: 2, newLoanAmount: 200000, assetChange: 50 },
   },
 ];
+
+// ─── Preset card with expandable description ─────────────────
+function PresetCard({ p, active, onApply, isFr }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`rounded-xl border-2 transition-all duration-200 overflow-hidden
+      ${active
+        ? 'border-primary bg-primary/10 dark:border-blue-400 dark:bg-blue-900/30'
+        : 'border-outline-variant/30 dark:border-slate-700 hover:border-primary/40 hover:bg-surface-container dark:hover:bg-slate-700/50 bg-surface-container-lowest dark:bg-slate-800'
+      }`}
+    >
+      {/* ── Main row ── */}
+      <div className="flex items-center gap-2 px-3 py-2.5">
+        {/* Apply button area */}
+        <button
+          onClick={() => onApply(p)}
+          className="flex-1 flex flex-col items-center gap-1 text-center min-w-0"
+        >
+          <span className={`material-symbols-outlined text-[22px] ${p.color}`}>{p.icon}</span>
+          <span className="text-[10px] font-bold text-on-surface dark:text-slate-200 leading-tight line-clamp-2">
+            {isFr ? p.iconFr : p.iconEn}
+          </span>
+        </button>
+        {/* Info toggle */}
+        <button
+          onClick={() => setOpen(o => !o)}
+          title={isFr ? 'Voir l\'explication' : 'Show explanation'}
+          className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-200
+            ${open
+              ? 'bg-primary text-white dark:bg-blue-500'
+              : 'text-on-surface-variant dark:text-slate-500 hover:text-primary dark:hover:text-blue-400'
+            }`}
+        >
+          <span className="material-symbols-outlined text-[13px]">{open ? 'close' : 'info'}</span>
+        </button>
+      </div>
+
+      {/* ── Expandable explanation ── */}
+      <div
+        className="grid transition-all duration-300"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div style={{ minHeight: 0, overflow: 'hidden' }}>
+          <div className="px-3 pb-3 border-t border-outline-variant/20 dark:border-slate-700 pt-2.5 space-y-2">
+            <p className="text-[10px] text-on-surface-variant dark:text-slate-400 leading-relaxed">
+              {isFr ? p.descFr : p.descEn}
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {p.chips.map((c, i) => (
+                <span key={i} className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.chipCls}`}>
+                  <span className="material-symbols-outlined text-[9px]">{c.icon}</span>
+                  {isFr ? c.labelFr : c.labelEn}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Slider component ────────────────────────────────────────
 function Slider({ label, hint, min, max, step = 1, value, onChange, format }) {
@@ -279,22 +383,15 @@ export default function Simulate() {
         <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest mb-4">
           {l.presets}
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-start">
           {PRESETS.map(p => (
-            <button
+            <PresetCard
               key={p.id}
-              onClick={() => applyPreset(p)}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center
-                ${activePreset === p.id
-                  ? 'border-primary bg-primary/10 dark:border-blue-400 dark:bg-blue-900/30'
-                  : 'border-outline-variant/30 dark:border-slate-700 hover:border-primary/50 hover:bg-surface-container dark:hover:bg-slate-700/50'
-                }`}
-            >
-              <span className={`material-symbols-outlined text-[22px] ${p.color}`}>{p.icon}</span>
-              <span className="text-[10px] font-bold text-on-surface dark:text-slate-200 leading-tight">
-                {isFr ? p.iconFr : p.iconEn}
-              </span>
-            </button>
+              p={p}
+              active={activePreset === p.id}
+              onApply={applyPreset}
+              isFr={isFr}
+            />
           ))}
         </div>
       </div>
