@@ -52,9 +52,9 @@ async function runDailySummary() {
     const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
     const expenses = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
-    const report = await analyzeRisk();
+    const report = await analyzeRisk('fr');
 
-    const message = `Hier: ${txs.length} transaction(s) — ${income.toLocaleString()} TND revenus, ${expenses.toLocaleString()} TND dépenses. Score de risque: ${report.globalScore}/100 (${report.level}).`;
+    const message = `Hier: ${txs.length} transaction(s) — ${income.toLocaleString('fr-FR')} TND revenus, ${expenses.toLocaleString('fr-FR')} TND dépenses. Score de risque: ${report.globalScore}/100 (${report.level}).`;
 
     const owners = await User.find({ role: 'owner', status: 'approved' }).select('_id');
     for (const owner of owners) {
@@ -76,10 +76,12 @@ async function runDailySummary() {
 
 async function runWeeklyDigest() {
   try {
-    const report = await analyzeRisk();
+    const report = await analyzeRisk('fr');
     const health = await require('../healthIndex').calculateHealthIndex();
+    const f30 = report.forecast.forecast30Days;
+    const f30str = (f30 < 0 ? '−' : '+') + Math.abs(f30).toLocaleString('fr-FR');
 
-    const message = `Rapport hebdomadaire — Risque: ${report.globalScore}/100 (${report.level}). Santé financière: ${health.score}/100 (Grade ${health.grade}). Prévision 30j: ${report.forecast.forecast30Days.toLocaleString()} TND.`;
+    const message = `Rapport hebdomadaire — Risque: ${report.globalScore}/100 (${report.level}). Santé financière: ${health.score}/100 (Grade ${health.grade}). Prévision 30j: ${f30str} TND.`;
 
     const owners = await User.find({ role: 'owner', status: 'approved' }).select('_id');
     for (const owner of owners) {

@@ -1,0 +1,131 @@
+@startuml SD05_Analyse_de_Risque_IA
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD05 — Analyse de Risque par Intelligence Artificielle**
+
+actor "Propriétaire" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "Service IA\n(aiService)" as AI #Orange
+participant "Moteur de\nDécision" as DE #Gold
+participant "Indice de\nSanté" as HI #Plum
+database "MongoDB" as DB #LightCoral
+
+== Demande d'analyse de risque ==
+
+User -> FE : Accéder à la page\n"Rapport de Risque"
+activate FE
+
+FE -> BE : **GET /api/ai/risk**\n+ JWT Bearer Token
+activate BE
+
+BE -> BE : **protect()** — Vérifier JWT
+BE -> BE : **authorize('owner')** —\nVérifier le rôle propriétaire
+
+alt Non autorisé
+    BE --> FE : **403** — Accès refusé
+    FE --> User : Rediriger vers le\ntableau de bord
+else Autorisé
+
+    BE -> AI : **analyzeRisk()**
+    activate AI
+
+    == Étape 1 : Collecte des données ==
+
+    AI -> DB : **Transaction.find()**
+    activate DB
+    DB --> AI : Toutes les transactions
+    deactivate DB
+
+    AI -> DB : **Invoice.find()**
+    activate DB
+    DB --> AI : Toutes les factures
+    deactivate DB
+
+    AI -> DB : **Loan.find()**
+    activate DB
+    DB --> AI : Tous les prêts
+    deactivate DB
+
+    AI -> DB : **Asset.find()**
+    activate DB
+    DB --> AI : Tous les actifs
+    deactivate DB
+
+    == Vérification des données ==
+
+    AI -> AI : Vérifier le drapeau **hasData**\n(au moins une transaction\nou facture existe)
+
+    alt Base de données vide
+        AI --> BE : Retourner tous les scores\nà **zéro** avec message :\n"Aucune donnée financière\ndisponible pour l'analyse"
+        BE --> FE : **200** — {globalScore: 0,\nlevel: 'low', message: '...'}
+        FE --> User : Afficher message\n"Ajoutez des données\npour voir l'analyse"
+    else Données disponibles
+
+        == Étape 2 : Calcul des scores par dimension ==
+
+        AI -> AI : **computeCashFlowRisk()**\n(Poids : **35%**)\n─ Flux net (revenus - dépenses)\n─ Volatilité mensuelle\n─ Tendance sur 6 mois\n→ Score 0-100
+
+        AI -> AI : **computeInvoiceRisk()**\n(Poids : **25%**)\n─ Taux de factures en retard\n─ Âge moyen des retards (jours)\n─ Concentration par client\n→ Score 0-100
+
+        AI -> AI : **computeDebtRisk()**\n(Poids : **25%**)\n─ Ratio dette / revenu\n─ Nombre de prêts actifs\n─ Capacité de remboursement\n→ Score 0-100
+
+        AI -> AI : **computeLoanBurdenRisk()**\n(Poids : **15%**)\n─ Paiement mensuel / revenu\n─ Charge totale des prêts\n→ Score 0-100
+
+        == Étape 3 : Score global pondéré ==
+
+        AI -> AI : **globalScore =\ncashFlow × 0.35 +\ninvoices × 0.25 +\ndebt × 0.25 +\nloanBurden × 0.15**
+
+        == Étape 4 : Classification ==
+
+        AI -> AI : Déterminer le **niveau** :\n─ 0-25 : Risque Faible\n─ 25-50 : Risque Moyen\n─ 50-75 : Risque Élevé\n─ 75-100 : Risque Critique
+
+        AI -> AI : Calculer la **confiance** :\n─ Faible → 85%+\n─ Moyen → 75%+\n─ Élevé → 70%+\n─ Critique → 65%+
+
+        == Étape 5 : Enrichissement ==
+
+        AI -> AI : **computeTrends()**\nTendances sur les 6 derniers\nmois (revenus, dépenses, solde)
+
+        AI -> AI : **detectAnomalies()**\nIdentifier les transactions\naberrantes (montants extrêmes)
+
+        AI -> AI : **generateForecast()**\nPrévisions sur 3 mois\n(revenus, dépenses, solde)
+
+        AI -> AI : **computeRootCauses()**\nTop 5 des causes principales\npar contribution :\n─ cause, contribution %,\ndimension
+
+        AI -> AI : **generateRecommendations()**\nActions prioritaires basées\nsur les scores
+
+        AI -> AI : Identifier les **factures\nen retard** détaillées\n(lateInvoicesList)
+
+        AI --> BE : {\nglobalScore, level, confidence,\nbreakdown: {cashFlow, invoices,\ndebt, loanBurden},\nmetrics, trends, anomalies,\nforecast, explanations,\npredictions, recommendations,\nrootCauses, lateInvoicesList\n}
+        deactivate AI
+
+        BE --> FE : **200** — Résultat complet\nde l'analyse de risque
+        deactivate BE
+
+        == Affichage des résultats ==
+
+        FE -> FE : Rendre le **graphique radar**\n(4 dimensions de risque)
+
+        FE -> FE : Rendre les **tendances**\n(graphique en courbe\nsur 6 mois)
+
+        FE -> FE : Rendre les **anomalies**\n(liste des transactions\naberrantes)
+
+        FE -> FE : Rendre les **prévisions**\n(graphique à barres\nsur 3 mois)
+
+        FE -> FE : Rendre les **causes\nprincipales**\n(top 5 par contribution)
+
+        FE -> FE : Rendre les **métriques**\ndétaillées par dimension
+
+        FE -> FE : Rendre les\n**recommandations**\nprioritaires
+
+        FE --> User : Afficher le rapport\nde risque complet
+
+    end
+end
+deactivate FE
+
+@enduml

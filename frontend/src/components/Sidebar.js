@@ -21,6 +21,7 @@ function useNavItems(t, lang) {
       { to: '/executive', label: lang === 'fr' ? 'Vue Exécutive' : 'Executive View', icon: 'monitoring' },
       { to: '/risk-report', label: t('nav.riskAnalysis'), icon: 'assessment' },
       { to: '/final-decision', label: t('nav.aiDecision'), icon: 'auto_awesome' },
+      { to: '/goals', label: lang === 'fr' ? 'Stratégie' : 'Strategy', icon: 'flag' },
       { to: '/simulate', label: lang === 'fr' ? 'Simulation' : 'Simulation', icon: 'science' },
       { to: '/approvals', label: lang === 'fr' ? 'Approbations' : 'Approvals', icon: 'pending_actions' },
       { to: '/reports', label: t('nav.reports'), icon: 'picture_as_pdf' },

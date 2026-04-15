@@ -23,6 +23,7 @@ import Approvals from './pages/Approvals';
 import Simulate from './pages/Simulate';
 import ExtractInvoice from './pages/ExtractInvoice';
 import Executive from './pages/Executive';
+import Goals from './pages/Goals';
 import CopilotChat from './components/CopilotChat';
 
 function ProtectedPage({ children, roles }) {
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="/approvals" element={<ProtectedPage roles={['owner', 'admin']}><Approvals /></ProtectedPage>} />
           <Route path="/simulate" element={<ProtectedPage roles={['owner']}><Simulate /></ProtectedPage>} />
           <Route path="/executive" element={<ProtectedPage roles={['owner']}><Executive /></ProtectedPage>} />
+          <Route path="/goals" element={<ProtectedPage roles={['owner']}><Goals /></ProtectedPage>} />
           <Route path="/settings" element={<ProtectedPage roles={['admin']}><Settings /></ProtectedPage>} />
           <Route path="/users" element={<ProtectedPage roles={['admin']}><Dashboard /></ProtectedPage>} />
 

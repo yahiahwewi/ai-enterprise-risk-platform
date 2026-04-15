@@ -75,8 +75,8 @@ async function calculateHealthIndex() {
   ));
 
   // ── Efficiency (20%) ──
-  const expenseRatio = totalIncome > 0 ? totalExpenses / totalIncome : 1;
-  const loanBurden = (totalIncome / 12) > 0 ? monthlyLoanPayments / (totalIncome / 12) : 0;
+  const expenseRatio = totalIncome > 0 ? totalExpenses / totalIncome : (transactions.length === 0 ? 0.5 : 1);
+  const loanBurden = (totalIncome / 12) > 0 ? monthlyLoanPayments / (totalIncome / 12) : (transactions.length === 0 ? 0.1 : 1);
 
   const efficiencyScore = Math.min(100, Math.max(0,
     (expenseRatio < 0.6 ? 50 : expenseRatio < 0.8 ? 40 : expenseRatio < 1 ? 25 : 10) +

@@ -37,8 +37,8 @@ async function buildReportData(language = 'fr') {
     assets,
   ] = await Promise.all([
     User.findOne({ role: 'owner' }).select('name email'),
-    analyzeRisk(),
-    generateFinalDecision(),
+    analyzeRisk(language),
+    generateFinalDecision(language),
     getInvoiceRiskScores(),
     getLoanStressTest(2),
     getAssetDepreciation(5),

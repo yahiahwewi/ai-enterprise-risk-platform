@@ -1,0 +1,167 @@
+@startuml SD03_Creation_Transaction_avec_Moteur_de_Regles
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD03 — Création de Transaction avec Moteur de Règles**
+
+actor "Comptable" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "Moteur de Règles\n(ruleEngine)" as RE #Orange
+participant "Service de\nNotifications" as NS #Plum
+database "MongoDB" as DB #LightCoral
+
+== Soumission de la transaction ==
+
+User -> FE : Remplir le formulaire\n(type, montant, catégorie,\ndescription, référence, ...)
+activate FE
+
+FE -> FE : Validation côté client\n(champs requis, montant > 0)
+
+FE -> BE : **POST /api/transactions**\n{type, amount, category,\ndescription, reference, ...}\n+ JWT Bearer Token
+activate BE
+
+== Authentification et autorisation ==
+
+BE -> BE : **protect()** — Décoder\net vérifier le JWT
+BE -> BE : **authorize()** —\nVérifier le rôle autorisé
+
+alt Token invalide ou expiré
+    BE --> FE : **401** — "Non authentifié"
+    FE --> User : Rediriger vers la connexion
+else Autorisé
+
+    == Validation des données ==
+
+    BE -> BE : **express-validator**\nVérifier type, amount, date,\ncategory (champs requis)
+
+    alt Validation échouée
+        BE --> FE : **400** — Erreurs de validation\n{errors: [{field, message}]}
+        FE --> User : Afficher les erreurs\nsous chaque champ
+    else Validation réussie
+
+        == Création de la transaction ==
+
+        BE -> DB : **Transaction.create()**\n{type, amount, category,\ndescription, reference,\nworkflowStatus: **'draft'**,\nsubmittedBy: userId}
+        activate DB
+        DB --> BE : Transaction créée\n(status: draft)
+        deactivate DB
+
+        == Évaluation des règles ==
+
+        BE -> RE : **evaluateRules(\n'transaction', entity, userId)**
+        activate RE
+
+        RE -> DB : **Rule.find({\nentityType: 'transaction',\nactive: true})**
+        activate DB
+        DB --> RE : Liste des règles actives
+        deactivate DB
+
+        loop Pour chaque règle active
+            RE -> RE : Évaluer la condition :\nentity[rule.condition.field]\n**[operator]**\nrule.condition.value\n\nOpérateurs : gt, lt, gte,\nlte, eq, ne, contains
+        end
+
+        alt Règle déclenchée : **require_approval**
+            RE -> RE : Action = **APPROBATION REQUISE**
+
+            RE -> DB : **ApprovalRequest.create()**\n{entityType: 'transaction',\nentityId: txn._id,\ntriggeredRule: rule._id,\ncurrentStep: 0,\nstatus: 'pending',\nsteps: [{role, order}],\nrequestedBy: userId}
+            activate DB
+            DB --> RE : Demande d'approbation créée
+            deactivate DB
+
+            RE -> DB : **Transaction.updateOne()**\n{workflowStatus:\n**'pending_approval'**}
+            activate DB
+            DB --> RE : Transaction mise à jour
+            deactivate DB
+
+            == Notifications ==
+
+            RE -> NS : Notifier le soumetteur
+            activate NS
+            NS -> DB : **Notification.create()**\n{userId: submitter,\ntype: 'approval_required',\ntitle: 'Transaction envoyée\npour approbation',\nmessage: 'Votre transaction de\n{amount} TND nécessite\nune approbation',\nseverity: 'info',\ngroup: 'operational'}
+            activate DB
+            DB --> NS : Notification créée
+            deactivate DB
+
+            NS -> DB : **User.find({role:\napprovalStep.role,\nstatus: 'approved'})**
+            activate DB
+            DB --> NS : Liste des approbateurs
+            deactivate DB
+
+            loop Pour chaque approbateur
+                NS -> DB : **Notification.create()**\n{userId: approver._id,\ntype: 'approval_required',\ntitle: 'Nouvelle approbation\nen attente',\nmessage: 'Transaction de\n{amount} TND à approuver',\nseverity: 'warning',\ngroup: 'operational'}
+                activate DB
+                DB --> NS : Notification créée
+                deactivate DB
+            end
+            deactivate NS
+
+            RE --> BE : {triggered: true,\naction: 'require_approval'}
+            deactivate RE
+
+            BE -> DB : **ActivityLog.create()**\n{action: 'created',\nentityType: 'transaction',\ndetails: 'En attente\nd\'approbation'}
+            activate DB
+            DB --> BE : Log enregistré
+            deactivate DB
+
+            BE --> FE : **201** — {transaction,\nmessage: 'Envoyée pour\napprobation'}
+            FE --> User : Toast info\n"Transaction envoyée\npour approbation"
+
+        else Règle déclenchée : **notify**
+            RE -> RE : Action = **NOTIFICATION**
+
+            RE -> NS : Envoyer notification
+            activate NS
+            NS -> DB : **Notification.create()**\n{type: 'rule_triggered',\ntitle: 'Alerte de règle',\nmessage: 'La règle "{name}"\na été déclenchée',\nseverity: 'warning',\ngroup: 'financial'}
+            activate DB
+            DB --> NS : Notification créée
+            deactivate DB
+            deactivate NS
+
+            RE --> BE : {triggered: true,\naction: 'notify'}
+            deactivate RE
+
+            BE -> DB : **ActivityLog.create()**\n{action: 'created',\nentityType: 'transaction'}
+            activate DB
+            DB --> BE : Log enregistré
+            deactivate DB
+
+            BE --> FE : **201** — {transaction}
+            FE --> User : Toast succès\n"Transaction créée"
+
+        else Règle déclenchée : **block**
+            RE -> RE : Action = **BLOQUER**
+
+            RE --> BE : {triggered: true,\naction: 'block',\nblocked: true}
+            deactivate RE
+
+            BE -> DB : **Transaction.deleteOne(\n{_id: txn._id})**
+            activate DB
+            DB --> BE : Transaction supprimée
+            deactivate DB
+
+            BE --> FE : **403** — "Transaction bloquée\npar la règle : {ruleName}"
+            FE --> User : Toast erreur\n"Transaction bloquée\npar une règle de sécurité"
+
+        else Aucune règle déclenchée
+            RE --> BE : {triggered: false}
+            deactivate RE
+
+            BE -> DB : **ActivityLog.create()**\n{action: 'created',\nentityType: 'transaction'}
+            activate DB
+            DB --> BE : Log enregistré
+            deactivate DB
+
+            BE --> FE : **201** — {transaction}
+            FE --> User : Toast succès\n"Transaction créée avec succès"
+        end
+
+    end
+end
+deactivate BE
+deactivate FE
+
+@enduml

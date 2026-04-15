@@ -106,6 +106,10 @@ const labels = {
     actionRequired: 'ACTION REQUISE — Intervention Nécessaire',
     immediateAction: 'ACTION IMMÉDIATE — Urgence Critique',
     topExpenses: 'Principales Dépenses',
+    predictions: 'Prédictions',
+    confidenceWarning: 'Avertissement : Score de confiance faible',
+    confidenceWarningText: (pct) => `Le score de confiance IA est de ${pct}%, ce qui est insuffisant pour garantir la fiabilité des résultats. Veuillez enrichir les données financières (transactions, actifs) pour améliorer la précision de l'analyse.`,
+    naLabel: 'N/D',
   },
   en: {
     title: 'Executive AI Risk Report',
@@ -192,11 +196,23 @@ const labels = {
     actionRequired: 'ACTION REQUIRED — Intervention Needed',
     immediateAction: 'IMMEDIATE ACTION — Critical Urgency',
     topExpenses: 'Top Expenses',
+    predictions: 'Predictions',
+    confidenceWarning: 'Warning: Low confidence score',
+    confidenceWarningText: (pct) => `The AI confidence score is ${pct}%, which is insufficient to guarantee result reliability. Please enrich financial data (transactions, assets) to improve analysis accuracy.`,
+    naLabel: 'N/A',
   },
 };
 
 function fmt(n) {
-  return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' TND';
+  return Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' TND';
+}
+
+// fmt with sign and colour: returns an object {text, color}
+function fmtSigned(n) {
+  const abs = Math.abs(n).toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  const sign = n < 0 ? '−\u202F' : (n > 0 ? '+\u202F' : '');
+  const color = n < 0 ? '#ba1a1a' : (n > 0 ? '#0d9e6e' : '#191c1e');
+  return { text: sign + abs + '\u202FTND', color };
 }
 
 function pct(n) {
@@ -363,6 +379,12 @@ function generateReportHTML(data) {
     <div style="margin-top:8px;font-size:8px;color:#57657a">${l.aiConfidence}: ${data.risk.confidence}%</div>
   </div>
 
+  ${data.risk.confidence < 50 ? `
+  <div class="alert-item alert-warning" style="margin-bottom:12px">
+    <strong>${l.confidenceWarning} (${data.risk.confidence}%)</strong><br>
+    ${l.confidenceWarningText(data.risk.confidence)}
+  </div>` : ''}
+
   <div class="decision-box" style="border-color:${riskColor}">
     <div style="font-size:10px;line-height:1.7;color:#191c1e">${data.decision.summary}</div>
   </div>
@@ -403,12 +425,12 @@ function generateReportHTML(data) {
     <!-- Debt Ratio -->
     <div class="card">
       <div class="card-label">${l.debtRatio}</div>
-      <div class="card-value">${data.kpis.debtToAssetRatio}x</div>
+      <div class="card-value">${data.kpis.debtToAssetRatio === 'N/A' ? l.naLabel : data.kpis.debtToAssetRatio + 'x'}</div>
       <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><div class="card-label">${l.totalDebt}</div><div class="card-value-sm">${fmt(data.kpis.totalDebt)}</div></div>
         <div><div class="card-label">${l.totalAssets}</div><div class="card-value-sm">${fmt(data.kpis.totalAssetValue)}</div></div>
       </div>
-      ${progressBar(parseFloat(data.kpis.debtToAssetRatio) * 50 || 0, 100, parseFloat(data.kpis.debtToAssetRatio) > 1 ? '#ba1a1a' : '#0d9e6e')}
+      ${progressBar(data.kpis.debtToAssetRatio !== 'N/A' ? Math.min(parseFloat(data.kpis.debtToAssetRatio) * 50, 100) : 80, 100, data.kpis.debtToAssetRatio !== 'N/A' && parseFloat(data.kpis.debtToAssetRatio) > 1 ? '#ba1a1a' : '#ba1a1a')}
     </div>
 
     <!-- Invoice Risk -->
@@ -523,22 +545,27 @@ function generateReportHTML(data) {
 
   <!-- Cash Flow Forecast -->
   <div class="card-label mb-8">${l.cashFlowForecast}</div>
+  ${(() => {
+    const f30 = fmtSigned(data.forecast.forecast30Days);
+    const f60 = fmtSigned(data.forecast.forecast60Days);
+    return `
   <div class="card-grid">
     <div class="card">
       <div class="card-label">${l.forecast30d}</div>
-      <div class="card-value" style="color:${data.forecast.forecast30Days >= 0 ? '#0d9e6e' : '#ba1a1a'}">${fmt(data.forecast.forecast30Days)}</div>
+      <div class="card-value" style="color:${f30.color}">${f30.text}</div>
       <div style="margin-top:8px;font-size:8px;color:#57657a">
         ${l.projectedIncome}: ${fmt(data.forecast.breakdown.projectedIncome)}<br>
         ${l.projectedExpenses}: ${fmt(data.forecast.breakdown.projectedExpenses)}<br>
         ${l.pendingInflow}: ${fmt(data.forecast.breakdown.pendingInvoiceInflow30)}<br>
-        ${l.loanPayments}: ${fmt(data.forecast.breakdown.monthlyLoanPayments)}
+        ${l.loanPayments}: −\u202F${fmt(data.forecast.breakdown.monthlyLoanPayments)}
       </div>
     </div>
     <div class="card">
       <div class="card-label">${l.forecast60d}</div>
-      <div class="card-value" style="color:${data.forecast.forecast60Days >= 0 ? '#0d9e6e' : '#ba1a1a'}">${fmt(data.forecast.forecast60Days)}</div>
+      <div class="card-value" style="color:${f60.color}">${f60.text}</div>
     </div>
-  </div>
+  </div>`;
+  })()}
 
   <!-- Invoice Delay Risk -->
   ${data.invoiceRisks.length > 0 ? `
@@ -574,7 +601,7 @@ function generateReportHTML(data) {
   </table>` : ''}
 
   <!-- Predictions -->
-  <div class="card-label mb-8 mt-8">Predictions</div>
+  <div class="card-label mb-8 mt-8">${l.predictions}</div>
   ${data.predictions.map(text => `<div class="alert-item alert-warning">${text}</div>`).join('')}
 
   <div class="page-footer">
@@ -603,7 +630,7 @@ function generateReportHTML(data) {
       <div class="priority-content">
         <h4>${a.action}</h4>
         <p>${a.impact}</p>
-        <span class="badge" style="background:${c.bg};color:${c.text};margin-top:4px">${a.urgency.toUpperCase()}</span>
+        <span class="badge" style="background:${c.bg};color:${c.text};margin-top:4px">${a.urgencyLabel || a.urgency.toUpperCase()}</span>
       </div>
     </div>`;
   }).join('')}

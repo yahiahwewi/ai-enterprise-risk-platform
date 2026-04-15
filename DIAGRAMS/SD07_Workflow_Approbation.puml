@@ -1,0 +1,188 @@
+@startuml SD07_Workflow_Approbation
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD07 — Flux de Travail d'Approbation**
+
+actor "Approbateur\n(Owner/Finance)" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "Service de\nNotifications" as NS #Plum
+database "MongoDB" as DB #LightCoral
+
+== Phase 1 : Consultation des approbations en attente ==
+
+User -> FE : Accéder à la page\n**Approbations**
+activate FE
+
+FE -> BE : **GET /api/approvals/pending**\n+ JWT Bearer Token
+activate BE
+
+BE -> BE : **protect()** — Vérifier JWT
+BE -> BE : Extraire le rôle de\nl'utilisateur connecté
+
+BE -> DB : **ApprovalRequest.find({\nstatus: 'pending'})\n.populate('entityId')\n.populate('triggeredRule')\n.populate('requestedBy')**
+activate DB
+DB --> BE : Liste des demandes\nd'approbation en attente
+deactivate DB
+
+BE -> BE : Filtrer les demandes\ndont l'étape actuelle\ncorrespond au rôle\nde l'utilisateur
+
+BE --> FE : **200** — [{\nentityType, entityId,\ntriggeredRule: {name},\ncurrentStep, steps,\nrequestedBy: {name, email}\n}, ...]
+deactivate BE
+
+FE -> FE : Afficher les cartes\nd'approbation avec :\n─ Type d'entité\n─ Montant\n─ Règle déclenchée\n─ Soumis par\n─ Boutons Approuver/Refuser
+
+FE --> User : Liste des approbations\nen attente
+
+== Phase 2 : Action de l'approbateur ==
+
+alt L'approbateur clique "Approuver"
+
+    User -> FE : Cliquer **Approuver**\n(+ commentaire optionnel)
+    FE -> BE : **PATCH /api/approvals/:id/approve**\n{comment: "Approuvé,\nmontant conforme"}\n+ JWT Bearer Token
+    activate BE
+
+    BE -> BE : **protect()** — Vérifier JWT
+
+    BE -> DB : **ApprovalRequest.findById(id)**
+    activate DB
+    DB --> BE : Demande d'approbation
+    deactivate DB
+
+    alt Demande non trouvée
+        BE --> FE : **404** — "Demande non trouvée"
+        FE --> User : Toast erreur
+    else Demande trouvée
+
+        BE -> BE : Vérifier que l'étape\nactuelle correspond au\nrôle de l'utilisateur
+
+        alt Rôle ne correspond pas
+            BE --> FE : **403** — "Ce n'est pas\nvotre tour d'approuver"
+            FE --> User : Toast erreur\n"Étape d'approbation\nnon autorisée"
+        else Rôle correspond
+
+            BE -> DB : Mettre à jour l'étape\nactuelle :\n**steps[currentStep].status\n= 'approved'**\n**steps[currentStep].userId\n= userId**\n**steps[currentStep].date\n= now()**\n**steps[currentStep].comment\n= comment**
+            activate DB
+            DB --> BE : Étape mise à jour
+            deactivate DB
+
+            alt Dernière étape (toutes approuvées)
+
+                BE -> DB : **ApprovalRequest\n.updateOne({\nstatus: 'approved'\n})**
+                activate DB
+                DB --> BE : Demande marquée approuvée
+                deactivate DB
+
+                BE -> DB : **Entity.updateOne({\nworkflowStatus: 'approved',\napprovedBy: userId,\napprovalDate: now()\n})**
+                activate DB
+                DB --> BE : Entité approuvée
+                deactivate DB
+
+                == Notifications finales ==
+
+                BE -> NS : Notifier le demandeur
+                activate NS
+                NS -> DB : **Notification.create()**\n{userId: requestedBy,\ntype: 'info',\ntitle: 'Demande approuvée',\nmessage: 'Votre {entityType}\na été approuvé(e)',\nseverity: 'info',\ngroup: 'operational'}
+                activate DB
+                DB --> NS : Notification créée
+                deactivate DB
+                deactivate NS
+
+                BE --> FE : **200** — {\napproval: {status: 'approved'},\nmessage: 'Approbation finalisée'\n}
+                FE --> User : Toast succès\n"Élément approuvé\ndéfinitivement"
+                FE -> FE : Retirer la carte\nde la liste
+
+            else Étapes restantes
+
+                BE -> DB : **ApprovalRequest\n.updateOne({\ncurrentStep: currentStep + 1\n})**
+                activate DB
+                DB --> BE : Étape suivante activée
+                deactivate DB
+
+                == Notification de l'étape suivante ==
+
+                BE -> NS : Notifier les prochains\napprobateurs
+                activate NS
+
+                NS -> DB : **User.find({role:\nsteps[nextStep].role,\nstatus: 'approved'})**
+                activate DB
+                DB --> NS : Liste des approbateurs\nde l'étape suivante
+                deactivate DB
+
+                loop Pour chaque approbateur
+                    NS -> DB : **Notification.create()**\n{userId: approver._id,\ntype: 'approval_required',\ntitle: 'Approbation requise',\nmessage: 'Un(e) {entityType}\nnécessite votre approbation\n(étape {nextStep})',\nseverity: 'warning',\ngroup: 'operational'}
+                    activate DB
+                    DB --> NS : Notification créée
+                    deactivate DB
+                end
+                deactivate NS
+
+                BE --> FE : **200** — {\napproval: {currentStep: next},\nmessage: 'Étape approuvée,\npassée à l\'étape suivante'\n}
+                FE --> User : Toast succès\n"Étape approuvée,\ntransmise au prochain\napprobateur"
+                FE -> FE : Retirer la carte\nde la liste
+
+            end
+        end
+    end
+    deactivate BE
+
+else L'approbateur clique "Refuser"
+
+    User -> FE : Cliquer **Refuser**\n+ motif obligatoire
+    FE -> BE : **PATCH /api/approvals/:id/reject**\n{comment: "Montant excessif,\nbudget dépassé"}\n+ JWT Bearer Token
+    activate BE
+
+    BE -> BE : **protect()** — Vérifier JWT
+
+    BE -> DB : **ApprovalRequest.findById(id)**
+    activate DB
+    DB --> BE : Demande d'approbation
+    deactivate DB
+
+    BE -> BE : Vérifier le rôle\net l'étape actuelle
+
+    alt Vérification échouée
+        BE --> FE : **403** — Non autorisé
+        FE --> User : Toast erreur
+    else Vérification réussie
+
+        BE -> DB : Mettre à jour l'étape :\n**steps[currentStep].status\n= 'rejected'**\n**steps[currentStep].comment\n= motif**
+        activate DB
+        DB --> BE : Étape mise à jour
+        deactivate DB
+
+        BE -> DB : **ApprovalRequest\n.updateOne({\nstatus: 'rejected'\n})**
+        activate DB
+        DB --> BE : Demande rejetée
+        deactivate DB
+
+        BE -> DB : **Entity.updateOne({\nworkflowStatus: 'rejected',\nrejectionReason: motif\n})**
+        activate DB
+        DB --> BE : Entité rejetée
+        deactivate DB
+
+        == Notification de rejet ==
+
+        BE -> NS : Notifier le demandeur
+        activate NS
+        NS -> DB : **Notification.create()**\n{userId: requestedBy,\ntype: 'info',\ntitle: 'Demande refusée',\nmessage: 'Votre {entityType}\na été refusé(e).\nMotif : {comment}',\nseverity: 'warning',\ngroup: 'operational'}
+        activate DB
+        DB --> NS : Notification créée
+        deactivate DB
+        deactivate NS
+
+        BE --> FE : **200** — {\napproval: {status: 'rejected'},\nmessage: 'Demande refusée'\n}
+        deactivate BE
+
+        FE --> User : Toast info\n"Demande refusée"
+        FE -> FE : Retirer la carte\nde la liste
+
+    end
+end
+deactivate FE
+
+@enduml

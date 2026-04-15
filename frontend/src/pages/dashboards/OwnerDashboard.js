@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../services/api';
 import KPICard from '../../components/KPICard';
 import { SkeletonKPIGrid, SkeletonChart } from '../../components/Skeleton';
@@ -9,13 +9,160 @@ import { useLang } from '../../context/LanguageContext';
 
 const COLORS = ['#0d9e6e', '#d97706', '#e67e22', '#ba1a1a'];
 
+// ── Dev Scenario Panel ─────────────────────────────────────────────────────
+function DevScenarioPanel({ onRefresh }) {
+  const [open, setOpen]       = useState(false);
+  const [seeding, setSeeding] = useState(null); // 'good' | 'bad' | null
+  const [confirm, setConfirm] = useState(null); // 'good' | 'bad' | null
+  const { addToast } = useToast();
+  const { lang } = useLang();
+
+  const seed = async (scenario) => {
+    setConfirm(null);
+    setSeeding(scenario);
+    try {
+      const res = await api.post(`/dev/seed/${scenario}`);
+      addToast('success',
+        scenario === 'good'
+          ? (lang === 'fr' ? '✅ Bon scénario chargé' : '✅ Good scenario loaded')
+          : (lang === 'fr' ? '⚠️ Mauvais scénario chargé' : '⚠️ Bad scenario loaded'),
+        res.data.message
+      );
+      await onRefresh();
+    } catch (err) {
+      addToast('error', 'Erreur', err.response?.data?.message || err.message);
+    } finally {
+      setSeeding(null);
+    }
+  };
+
+  const scenarios = {
+    good: {
+      label:   lang === 'fr' ? 'Bon Scénario' : 'Good Scenario',
+      desc:    lang === 'fr' ? 'Score attendu : ~15-20 · Niveau : Faible' : 'Expected score: ~15-20 · Level: Low',
+      detail:  lang === 'fr'
+        ? '36 transactions saines · 15 factures (10 payées, 3 en attente, 2 en retard) · 1 prêt gérable · 4 actifs'
+        : '36 healthy transactions · 15 invoices (10 paid, 3 pending, 2 late) · 1 manageable loan · 4 assets',
+      icon:    'trending_up',
+      color:   '#0d9e6e',
+      bg:      '#e8f5e9',
+      border:  '#0d9e6e',
+      btnCls:  'bg-emerald-600 hover:bg-emerald-700 text-white',
+    },
+    bad: {
+      label:   lang === 'fr' ? 'Mauvais Scénario' : 'Bad Scenario',
+      desc:    lang === 'fr' ? 'Score attendu : ~88-95 · Niveau : Critique' : 'Expected score: ~88-95 · Level: Critical',
+      detail:  lang === 'fr'
+        ? '30 transactions déficitaires · 20 factures (18 en retard, montants élevés) · 2 prêts lourds · 0 actif'
+        : '30 deficit transactions · 20 invoices (18 late, large amounts) · 2 heavy loans · 0 assets',
+      icon:    'trending_down',
+      color:   '#ba1a1a',
+      bg:      '#ffebee',
+      border:  '#ba1a1a',
+      btnCls:  'bg-red-600 hover:bg-red-700 text-white',
+    },
+  };
+
+  return (
+    <div className="mb-10">
+      {/* Collapsible header */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-dashed border-amber-400 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-100 transition-all"
+      >
+        <span className="material-symbols-outlined text-base">science</span>
+        {lang === 'fr' ? 'Options de développement — Scénarios de test' : 'Dev Options — Test Scenarios'}
+        <span className="material-symbols-outlined text-base ml-auto transition-transform duration-200" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>expand_more</span>
+      </button>
+
+      {open && (
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
+          {Object.entries(scenarios).map(([key, s]) => (
+            <div
+              key={key}
+              className="rounded-xl border-2 p-6 flex flex-col gap-4 transition-all"
+              style={{ borderColor: s.border, background: s.bg + '33' }}
+            >
+              {/* Header */}
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: s.bg }}>
+                  <span className="material-symbols-outlined text-xl" style={{ color: s.color }}>{s.icon}</span>
+                </div>
+                <div>
+                  <p className="font-extrabold text-on-surface dark:text-slate-100 text-base">{s.label}</p>
+                  <p className="text-xs font-semibold" style={{ color: s.color }}>{s.desc}</p>
+                </div>
+              </div>
+
+              {/* Detail */}
+              <p className="text-xs text-on-surface-variant leading-relaxed border-l-2 pl-3" style={{ borderColor: s.border }}>
+                {s.detail}
+              </p>
+
+              {/* Action */}
+              {confirm === key ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => seed(key)}
+                    disabled={seeding !== null}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${s.btnCls}`}
+                  >
+                    {seeding === key ? (
+                      <><span className="animate-spin material-symbols-outlined text-sm">progress_activity</span>{lang === 'fr' ? 'Chargement...' : 'Loading...'}</>
+                    ) : (
+                      <><span className="material-symbols-outlined text-sm">check</span>{lang === 'fr' ? 'Confirmer' : 'Confirm'}</>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setConfirm(null)}
+                    className="px-4 py-2 rounded-lg text-sm font-bold bg-surface-container text-on-surface-variant hover:bg-surface-container-high transition-all"
+                  >
+                    {lang === 'fr' ? 'Annuler' : 'Cancel'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirm(key)}
+                  disabled={seeding !== null}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${s.btnCls} disabled:opacity-50`}
+                >
+                  <span className="material-symbols-outlined text-sm">play_arrow</span>
+                  {lang === 'fr' ? `Charger le ${s.label.toLowerCase()}` : `Load ${s.label}`}
+                </button>
+              )}
+
+              {/* Warning */}
+              <p className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs text-amber-500">warning</span>
+                {lang === 'fr' ? 'Toutes les données existantes seront supprimées.' : 'All existing data will be deleted.'}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OwnerDashboard() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const { addToast } = useToast();
   const { t } = useLang();
 
-  useEffect(() => { api.get('/ai/risk-report').then((r) => setReport(r.data)).catch(() => addToast('error', t('toast.error'), t('toast.failed'))).finally(() => setLoading(false)); }, [addToast, t]);
+  const fetchReport = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await api.get('/ai/risk-report');
+      setReport(r.data);
+    } catch {
+      addToast('error', t('toast.error'), t('toast.failed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast, t]);
+
+  useEffect(() => { fetchReport(); }, [fetchReport]);
 
   if (loading) return (<div><section className="mb-10"><h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface">{t('dashboard.strategic')}</h2><p className="text-on-surface-variant mt-2">{t('common.loading')}</p></section><SkeletonKPIGrid count={4} /><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><SkeletonChart /><SkeletonChart /></div></div>);
   if (!report) return <div className="bg-surface-container-lowest rounded-xl p-8 text-center text-on-surface-variant">{t('common.noData')}</div>;
@@ -31,6 +178,9 @@ export default function OwnerDashboard() {
         <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface dark:text-slate-100">{t('dashboard.strategic')}</h2>
         <p className="text-on-surface-variant mt-2">{t('dashboard.strategicDesc')}</p>
       </section>
+
+      {/* ── Dev scenario panel ── */}
+      <DevScenarioPanel onRefresh={fetchReport} />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
         <div className="lg:col-span-4 bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden border border-transparent hover:border-outline-variant/15 transition-all">

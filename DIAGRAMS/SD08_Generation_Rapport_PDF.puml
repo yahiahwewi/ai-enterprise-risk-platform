@@ -1,0 +1,206 @@
+@startuml SD08_Generation_Rapport_PDF
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD08 — Génération de Rapport PDF Exécutif**
+
+actor "Propriétaire" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "Service de\nDonnées\n(reportDataService)" as RDS #Orange
+participant "Service IA\n(aiService)" as AI #Gold
+participant "Moteur de\nDécision" as DE #Plum
+participant "Indice de\nSanté" as HI #LightPink
+participant "Prévisions\n(forecastService)" as FS #LightCyan
+participant "Générateur PDF\n(pdfGenerator)" as PDF #Salmon
+participant "Puppeteer\n(HTML → PDF)" as PUP #Peru
+participant "Template\nRapport" as TPL #PaleGreen
+database "MongoDB" as DB #LightCoral
+
+== Phase 1 : Demande de génération ==
+
+User -> FE : Accéder à la page **Rapports**
+activate FE
+
+FE -> BE : **GET /api/reports/history**\n+ JWT Bearer Token
+activate BE
+BE -> DB : **Report.find()\n.sort({createdAt: -1})**
+activate DB
+DB --> BE : Historique des rapports
+deactivate DB
+BE --> FE : **200** — Liste des rapports
+deactivate BE
+
+FE --> User : Afficher l'historique\net le bouton "Générer"
+
+User -> FE : Cliquer **"Générer un rapport"**\nSélectionner la langue : FR
+
+FE -> BE : **POST /api/reports/generate**\n{language: 'fr'}\n+ JWT Bearer Token
+activate BE
+
+BE -> BE : **protect()** + **authorize('owner')**
+
+alt Non autorisé
+    BE --> FE : **403** — Accès refusé
+    FE --> User : Message d'erreur
+else Autorisé
+
+    == Phase 2 : Collecte de toutes les données ==
+
+    BE -> DB : **Report.create()**\n{type: 'risk_analysis',\nstatus: **'generating'**,\nlanguage: 'fr',\ngeneratedBy: userId}
+    activate DB
+    DB --> BE : Rapport créé (en cours)
+    deactivate DB
+
+    BE -> RDS : **buildReportData('fr')**
+    activate RDS
+
+    == Collecte parallèle des données ==
+
+    RDS -> AI : **analyzeRisk()**
+    activate AI
+    AI -> DB : Récupérer transactions,\nfactures, prêts, actifs
+    activate DB
+    DB --> AI : Données financières
+    deactivate DB
+    AI -> AI : Calculer les 4 dimensions\nde risque + score global
+    AI -> AI : Tendances, anomalies,\nprévisions, causes principales
+    AI --> RDS : {globalScore, level,\nconfidence, breakdown,\nmetrics, trends, anomalies,\nforecast, rootCauses,\nrecommendations}
+    deactivate AI
+
+    RDS -> DE : **generateFinalDecision()**
+    activate DE
+    DE -> DE : Mapper le score\nau niveau de décision :\n─ 0-25 : OK\n─ 25-50 : Surveiller\n─ 50-75 : Action Requise\n─ 75-100 : Action Immédiate
+    DE --> RDS : {decision, actions\nprioritaires, confiance}
+    deactivate DE
+
+    RDS -> HI : **calculateHealthIndex()**
+    activate HI
+    HI -> DB : Récupérer les données\nfinancières agrégées
+    activate DB
+    DB --> HI : Données agrégées
+    deactivate DB
+    HI -> HI : Calculer les 4 dimensions :\n─ Liquidité (30%)\n─ Stabilité (25%)\n─ Croissance (25%)\n─ Efficacité (20%)
+    HI --> RDS : {score: 72, grade: 'B',\ndimensions: {liquidité,\nstabilité, croissance,\nefficacité}}
+    deactivate HI
+
+    RDS -> FS : **getInvoiceRiskScores()**
+    activate FS
+    FS -> DB : **Invoice.find()**
+    activate DB
+    DB --> FS : Factures
+    deactivate DB
+    FS --> RDS : Scores de risque\npar facture
+    deactivate FS
+
+    RDS -> FS : **getLoanStressTest(2)**
+    activate FS
+    FS -> DB : **Loan.find()**
+    activate DB
+    DB --> FS : Prêts
+    deactivate DB
+    FS --> RDS : Test de stress\ndes prêts (+2%)
+    deactivate FS
+
+    RDS -> FS : **getAssetDepreciation(5)**
+    activate FS
+    FS -> DB : **Asset.find()**
+    activate DB
+    DB --> FS : Actifs
+    deactivate DB
+    FS --> RDS : Projection de\ndépréciation (5 ans)
+    deactivate FS
+
+    RDS -> DB : Comptages et sommes :\n─ Nombre de transactions\n─ Total revenus / dépenses\n─ Nombre de factures par statut\n─ Nombre de prêts / actifs
+    activate DB
+    DB --> RDS : Statistiques agrégées
+    deactivate DB
+
+    RDS --> BE : **reportData** = {\nrisk, decision, healthIndex,\ninvoiceRisk, stressTest,\nassetProjection, statistics,\nlanguage: 'fr'\n}
+    deactivate RDS
+
+    == Phase 3 : Génération du HTML ==
+
+    BE -> TPL : **reportTemplate(reportData)**
+    activate TPL
+
+    TPL -> TPL : Générer le HTML\ndu rapport exécutif\n(7 pages) :\n\n**Page 1** : Couverture\n(logo TAC-TIC, date, titre)\n\n**Page 2** : Résumé exécutif\n(score global, décision,\nniveau de confiance)\n\n**Page 3** : KPIs financiers\n(revenus, dépenses,\ntrésorerie, factures)\n\n**Page 4** : Analyse IA\n(4 dimensions, radar,\ncauses principales)\n\n**Page 5** : Prévisions\n(3 mois, test de stress,\ndépréciation)\n\n**Page 6** : Recommandations\n(actions prioritaires,\nplan d'action)\n\n**Page 7** : Annexe\n(métriques détaillées,\nméthodologie)
+
+    TPL --> BE : **HTML complet** (chaîne)
+    deactivate TPL
+
+    == Phase 4 : Conversion HTML → PDF ==
+
+    BE -> PDF : **generatePDF({\nhtml, filename})**
+    activate PDF
+
+    PDF -> PUP : Lancer le navigateur\nChromium sans tête
+    activate PUP
+
+    PUP -> PUP : **page.setContent(html)**\nCharger le HTML dans la page
+
+    PUP -> PUP : **page.pdf({\nformat: 'A4',\nmargin: {top, bottom,\nleft, right},\nprintBackground: true\n})**
+
+    PUP -> PUP : Récupérer le Uint8Array\ndu PDF généré
+
+    PUP -> PUP : **Buffer.from(pdfUint8)**\nConvertir en Buffer Node.js
+
+    PUP -> PUP : Fermer le navigateur
+
+    PUP --> PDF : Buffer PDF
+    deactivate PUP
+
+    PDF -> PDF : **fs.writeFileSync(\nfilePath, buffer)**\nSauvegarder sur le serveur\ndans **/reports/**
+
+    PDF -> PDF : Calculer la taille\ndu fichier
+
+    PDF --> BE : {filePath, fileSize,\nfilename}
+    deactivate PDF
+
+    == Phase 5 : Mise à jour de la base ==
+
+    BE -> DB : **Report.updateOne({\nstatus: 'completed',\nfilename, filePath, fileSize,\ndata: {globalScore, level,\ndecision, confidence}\n})**
+    activate DB
+    DB --> BE : Rapport mis à jour
+    deactivate DB
+
+    BE --> FE : **201** — {\nreport: {_id, title,\nfilename, status: 'completed',\nfileSize, createdAt},\nmessage: 'Rapport généré\navec succès'\n}
+    deactivate BE
+
+    FE --> User : Toast succès\n"Rapport PDF généré"
+    FE -> FE : Ajouter le rapport\nà l'historique
+
+    == Phase 6 : Téléchargement ==
+
+    User -> FE : Cliquer **"Télécharger"**
+    FE -> FE : Ouvrir une nouvelle fenêtre :\n**window.open(\n'/api/reports/:id/download\n?token=JWT')**
+
+    FE -> BE : **GET /api/reports/:id/download\n?token=JWT**
+    activate BE
+
+    BE -> BE : **protect()** — JWT depuis\nle paramètre de requête
+
+    BE -> DB : **Report.findById(id)**
+    activate DB
+    DB --> BE : Métadonnées du rapport
+    deactivate DB
+
+    alt Fichier non trouvé
+        BE --> FE : **404** — "Rapport non trouvé"
+    else Fichier existe
+        BE -> BE : **res.setHeader(\n'Content-Type',\n'application/pdf')**
+        BE -> BE : **res.setHeader(\n'Content-Disposition',\n'attachment; filename=...')**
+        BE -> BE : **fs.createReadStream(filePath)\n.pipe(res)**
+        BE --> FE : Flux PDF envoyé
+    end
+    deactivate BE
+
+    FE --> User : Téléchargement du fichier\nPDF démarré
+
+end
+deactivate FE
+
+@enduml

@@ -1,4 +1,5 @@
 const { analyzeRisk } = require('../services/aiService');
+const { getGoalAdvice } = require('../services/goalAdvisorService');
 const { generateFinalDecision } = require('../services/decisionEngine');
 const { checkAndNotifyRiskAlerts, checkOverdueInvoices, checkNegativeCashFlow } = require('../services/notificationService');
 const { calculateHealthIndex } = require('../services/healthIndex');
@@ -8,7 +9,8 @@ const { suggestCategory } = require('../services/categoryService');
 
 exports.getRiskReport = async (req, res) => {
   try {
-    const report = await analyzeRisk();
+    const lang = req.query.language || req.body.language || 'fr';
+    const report = await analyzeRisk(lang);
     checkAndNotifyRiskAlerts(report.globalScore, report.level).catch(() => {});
     checkOverdueInvoices(report.lateInvoicesList).catch(() => {});
     checkNegativeCashFlow(report.metrics.cashFlow).catch(() => {});
@@ -20,7 +22,8 @@ exports.getRiskReport = async (req, res) => {
 
 exports.getFinalDecision = async (req, res) => {
   try {
-    const decision = await generateFinalDecision();
+    const lang = req.query.language || req.body.language || 'fr';
+    const decision = await generateFinalDecision(lang);
     const { riskReport } = decision;
     checkAndNotifyRiskAlerts(riskReport.globalScore, riskReport.level).catch(() => {});
     checkNegativeCashFlow(riskReport.metrics.cashFlow).catch(() => {});
@@ -65,5 +68,20 @@ exports.suggestCat = async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getGoalAdvice = async (req, res) => {
+  try {
+    const { scenario } = req.params;
+    const lang = req.query.language || 'fr';
+    const validScenarios = ['growth', 'stability', 'debt_reduction', 'revenue_optimization', 'recovery', 'excellence'];
+    if (!validScenarios.includes(scenario)) {
+      return res.status(400).json({ message: 'Scénario invalide' });
+    }
+    const result = await getGoalAdvice(scenario, lang);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

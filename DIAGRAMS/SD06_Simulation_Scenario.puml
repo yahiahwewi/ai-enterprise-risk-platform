@@ -1,0 +1,119 @@
+@startuml SD06_Simulation_de_Scenario
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD06 — Simulation de Scénario "Et si..."**
+
+actor "Propriétaire" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "Moteur de\nSimulation\n(scenarioEngine)" as SIM #Orange
+participant "Service IA\n(aiService)" as AI #Gold
+participant "Service de\nPrévisions\n(forecastService)" as FS #Plum
+database "MongoDB" as DB #LightCoral
+
+== Configuration de la simulation ==
+
+User -> FE : Accéder à la page\n**Simulation**
+activate FE
+
+FE --> User : Afficher 3 curseurs :\n─ Variation des dépenses (%)\n─ Nombre de factures en retard\n─ Augmentation du taux d'intérêt
+
+User -> FE : Ajuster les paramètres :\n─ expenseChange: **+20%**\n─ lateInvoiceCount: **5**\n─ rateIncrease: **+2%**
+
+FE -> FE : Validation côté client\n(valeurs dans les limites)
+
+FE -> BE : **POST /api/ai/simulate**\n{expenseChange: 20,\nlateInvoiceCount: 5,\nrateIncrease: 2}\n+ JWT Bearer Token
+activate BE
+
+BE -> BE : **protect()** + **authorize('owner')**
+
+alt Non autorisé
+    BE --> FE : **403** — Accès refusé
+    FE --> User : Message d'erreur
+else Autorisé
+
+    BE -> SIM : **simulateScenario(params)**
+    activate SIM
+
+    == Étape 1 : Calcul du score de référence ==
+
+    SIM -> AI : **analyzeRisk()**\n(données actuelles)
+    activate AI
+
+    AI -> DB : Récupérer transactions,\nfactures, prêts, actifs
+    activate DB
+    DB --> AI : Données financières actuelles
+    deactivate DB
+
+    AI -> AI : Calculer les 4 dimensions\nde risque (cashFlow, invoices,\ndebt, loanBurden)
+    AI -> AI : Calculer le score global\npondéré
+    AI -> AI : Générer les prévisions\nde référence
+
+    AI --> SIM : **baseline** = {\nscore: 42, level: 'medium',\nforecast: {revenus, dépenses,\nsolde sur 3 mois}\n}
+    deactivate AI
+
+    == Étape 2 : Application des modifications simulées ==
+
+    SIM -> SIM : **Ajuster les dépenses**\nMultiplier toutes les dépenses\npar **(1 + expenseChange/100)**\n= ×1.20 (+20%)
+
+    SIM -> SIM : **Ajouter des factures en retard**\nCréer temporairement\n**5 factures simulées** en retard\navec des montants moyens
+
+    SIM -> FS : **getLoanStressTest(\nrateIncrease: 2)**
+    activate FS
+
+    FS -> DB : **Loan.find()**\nRécupérer tous les prêts
+    activate DB
+    DB --> FS : Liste des prêts actifs
+    deactivate DB
+
+    FS -> FS : Recalculer les mensualités\navec taux + 2%\npour chaque prêt
+
+    FS --> SIM : {\noriginalPayments,\nstressedPayments,\nmonthlyIncrease,\ntotalIncrease\n}
+    deactivate FS
+
+    == Étape 3 : Recalcul avec données simulées ==
+
+    SIM -> AI : **analyzeRisk()**\n(avec données modifiées)
+    activate AI
+
+    AI -> AI : Recalculer cashFlowRisk\n(avec dépenses +20%)
+    AI -> AI : Recalculer invoiceRisk\n(avec 5 retards supplémentaires)
+    AI -> AI : Recalculer debtRisk\n(avec taux +2%)
+    AI -> AI : Recalculer loanBurdenRisk\n(avec nouvelles mensualités)
+    AI -> AI : Nouveau score global pondéré
+
+    AI --> SIM : **simulated** = {\nscore: 67, level: 'high',\nforecast: {nouvelles\nprévisions ajustées}\n}
+    deactivate AI
+
+    == Étape 4 : Calcul du delta ==
+
+    SIM -> SIM : **delta** = {\nscoreChange: 67 - 42 = **+25**,\nlevelChange: 'medium' → 'high',\ncashFlowDelta: +15,\ninvoiceDelta: +20,\ndebtDelta: +8,\nforecastChange: {...}\n}
+
+    SIM -> SIM : Classifier l'**impact** :\n─ delta > 20 → **"élevé"**\n─ delta 10-20 → **"moyen"**\n─ delta < 10 → **"faible"**\n\n→ Impact = **"élevé"**
+
+    SIM --> BE : {\nbaseline: {score: 42,\nlevel: 'medium', forecast},\nsimulated: {score: 67,\nlevel: 'high', forecast},\ndelta: {scoreChange: +25,\nimpact: 'high'},\nstressTest: {\nmonthlyIncrease, totalIncrease}\n}
+    deactivate SIM
+
+    BE --> FE : **200** — Résultats\nde la simulation
+    deactivate BE
+
+    == Affichage des résultats ==
+
+    FE -> FE : Afficher la comparaison\n**Avant / Après** :\n─ Score de référence : 42\n─ Score simulé : 67\n─ Variation : +25
+
+    FE -> FE : Afficher le badge d'impact\n**"Impact Élevé"** en rouge
+
+    FE -> FE : Afficher la comparaison\ndes prévisions\n(graphiques côte à côte)
+
+    FE -> FE : Afficher le détail\ndu test de stress\nsur les prêts
+
+    FE --> User : Résultats de la simulation\naffichés avec visualisations
+
+end
+deactivate FE
+
+@enduml

@@ -1,0 +1,227 @@
+@startuml SD04_Pipeline_OCR_Extraction_Facture
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD04 — Pipeline OCR d'Extraction de Factures**
+
+actor "Comptable" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "ExtractionContext\n(État global)" as CTX #LightCyan
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "Puppeteer\n(PDF → Images)" as PUP #Orange
+participant "Tesseract.js\n(OCR fra+eng)" as TESS #Plum
+participant "Extraction\nRegex" as REG #Pink
+participant "Groq API\n(Vérification LLM)" as GROQ #Gold
+database "MongoDB" as DB #LightCoral
+
+== Phase 1 : Téléversement des fichiers ==
+
+User -> FE : Glisser-déposer\nfichier(s) PDF
+activate FE
+
+FE -> CTX : **addFiles(fichiers)**\nAjouter à la file d'attente
+activate CTX
+CTX -> CTX : Créer un élément par fichier\n{id, file, status: 'queued',\ndata: null, warnings: []}
+CTX --> FE : File d'attente mise à jour
+deactivate CTX
+
+FE --> User : Afficher la liste des\nfichiers en attente
+
+User -> FE : Cliquer "Extraire"
+FE -> CTX : **processQueue()**
+activate CTX
+
+== Phase 2 : Traitement en lot ==
+
+loop Pour chaque fichier dans la file d'attente
+
+    CTX -> CTX : Vérifier **abortRef**\n(signal d'annulation)
+
+    alt Annulation demandée
+        CTX -> CTX : Arrêter le traitement
+        CTX --> FE : File vidée
+        FE --> User : Afficher "Extraction annulée"
+    else Continuer le traitement
+
+        CTX -> CTX : Mettre à jour le statut\ndu fichier → **'processing'**
+        FE --> User : Afficher indicateur\nde chargement
+
+        CTX -> BE : **POST /api/extraction/extract**\nmultipart/form-data {pdf}\n+ JWT Bearer Token
+        activate BE
+
+        BE -> BE : **protect()** — Vérifier JWT
+
+        alt Token invalide
+            BE --> CTX : **401** — Non authentifié
+            CTX -> CTX : Statut → **'error'**
+            FE --> User : Afficher erreur d'authentification
+        else Autorisé
+
+            BE -> BE : Sauvegarder le fichier PDF\ndans **/uploads/invoices/**\n(multer)
+
+            == Étape 1 : PDF → Images (Puppeteer) ==
+
+            BE -> PUP : **pdfToImages(cheminFichier)**
+            activate PUP
+            PUP -> PUP : Lancer le navigateur\nChromium sans tête
+            PUP -> PUP : Charger le PDF via\n**pdf.js** dans la page
+            PUP -> PUP : Obtenir le nombre de pages
+
+            loop Pour chaque page du PDF
+                PUP -> PUP : Rendre la page dans\nun <canvas>\n(viewport.scale = 2.0)
+                PUP -> PUP : Capturer la page\nen image PNG (buffer)
+            end
+
+            PUP -> PUP : Fermer le navigateur
+            PUP --> BE : **[buffers PNG]**\nTableau d'images
+            deactivate PUP
+
+            == Étape 2 : Images → Texte (Tesseract OCR) ==
+
+            BE -> TESS : **ocrImages(images)**
+            activate TESS
+            TESS -> TESS : **createWorker('fra+eng')**\nInitialiser le moteur OCR\n(français + anglais)
+
+            loop Pour chaque image PNG
+                TESS -> TESS : **worker.recognize(image)**\nExtraire le texte de l'image
+                TESS -> TESS : Accumuler le texte extrait
+            end
+
+            TESS -> TESS : **worker.terminate()**\nLibérer les ressources
+            TESS --> BE : **texte brut combiné**
+            deactivate TESS
+
+            == Étape 3 : Extraction par expressions régulières ==
+
+            BE -> REG : **extractPatterns(texte)**
+            activate REG
+            REG -> REG : Rechercher le **montant** :\n/(\d[\d\s]*[.,]\d+)/
+            REG -> REG : Rechercher la **date** :\n/(\d{2}[\/.-]\d{2}[\/.-]\d{2,4})/
+            REG -> REG : Rechercher la **référence** :\n/(N°|Ref|Facture)\s*:?\s*(.+)/i
+            REG -> REG : Rechercher le **client** :\n/Client\s*:?\s*(.+)/i
+            REG -> REG : Rechercher la **description** :\nmots-clés courants
+            REG --> BE : {clientName, amount, date,\nreference, description}\n+ avertissements si champ manquant
+            deactivate REG
+
+            == Étape 4 : Vérification par LLM (Groq API) ==
+
+            BE -> GROQ : **verifyWithGroq(\nchampsExtraits, texteBrut)**
+            activate GROQ
+
+            GROQ -> GROQ : Préparer le prompt :\n"Vérifier et corriger ces\nchamps de facture...\nRetourner du JSON"
+
+            alt Modèle 1 : llama-3.3-70b-versatile
+                GROQ -> GROQ : **POST** chat/completions\nmodèle: llama-3.3-70b-versatile
+                alt Succès (200)
+                    GROQ -> GROQ : Parser la réponse JSON
+                    GROQ --> BE : Champs vérifiés et corrigés
+                else Erreur 429 — Limite de débit
+                    GROQ -> GROQ : Passer au modèle suivant
+
+                    alt Modèle 2 : llama-3.1-70b-versatile
+                        GROQ -> GROQ : Réessayer avec le modèle 2
+                        alt Succès
+                            GROQ --> BE : Champs vérifiés
+                        else 429 — Nouvelle limite
+
+                            alt Modèle 3 : llama-3.1-8b-instant
+                                GROQ -> GROQ : Réessayer avec le modèle 3
+                                alt Succès
+                                    GROQ --> BE : Champs vérifiés
+                                else 429
+
+                                    note right of GROQ
+                                        Continue avec les modèles 4-10 :
+                                        4. llama3-70b-8192
+                                        5. llama3-8b-8192
+                                        6. mixtral-8x7b-32768
+                                        7. gemma2-9b-it
+                                        8. gemma-7b-it
+                                        9. llama-3.2-3b-preview
+                                        10. llama-3.2-1b-preview
+                                    end note
+
+                                    alt Un modèle réussit
+                                        GROQ --> BE : Champs vérifiés par le LLM
+                                    else Tous les 10 modèles épuisés
+                                        GROQ --> BE : Retourner les résultats\nregex originaux\n+ avertissement :\n"Vérification IA non disponible"
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            deactivate GROQ
+
+            == Étape 5 : Post-traitement ==
+
+            BE -> DB : **Invoice.find({clientName:\n$regex})** — Détecter les doublons
+            activate DB
+            DB --> BE : Factures existantes similaires
+            deactivate DB
+
+            BE -> DB : **Preset.find({type: 'client'})**\nRechercher le client correspondant
+            activate DB
+            DB --> BE : Clients prédéfinis
+            deactivate DB
+
+            BE -> BE : **matchClient(clientName)**\nCorrespondance floue avec\nles présets existants
+
+            == Détection de catégorie par IA ==
+
+            BE -> GROQ : **detectCategory(\ndescription, texteBrut)**
+            activate GROQ
+            GROQ -> GROQ : Classifier dans les\ncatégories prédéfinies\nexistantes
+            GROQ --> BE : Catégorie détectée
+            deactivate GROQ
+
+            BE -> DB : Vérifier si la catégorie\nexiste dans les présets
+            activate DB
+            DB --> BE : Résultat
+            deactivate DB
+
+            alt Catégorie nouvelle
+                BE -> DB : **Preset.create()**\n{type: 'invoice_category',\nvalue, label_fr, label_en}
+                activate DB
+                DB --> BE : Nouveau préset créé
+                deactivate DB
+            end
+
+            == Réponse ==
+
+            BE --> CTX : **200** — {\nextracted: {clientName,\namount, date, reference,\ndescription, category},\nwarnings: [...],\nisDuplicate: true/false,\noriginalFile: filename\n}
+            deactivate BE
+
+            CTX -> CTX : Mettre à jour l'élément\nstatut → **'done'**\ndata → champs extraits
+
+            FE --> User : Afficher la carte\nde facture extraite\navec les détails
+
+        end
+    end
+end
+deactivate CTX
+
+== Phase 3 : Sauvegarde ==
+
+User -> FE : Cliquer "Enregistrer"\nsur une facture extraite
+activate FE
+
+FE -> BE : **POST /api/invoices**\n{clientName, amount, status,\nissueDate, dueDate, description,\ncategory, extractedBy: 'ai',\noriginalPdf: filename}
+activate BE
+
+BE -> DB : **Invoice.create()**
+activate DB
+DB --> BE : Facture créée
+deactivate DB
+
+BE --> FE : **201** — {facture}
+deactivate BE
+
+FE --> User : Toast succès\n"Facture enregistrée avec succès"
+deactivate FE
+
+@enduml

@@ -1,0 +1,143 @@
+@startuml SD01_Inscription_et_Approbation_Admin
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD01 — Inscription Utilisateur et Approbation Admin**
+
+actor "Utilisateur" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+database "MongoDB" as DB #LightCoral
+actor "Administrateur" as Admin #Gold
+
+== Phase 1 : Inscription ==
+
+User -> FE : Remplit le formulaire\n(nom, email, mot de passe, rôle)
+activate FE
+
+FE -> FE : Validation côté client\n(champs requis, format email)
+
+alt Validation échouée
+    FE --> User : Afficher erreurs de validation
+else Validation réussie
+    FE -> BE : **POST /api/auth/register**\n{name, email, password, role}
+    activate BE
+
+    BE -> BE : Vérifier que le rôle est\nautorisé (accountant | finance)
+
+    alt Rôle non autorisé
+        BE --> FE : **400** — Rôle non autorisé
+        FE --> User : Afficher erreur\n"Rôle non autorisé"
+    else Rôle autorisé
+        BE -> DB : **User.findOne({email})**\nVérifier si l'email existe déjà
+        activate DB
+        DB --> BE : Résultat de la recherche
+        deactivate DB
+
+        alt Email déjà utilisé
+            BE --> FE : **409** — Email déjà enregistré
+            FE --> User : Afficher erreur\n"Cet email est déjà utilisé"
+        else Email disponible
+            BE -> BE : Hacher le mot de passe\navec **bcrypt** (salt=10)
+            BE -> DB : **User.create()**\n{name, email, hashedPassword,\nrole, status: **'pending'**}
+            activate DB
+            DB --> BE : Utilisateur créé avec succès
+            deactivate DB
+
+            == Notifications aux administrateurs ==
+
+            BE -> DB : **User.find({role: 'admin',\nstatus: 'approved'})**
+            activate DB
+            DB --> BE : Liste des administrateurs
+            deactivate DB
+
+            loop Pour chaque administrateur
+                BE -> DB : **Notification.create()**\n{userId: admin._id,\ntype: 'system',\ntitle: 'Nouvelle demande d\'accès',\nmessage: 'Un nouvel utilisateur\ndemande l\'accès',\nseverity: 'info',\ngroup: 'system'}
+                activate DB
+                DB --> BE : Notification créée
+                deactivate DB
+            end
+
+            BE -> DB : **ActivityLog.create()**\n{action: 'created',\nentityType: 'user',\ndetails: 'Inscription en attente'}
+            activate DB
+            DB --> BE : Log d'activité enregistré
+            deactivate DB
+
+            BE --> FE : **201** — {message:\n"Inscription réussie,\nen attente d'approbation"}
+            FE --> User : Afficher message de succès\n"Votre demande est en attente\nd'approbation par l'administrateur"
+        end
+    end
+    deactivate BE
+end
+deactivate FE
+
+== Phase 2 : Approbation par l'administrateur ==
+
+Admin -> FE : Accéder au tableau de bord\nadministration
+activate FE
+
+FE -> BE : **GET /api/users/pending**\n+ JWT Bearer Token
+activate BE
+
+BE -> BE : **protect()** — Vérifier le JWT
+BE -> BE : **authorize('admin')** —\nVérifier le rôle
+
+alt Token invalide ou rôle non autorisé
+    BE --> FE : **401/403** — Non autorisé
+    FE --> Admin : Rediriger vers la connexion
+else Autorisé
+    BE -> DB : **User.find({status: 'pending'})**
+    activate DB
+    DB --> BE : Liste des utilisateurs en attente
+    deactivate DB
+    BE --> FE : **200** — [{name, email,\nrole, createdAt}, ...]
+    FE --> Admin : Afficher la liste des\ndemandes en attente
+end
+deactivate BE
+
+Admin -> FE : Choisir une action sur\nun utilisateur
+
+alt Administrateur clique "Approuver"
+    FE -> BE : **PATCH /api/users/:id/approve**\n+ JWT Bearer Token
+    activate BE
+    BE -> BE : **protect()** + **authorize('admin')**
+    BE -> DB : **User.findByIdAndUpdate(id,\n{status: 'approved'})**
+    activate DB
+    DB --> BE : Utilisateur mis à jour
+    deactivate DB
+
+    BE -> DB : **Notification.create()**\n{userId: user._id,\ntitle: 'Compte approuvé',\nmessage: 'Votre compte a été activé',\ntype: 'info',\nseverity: 'info'}
+    activate DB
+    DB --> BE : Notification créée
+    deactivate DB
+
+    BE --> FE : **200** — Utilisateur approuvé
+    deactivate BE
+    FE --> Admin : Toast de succès\n"Utilisateur activé"
+    FE -> FE : Retirer l'utilisateur\nde la liste en attente
+
+else Administrateur clique "Refuser"
+    FE -> BE : **PATCH /api/users/:id/reject**\n+ JWT Bearer Token
+    activate BE
+    BE -> BE : **protect()** + **authorize('admin')**
+    BE -> DB : **User.findByIdAndUpdate(id,\n{status: 'rejected'})**
+    activate DB
+    DB --> BE : Utilisateur mis à jour
+    deactivate DB
+
+    BE -> DB : **Notification.create()**\n{userId: user._id,\ntitle: 'Demande refusée',\nmessage: 'Votre demande a été refusée',\ntype: 'info',\nseverity: 'warning'}
+    activate DB
+    DB --> BE : Notification créée
+    deactivate DB
+
+    BE --> FE : **200** — Utilisateur refusé
+    deactivate BE
+    FE --> Admin : Toast info\n"Demande refusée"
+    FE -> FE : Retirer l'utilisateur\nde la liste en attente
+end
+deactivate FE
+
+@enduml

@@ -1,0 +1,103 @@
+@startuml SD02_Connexion_Utilisateur
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 220
+
+title **SD02 — Flux de Connexion Utilisateur**
+
+actor "Utilisateur" as User #LightBlue
+participant "Frontend\n(React SPA)" as FE #LightYellow
+participant "Backend\n(Express API)" as BE #LightGreen
+participant "JWT\n(jsonwebtoken)" as JWT #Plum
+participant "Bcrypt\n(bcryptjs)" as BCrypt #LightPink
+database "MongoDB" as DB #LightCoral
+
+== Connexion ==
+
+User -> FE : Saisir email et mot de passe
+activate FE
+
+FE -> FE : Validation côté client\n(champs non vides, format email)
+
+alt Validation échouée
+    FE --> User : Afficher erreurs\n"Veuillez remplir tous les champs"
+else Validation réussie
+    FE -> BE : **POST /api/auth/login**\n{email, password}
+    activate BE
+
+    BE -> BE : Vérifier la présence\ndes champs requis
+
+    alt Champs manquants
+        BE --> FE : **400** — "Email et mot de passe requis"
+        FE --> User : Afficher erreur
+    else Champs valides
+
+        BE -> DB : **User.findOne({email})\n.select('+password')**
+        activate DB
+        DB --> BE : Résultat de la recherche
+        deactivate DB
+
+        alt Utilisateur non trouvé
+            BE --> FE : **401** — "Identifiants invalides"
+            FE --> User : Afficher erreur\n"Email ou mot de passe incorrect"
+        else Utilisateur trouvé
+
+            == Vérification du statut ==
+
+            alt Statut = "pending"
+                BE --> FE : **403** —\n"Votre compte est en attente\nd'approbation par l'administrateur"
+                FE --> User : Afficher message d'attente\navec icône hourglass
+            else Statut = "rejected"
+                BE --> FE : **403** —\n"Votre demande d'accès\na été refusée"
+                FE --> User : Afficher message de refus\navec icône erreur
+            else Statut = "approved"
+
+                == Vérification du mot de passe ==
+
+                BE -> BCrypt : **bcrypt.compare(\npassword, user.password)**
+                activate BCrypt
+                BCrypt --> BE : Résultat de la comparaison\n(true / false)
+                deactivate BCrypt
+
+                alt Mot de passe incorrect
+                    BE --> FE : **401** — "Identifiants invalides"
+                    FE --> User : Afficher erreur\n"Email ou mot de passe incorrect"
+                else Mot de passe correct
+
+                    == Génération du token JWT ==
+
+                    BE -> JWT : **jwt.sign(\n{id: user._id,\nrole: user.role,\nstatus: user.status},\nJWT_SECRET,\n{expiresIn: '7d'})**
+                    activate JWT
+                    JWT --> BE : Token JWT signé
+                    deactivate JWT
+
+                    BE --> FE : **200** — {\ntoken: "eyJhbG...",\nuser: {\n  _id, name, email,\n  role, status\n}\n}
+                    deactivate BE
+
+                    == Stockage et redirection ==
+
+                    FE -> FE : **localStorage.setItem(\n'token', token)**
+                    FE -> FE : **localStorage.setItem(\n'user', JSON.stringify(user))**
+
+                    FE -> FE : Configurer l'en-tête\nAxios par défaut\n**Authorization: Bearer {token}**
+
+                    alt Rôle = "admin"
+                        FE --> User : Rediriger vers\n**Tableau de bord Admin**\n(gestion utilisateurs)
+                    else Rôle = "owner"
+                        FE --> User : Rediriger vers\n**Tableau de bord Propriétaire**\n(score de risque, KPIs)
+                    else Rôle = "accountant"
+                        FE --> User : Rediriger vers\n**Tableau de bord Comptable**\n(transactions, factures)
+                    else Rôle = "finance"
+                        FE --> User : Rediriger vers\n**Tableau de bord Finance**\n(prêts, actifs)
+                    end
+
+                end
+            end
+        end
+    end
+end
+deactivate FE
+
+@enduml
