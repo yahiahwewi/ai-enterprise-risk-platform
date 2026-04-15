@@ -136,7 +136,15 @@ export default function Reports() {
                       )}
                     </td>
                     <td className="py-3 text-sm text-on-surface-variant">{formatSize(r.fileSize)}</td>
-                    <td className="py-3 text-sm text-on-surface-variant">{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 text-sm text-on-surface-variant whitespace-nowrap">
+                      <div className="text-sm text-on-surface dark:text-slate-200">
+                        {new Date(r.createdAt).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-0.5">
+                        <span className="material-symbols-outlined text-[11px]">schedule</span>
+                        {new Date(r.createdAt).toLocaleTimeString(lang === 'fr' ? 'fr-FR' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </td>
                     <td className="py-3">
                       {r.status === 'ready' ? (
                         <button
