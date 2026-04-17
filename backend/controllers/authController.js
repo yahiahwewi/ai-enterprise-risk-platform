@@ -10,7 +10,7 @@ exports.register = async (req, res) => {
     const { name, email, password, role } = req.body;
 
     // Only accountant and finance can self-register
-    const allowedRoles = ['accountant', 'finance'];
+    const allowedRoles = ['accountant', 'finance', 'analyst', 'auditor'];
     const safeRole = allowedRoles.includes(role) ? role : 'accountant';
 
     if (await User.findOne({ email })) {

@@ -50,6 +50,26 @@ function useNavItems(t, lang) {
       { to: '/loans', label: t('nav.loans'), icon: 'account_balance' },
       { to: '/assets', label: t('nav.assets'), icon: 'inventory_2' },
     ],
+    analyst: [
+      { section: t('nav.overview') },
+      { to: '/dashboard', label: t('nav.dashboard'), icon: 'dashboard' },
+      { to: '/analyst', label: lang === 'fr' ? 'Espace analyste' : 'Analyst workbench', icon: 'insights' },
+      { section: lang === 'fr' ? 'Analyse des risques' : 'Risk analysis' },
+      { to: '/risk-report', label: t('nav.riskAnalysis'), icon: 'assessment' },
+      { to: '/final-decision', label: t('nav.aiDecision'), icon: 'auto_awesome' },
+      { to: '/simulate', label: lang === 'fr' ? 'Simulation' : 'Simulation', icon: 'science' },
+    ],
+    auditor: [
+      { section: lang === 'fr' ? 'Audit' : 'Audit' },
+      { to: '/audit', label: lang === 'fr' ? 'Tableau de bord audit' : 'Audit dashboard', icon: 'fact_check' },
+      { to: '/reports', label: lang === 'fr' ? 'Rapports certifiés' : 'Certified reports', icon: 'picture_as_pdf' },
+      { to: '/activity', label: t('nav.activityLog'), icon: 'history' },
+      { section: lang === 'fr' ? 'Consultation' : 'Consultation' },
+      { to: '/invoices', label: t('nav.invoices'), icon: 'description' },
+      { to: '/transactions', label: t('nav.transactions'), icon: 'receipt_long' },
+      { to: '/loans', label: t('nav.loans'), icon: 'account_balance' },
+      { to: '/assets', label: t('nav.assets'), icon: 'inventory_2' },
+    ],
   };
 }
 

@@ -36,7 +36,9 @@ app.use('/api/forecast', require('./routes/forecastRoutes'));
 app.use('/api/export', require('./routes/reportRoutes'));
 app.use('/api/approvals', require('./routes/approvalRoutes'));
 app.use('/api/rules', require('./routes/ruleRoutes'));
-app.use('/api/dev',   require('./routes/devRoutes'));
+app.use('/api/dev',    require('./routes/devRoutes'));
+app.use('/api/verify', require('./routes/verifyRoutes')); // public — no auth
+app.use('/api/audit',  require('./routes/auditRoutes'));
 
 // Global error handler
 app.use(errorHandler);

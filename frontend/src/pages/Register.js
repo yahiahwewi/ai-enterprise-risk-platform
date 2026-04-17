@@ -21,8 +21,8 @@ export default function Register() {
   };
 
   const roleLabels = {
-    fr: { accountant: 'Comptable', finance: 'Directeur Financier' },
-    en: { accountant: 'Accountant', finance: 'Finance Manager' },
+    fr: { accountant: 'Comptable', finance: 'Directeur Financier', analyst: 'Analyste des risques', auditor: 'Auditeur' },
+    en: { accountant: 'Accountant', finance: 'Finance Manager',    analyst: 'Risk Analyst',         auditor: 'Auditor'  },
   };
   const rl = roleLabels[lang] || roleLabels.fr;
 
@@ -92,6 +92,8 @@ export default function Register() {
                 <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full bg-surface-container-low dark:bg-slate-700 border-none rounded-lg py-2.5 px-3 text-sm focus:ring-2 focus:ring-blue-500/20 text-on-surface dark:text-slate-200">
                   <option value="accountant">{rl.accountant}</option>
                   <option value="finance">{rl.finance}</option>
+                  <option value="analyst">{rl.analyst}</option>
+                  <option value="auditor">{rl.auditor}</option>
                 </select>
               </div>
               <button type="submit" className="w-full executive-gradient text-white font-bold py-2.5 rounded-lg hover:opacity-90 transition-opacity text-sm">

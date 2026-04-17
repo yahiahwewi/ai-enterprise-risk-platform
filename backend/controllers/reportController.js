@@ -7,7 +7,7 @@ const { runMonthlyReports } = require('../services/report/scheduler');
 exports.generateReport = async (req, res) => {
   try {
     const { type = 'monthly', language = 'fr' } = req.query;
-    const report = await generatePDF({ type, language, generatedBy: 'api' });
+    const report = await generatePDF({ type, language, generatedBy: 'api', user: req.user });
     res.status(201).json({
       message: 'Report generated successfully',
       report: {
@@ -17,6 +17,21 @@ exports.generateReport = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Report generation failed: ' + error.message });
+  }
+};
+
+exports.deleteReport = async (req, res) => {
+  try {
+    const report = await Report.findById(req.params.reportId);
+    if (!report) return res.status(404).json({ message: 'Report not found' });
+    // Delete file from disk if it exists
+    if (report.filePath && fs.existsSync(report.filePath)) {
+      fs.unlinkSync(report.filePath);
+    }
+    await report.deleteOne();
+    res.json({ message: 'Report deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -49,8 +64,17 @@ exports.getReportHistory = async (req, res) => {
         id: r._id, title: r.title, type: r.type, period: r.period,
         language: r.language, version: r.version, status: r.status,
         fileSize: r.fileSize, data: r.data, generatedBy: r.generatedBy,
+        generatedByName: r.generatedByName || null,
         createdAt: r.createdAt,
         downloadUrl: r.status === 'ready' ? `/api/export/pdf/${r._id}` : null,
+        // Signature / integrity fields
+        hash:         r.hash     ? r.hash.slice(0, 12) + '…' : null,
+        signedAt:     r.signedAt  || null,
+        certCN:       r.certCN    || null,
+        tsaStatus:    r.tsaStatus  || null,
+        tsaIssuer:    r.tsaIssuer  || null,
+        tsaTimestamp: r.tsaTimestamp || null,
+        verifyUrl:    `/verify/${r._id}`,
       })),
       total,
     });

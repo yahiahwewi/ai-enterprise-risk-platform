@@ -25,6 +25,10 @@ import ExtractInvoice from './pages/ExtractInvoice';
 import Executive from './pages/Executive';
 import Goals from './pages/Goals';
 import CopilotChat from './components/CopilotChat';
+import VerifyReport from './pages/VerifyReport';
+import VerifyUpload from './pages/VerifyUpload';
+import AnalystWorkbench from './pages/AnalystWorkbench';
+import AuditDashboard from './pages/AuditDashboard';
 
 function ProtectedPage({ children, roles }) {
   return (
@@ -46,20 +50,24 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/about" element={<About />} />
+          <Route path="/verify/:id" element={<VerifyReport />} />
+          <Route path="/verify-upload" element={<VerifyUpload />} />
 
           <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
-          <Route path="/risk-report" element={<ProtectedPage roles={['owner']}><RiskReport /></ProtectedPage>} />
-          <Route path="/final-decision" element={<ProtectedPage roles={['owner']}><FinalDecision /></ProtectedPage>} />
+          <Route path="/risk-report" element={<ProtectedPage roles={['owner', 'analyst']}><RiskReport /></ProtectedPage>} />
+          <Route path="/final-decision" element={<ProtectedPage roles={['owner', 'analyst']}><FinalDecision /></ProtectedPage>} />
           <Route path="/team" element={<ProtectedPage roles={['owner']}><Team /></ProtectedPage>} />
-          <Route path="/transactions" element={<ProtectedPage roles={['owner', 'accountant']}><Transactions /></ProtectedPage>} />
-          <Route path="/invoices" element={<ProtectedPage roles={['owner', 'accountant']}><Invoices /></ProtectedPage>} />
+          <Route path="/transactions" element={<ProtectedPage roles={['owner', 'accountant', 'auditor']}><Transactions /></ProtectedPage>} />
+          <Route path="/invoices" element={<ProtectedPage roles={['owner', 'accountant', 'auditor']}><Invoices /></ProtectedPage>} />
           <Route path="/extract-invoice" element={<ProtectedPage roles={['owner', 'accountant']}><ExtractInvoice /></ProtectedPage>} />
-          <Route path="/loans" element={<ProtectedPage roles={['owner', 'finance']}><Loans /></ProtectedPage>} />
-          <Route path="/assets" element={<ProtectedPage roles={['owner', 'finance']}><Assets /></ProtectedPage>} />
-          <Route path="/activity" element={<ProtectedPage roles={['owner', 'admin']}><ActivityLog /></ProtectedPage>} />
-          <Route path="/reports" element={<ProtectedPage roles={['owner', 'admin']}><Reports /></ProtectedPage>} />
+          <Route path="/loans" element={<ProtectedPage roles={['owner', 'finance', 'auditor']}><Loans /></ProtectedPage>} />
+          <Route path="/assets" element={<ProtectedPage roles={['owner', 'finance', 'auditor']}><Assets /></ProtectedPage>} />
+          <Route path="/activity" element={<ProtectedPage roles={['owner', 'admin', 'auditor']}><ActivityLog /></ProtectedPage>} />
+          <Route path="/reports" element={<ProtectedPage roles={['owner', 'admin', 'auditor']}><Reports /></ProtectedPage>} />
+          <Route path="/analyst" element={<ProtectedPage roles={['analyst', 'owner']}><AnalystWorkbench /></ProtectedPage>} />
+          <Route path="/audit" element={<ProtectedPage roles={['auditor', 'admin', 'owner']}><AuditDashboard /></ProtectedPage>} />
           <Route path="/approvals" element={<ProtectedPage roles={['owner', 'admin']}><Approvals /></ProtectedPage>} />
-          <Route path="/simulate" element={<ProtectedPage roles={['owner']}><Simulate /></ProtectedPage>} />
+          <Route path="/simulate" element={<ProtectedPage roles={['owner', 'analyst']}><Simulate /></ProtectedPage>} />
           <Route path="/executive" element={<ProtectedPage roles={['owner']}><Executive /></ProtectedPage>} />
           <Route path="/goals" element={<ProtectedPage roles={['owner']}><Goals /></ProtectedPage>} />
           <Route path="/settings" element={<ProtectedPage roles={['admin']}><Settings /></ProtectedPage>} />

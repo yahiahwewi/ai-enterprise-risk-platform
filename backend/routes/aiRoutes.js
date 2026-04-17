@@ -2,10 +2,10 @@ const router = require('express').Router();
 const { getRiskReport, getFinalDecision, getHealthIndex, simulate, copilot, suggestCat, getGoalAdvice, getRecommendedScenario } = require('../controllers/aiController');
 const { protect, authorize } = require('../middleware/auth');
 
-router.get('/risk-report', protect, authorize('owner'), getRiskReport);
-router.get('/final-decision', protect, authorize('owner'), getFinalDecision);
-router.get('/health-index', protect, authorize('owner'), getHealthIndex);
-router.post('/simulate', protect, authorize('owner'), simulate);
+router.get('/risk-report', protect, authorize('owner', 'analyst'), getRiskReport);
+router.get('/final-decision', protect, authorize('owner', 'analyst'), getFinalDecision);
+router.get('/health-index', protect, authorize('owner', 'analyst', 'auditor'), getHealthIndex);
+router.post('/simulate', protect, authorize('owner', 'analyst'), simulate);
 router.post('/copilot', protect, authorize('owner'), copilot);
 router.post('/suggest-category', protect, suggestCat);
 router.get('/goals/recommended', protect, authorize('owner'), getRecommendedScenario);

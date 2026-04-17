@@ -30,5 +30,15 @@ Thumbs.db
 # Generated reports
 backend/reports/
 
+# Signing certificates (contains private RSA key — must never be committed)
+backend/certs/
+
+# Uploaded files
+backend/uploads/
+
+# Log files
+*.log
+backend/backend.err
+
 # Claude
 .claude/

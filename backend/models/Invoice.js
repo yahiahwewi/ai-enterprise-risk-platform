@@ -16,6 +16,10 @@ const invoiceSchema = new mongoose.Schema({
   category: { type: String, trim: true, default: '' },
   originalPdf: { type: String, default: '' },  // filename of uploaded PDF
   extractedBy: { type: String, enum: ['manual', 'ai', ''], default: '' },
+  // ── Integrity fingerprint ────────────────────────────────────────────────
+  integrityHash:     { type: String },   // SHA-256 of key fields at creation
+  integrityHashedAt: { type: Date   },   // when the hash was computed
+  integritySnapshot: { type: Object },   // copy of hashed fields (for diff display)
   workflowStatus: { type: String, enum: ['draft', 'pending_approval', 'approved', 'rejected', 'locked'], default: 'draft' },
   approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   approvalDate: { type: Date },

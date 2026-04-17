@@ -38,9 +38,11 @@ async function seed() {
   const owner = await User.create({ name: 'Sarah Johnson', email: 'owner@erm.com', password: 'owner123', role: 'owner', status: 'approved' });
   const accountant = await User.create({ name: 'Ahmed Benali', email: 'accountant@erm.com', password: 'accountant123', role: 'accountant', status: 'approved' });
   const finance = await User.create({ name: 'Maria Garcia', email: 'finance@erm.com', password: 'finance123', role: 'finance', status: 'approved' });
+  const analyst = await User.create({ name: 'Leila Trabelsi', email: 'analyst@erm.com', password: 'analyst123', role: 'analyst', status: 'approved' });
+  const auditor = await User.create({ name: 'Karim Bouazizi', email: 'auditor@erm.com', password: 'auditor123', role: 'auditor', status: 'approved' });
   // Pending user for testing admin approval workflow
   await User.create({ name: 'Mohamed Kadi', email: 'mohamed@tac-tic.tn', password: 'test123', role: 'accountant', status: 'pending' });
-  console.log('5 users created (4 approved + 1 pending)');
+  console.log('7 users created (6 approved + 1 pending)');
 
   // ── Transactions (spread across 90 days) ──
   const transactions = await Transaction.insertMany([
@@ -182,7 +184,9 @@ async function seed() {
   console.log('  ADMIN:    admin@erm.com / admin123');
   console.log('  OWNER:    owner@erm.com / owner123');
   console.log('  ACCT:     accountant@erm.com / accountant123');
-  console.log('  FINANCE:  finance@erm.com / finance123\n');
+  console.log('  FINANCE:  finance@erm.com / finance123');
+  console.log('  ANALYST:  analyst@erm.com / analyst123');
+  console.log('  AUDITOR:  auditor@erm.com / auditor123\n');
   console.log('  All users share the same Tac-Tic data.');
   console.log('========================================\n');
 

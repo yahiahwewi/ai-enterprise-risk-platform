@@ -1,9 +1,17 @@
 const Invoice = require('../models/Invoice');
 const { evaluateRules, applyRuleActions } = require('../services/ruleEngine');
+const { computeHash, checkIntegrity } = require('../services/invoiceIntegrity');
 
 exports.createInvoice = async (req, res) => {
   try {
     const invoice = await Invoice.create({ ...req.body, submittedBy: req.user._id, workflowStatus: 'draft' });
+
+    // Stamp integrity fingerprint immediately after creation
+    const { hash, snapshot } = computeHash(invoice.toObject());
+    invoice.integrityHash      = hash;
+    invoice.integrityHashedAt  = new Date();
+    invoice.integritySnapshot  = snapshot;
+    await invoice.save();
 
     const triggered = await evaluateRules('invoice', invoice, req.user._id);
     if (triggered.length > 0) {
@@ -70,6 +78,48 @@ exports.deleteInvoice = async (req, res) => {
     const invoice = await Invoice.findByIdAndDelete(req.params.id);
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
     res.json({ message: 'Invoice deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/invoices/:id/integrity — check a single invoice
+exports.checkInvoiceIntegrity = async (req, res) => {
+  try {
+    const invoice = await Invoice.findById(req.params.id);
+    if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
+    const result = checkIntegrity(invoice.toObject());
+    res.json({ invoiceId: invoice._id, clientName: invoice.clientName, ...result });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/invoices/integrity/all — bulk integrity check
+exports.checkAllIntegrity = async (req, res) => {
+  try {
+    const invoices = await Invoice.find({}).sort({ createdAt: -1 });
+    const results = invoices.map((inv) => {
+      const r = checkIntegrity(inv.toObject());
+      return {
+        invoiceId:   inv._id,
+        clientName:  inv.clientName,
+        reference:   inv.reference,
+        amount:      inv.amount,
+        issueDate:   inv.issueDate,
+        hashedAt:    inv.integrityHashedAt,
+        intact:      r.intact,
+        changedFields: r.changedFields,
+        reason:      r.reason,
+      };
+    });
+    const summary = {
+      total:        results.length,
+      original:     results.filter(r => r.intact === true).length,
+      modified:     results.filter(r => r.intact === false).length,
+      untracked:    results.filter(r => r.intact === null).length,
+    };
+    res.json({ summary, invoices: results });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

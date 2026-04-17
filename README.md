@@ -34,7 +34,9 @@ Tac-Tic ERM is a full-stack enterprise risk management platform that combines fi
 - **Executive Dashboard** — Boardroom-grade read-only view with health gauges, sparklines, and priority action list
 - **AI Copilot Chat** — Floating chat widget routing financial questions to live data services
 - **Approval Workflows** — Multi-step approval chains for high-value invoices and transactions
-- **Role-Based Dashboards** — Tailored views for Business Owner, Accountant, Finance Manager, and Admin
+- **Role-Based Dashboards** — Tailored views for Business Owner, Accountant, Finance Manager, Risk Analyst, Auditor, and Admin
+- **Digital Report Certification** — RSA-SHA256 signing + RFC 3161 TSA timestamping with public `/verify/:id` page and upload-and-verify flow
+- **SHA-256 Invoice Integrity** — Per-invoice fingerprint at creation; inline audit detects tampering and flags modified fields
 - **Real-Time Notifications** — Automated alerts for high risk, overdue invoices, and negative cash flow
 - **Bilingual Interface** — Full French/English support with runtime language switching
 
@@ -367,6 +369,8 @@ Multi-step approval chains for high-value transactions:
 - **Owner** — Strategic dashboard with AI risk score (SVG ring gauge), risk domain cards, trend KPIs, cash flow forecasts, AI alerts with action buttons, Health Index KPI
 - **Accountant** — Transaction & invoice management with inline forms, category charts, status tracking
 - **Finance Manager** — Loan & asset management with valuation charts, debt-to-asset ratio, depreciation tracking
+- **Risk Analyst** — Dedicated Analyst Workbench with AI risk scoring, interactive 5×5 risk matrix, health index KPI, qualitative analysis notes and shortcut to simulation
+- **Auditor** — Read-only Audit Dashboard aggregating invoice SHA-256 integrity, report certification status (authentic / edited / unsigned), recent activity log; read-only banner enforced across all reachable pages
 - **Admin** — Platform user management with role distribution KPIs
 
 ### UI/UX
@@ -446,6 +450,8 @@ Creates test accounts with realistic financial data:
 | Business Owner | owner@erm.com | owner123 |
 | Accountant | accountant@erm.com | accountant123 |
 | Finance Manager | finance@erm.com | finance123 |
+| Risk Analyst | analyst@erm.com | analyst123 |
+| Auditor | auditor@erm.com | auditor123 |
 
 Seeded data: 23 transactions (90 days), 8 invoices, 3 loans, 5 assets, 4 notifications, 10 activity logs.
 
