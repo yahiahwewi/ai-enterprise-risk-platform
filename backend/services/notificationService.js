@@ -1,9 +1,12 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
 
-async function createNotification({ userId, type, title, message, severity = 'info', metadata = {} }) {
+async function createNotification({ userId, type, title, message, severity = 'info', metadata = {}, priority, group }) {
   try {
-    return await Notification.create({ userId, type, title, message, severity, metadata });
+    const doc = { userId, type, title, message, severity, metadata };
+    if (priority !== undefined) doc.priority = priority;
+    if (group) doc.group = group;
+    return await Notification.create(doc);
   } catch (err) {
     console.error('Failed to create notification:', err.message);
     return null;

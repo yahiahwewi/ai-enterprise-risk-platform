@@ -1,3 +1,4 @@
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import OwnerDashboard from './dashboards/OwnerDashboard';
 import AccountantDashboard from './dashboards/AccountantDashboard';
@@ -16,6 +17,12 @@ export default function Dashboard() {
       return <FinanceDashboard />;
     case 'admin':
       return <AdminDashboard />;
+    case 'analyst':
+      // Analysts land on their dedicated workbench
+      return <Navigate to="/analyst" replace />;
+    case 'auditor':
+      // Auditors land on their audit dashboard
+      return <Navigate to="/audit" replace />;
     default:
       return <p>Unknown role</p>;
   }

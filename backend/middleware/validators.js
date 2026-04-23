@@ -16,7 +16,7 @@ const validateRegister = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['accountant', 'finance']).withMessage('Role must be accountant or finance'),
+  body('role').optional().isIn(['accountant', 'finance', 'analyst', 'auditor']).withMessage('Role must be accountant, finance, analyst or auditor'),
   handleValidationErrors,
 ];
 
@@ -69,7 +69,7 @@ const validateInvite = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').isIn(['accountant', 'finance']).withMessage('Role must be accountant or finance'),
+  body('role').isIn(['accountant', 'finance', 'analyst', 'auditor']).withMessage('Role must be accountant, finance, analyst or auditor'),
   handleValidationErrors,
 ];
 

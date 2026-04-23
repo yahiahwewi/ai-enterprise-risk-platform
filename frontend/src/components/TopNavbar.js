@@ -52,16 +52,35 @@ export default function TopNavbar() {
   const help = helpData || fallback;
 
   return (
-    <header className="fixed top-0 right-0 left-64 h-16 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-800/50 flex justify-between items-center px-8 shadow-sm dark:shadow-none">
-      <div className="flex items-center gap-4 flex-1 max-w-xl">
-        <div className="relative w-full group">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors text-[20px]">search</span>
-          <input className="w-full bg-surface-container-low dark:bg-slate-800 border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all font-body text-on-surface dark:text-slate-200 placeholder:text-slate-400" placeholder={t('common.search')} type="text" />
+    <header className="fixed top-0 right-0 left-64 h-16 z-40 flex justify-between items-center px-8"
+            style={{ background: '#faf7f2', borderBottom: '1px solid #e5ddce' }}>
+      <div className="flex items-center gap-6 flex-1">
+        {/* Editorial masthead */}
+        <div className="small-caps text-[#0b1f33]" style={{ letterSpacing: '0.2em', fontWeight: 700 }}>
+          {lang === 'fr' ? 'EXECUTIVE RISK EDITORIAL' : 'EXECUTIVE RISK EDITORIAL'}
+        </div>
+        {/* Slim search */}
+        <div className="relative max-w-md flex-1 hidden md:block">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#8b8672] text-[18px]">search</span>
+          <input className="w-full rounded-full py-1.5 pl-10 pr-4 text-sm transition-all"
+                 style={{ background: '#ffffff', border: '1px solid #e5ddce', color: '#0b1f33' }}
+                 placeholder={lang === 'fr' ? 'Rechercher des risques...' : 'Search risks...'}
+                 type="text" />
         </div>
       </div>
-      <div className="flex items-center gap-4 relative">
-        <button onClick={() => setHelpOpen(!helpOpen)} className={`text-slate-500 hover:text-blue-900 dark:hover:text-blue-300 transition-colors ${helpOpen ? 'text-blue-900 dark:text-blue-300' : ''}`}>
-          <span className="material-symbols-outlined text-[22px]">help</span>
+      <div className="flex items-center gap-3 relative">
+        {/* AI report chip */}
+        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md"
+             style={{ background: '#ffffff', border: '1px solid #efe8dc' }}>
+          <span className="small-caps text-[#6b7280]">
+            {lang === 'fr' ? 'Rapport IA' : 'AI Report'} #{new Date().getTime().toString().slice(-3)}
+          </span>
+          <span className="editorial-badge-ai">AI</span>
+        </div>
+        <button onClick={() => setHelpOpen(!helpOpen)}
+                className={`p-1.5 rounded-md transition-colors hover:bg-[#efe8dc] ${helpOpen ? 'bg-[#efe8dc]' : ''}`}
+                style={{ color: '#6b7280' }}>
+          <span className="material-symbols-outlined text-[20px]">help</span>
         </button>
 
         {/* Help panel */}

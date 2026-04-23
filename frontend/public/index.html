@@ -9,7 +9,7 @@
     <!-- Tailwind CSS CDN with plugins -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <!-- Google Fonts: Manrope & Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@500;600;700;800&family=Playfair+Display:wght@700;800;900&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <script>
@@ -51,16 +51,26 @@
               "on-tertiary-container": "#acbbd3",
               "error-container": "#ffdad6",
               "outline-variant": "#c2c7d1",
-              "surface": "#f7f9fb",
-              "on-background": "#191c1e",
-              "on-surface": "#191c1e",
-              "background": "#f7f9fb",
-              "surface-container-lowest": "#ffffff"
+              "surface": "#faf7f2",
+              "on-background": "#0b1f33",
+              "on-surface": "#0b1f33",
+              "background": "#f6f2ea",
+              "surface-container-lowest": "#ffffff",
+              "editorial-cream": "#f6f2ea",
+              "editorial-ivory": "#faf7f2",
+              "editorial-navy": "#002b4c",
+              "editorial-navy-deep": "#001a2e",
+              "editorial-ink": "#0b1f33",
+              "editorial-red": "#c8102e",
+              "editorial-red-soft": "#fbe9ec",
+              "editorial-gold": "#b8860b",
+              "editorial-divider": "#e5ddce"
             },
             fontFamily: {
-              "headline": ["Manrope", "sans-serif"],
-              "body": ["Inter", "sans-serif"],
-              "label": ["Inter", "sans-serif"]
+              "headline": ["Playfair Display", "Georgia", "serif"],
+              "editorial": ["Playfair Display", "Georgia", "serif"],
+              "body": ["IBM Plex Sans", "Inter", "sans-serif"],
+              "label": ["IBM Plex Sans", "Inter", "sans-serif"]
             },
             borderRadius: {
               "DEFAULT": "0.125rem",
@@ -73,32 +83,255 @@
       }
     </script>
     <style>
-      body { font-family: 'Inter', sans-serif; }
-      .font-headline { font-family: 'Manrope', sans-serif; }
+      body {
+        font-family: 'IBM Plex Sans', 'Inter', sans-serif;
+        background: #f6f2ea;
+        color: #0b1f33;
+      }
+      .font-headline, .font-editorial { font-family: 'Playfair Display', Georgia, serif; }
+
+      /* ═══════════════════════════════════════════════════════════════════════
+       *  EDITORIAL DESIGN LANGUAGE
+       *  Inspired by executive reporting suites — cream background, navy ink,
+       *  bold serif headlines, refined typographic rhythm.
+       * ═══════════════════════════════════════════════════════════════════════ */
+      .small-caps {
+        font-family: 'IBM Plex Sans', sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        font-weight: 600;
+        font-size: 0.68rem;
+      }
+      .editorial-card {
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 1px 0 rgba(0, 43, 76, 0.04), 0 2px 8px rgba(0, 43, 76, 0.05);
+        border: 1px solid #efe8dc;
+      }
+      .editorial-divider {
+        height: 1px;
+        background: #e5ddce;
+      }
+      .editorial-btn-primary {
+        background: #002b4c;
+        color: #ffffff;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: background 0.2s ease, transform 0.12s ease;
+      }
+      .editorial-btn-primary:hover { background: #001a2e; transform: translateY(-1px); }
+      .editorial-btn-ghost {
+        background: transparent;
+        color: #002b4c;
+        border: 1px solid #d8cfb9;
+        border-radius: 8px;
+        padding: 9px 18px;
+        font-weight: 600;
+      }
+      .editorial-badge-ai {
+        background: #002b4c;
+        color: #ffffff;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+      }
+      .editorial-pill-critical {
+        background: #fbe9ec;
+        color: #c8102e;
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .editorial-alert-banner {
+        background: #c8102e;
+        color: #ffffff;
+        border-radius: 10px;
+        padding: 22px 28px;
+        position: relative;
+        overflow: hidden;
+      }
+      .editorial-alert-banner::before {
+        content: "";
+        position: absolute;
+        right: -60px;
+        top: -40px;
+        width: 260px;
+        height: 260px;
+        background: radial-gradient(ellipse at center, rgba(255,255,255,0.18), transparent 60%);
+        pointer-events: none;
+      }
+      .editorial-kpi-icon {
+        width: 40px; height: 40px;
+        background: #f0eadb;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #002b4c;
+      }
+      .editorial-confidential-footer {
+        font-family: 'IBM Plex Sans', sans-serif;
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #6b7280;
+      }
       .material-symbols-outlined {
         font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
       .material-symbols-outlined.filled {
         font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
       }
+
+      /* ═══════════════════════════════════════════════════════════════════════
+       *  DARK MODE — Premium palette (Linear / Arc / Vercel-inspired)
+       *
+       *  Redefines the Tailwind semantic tokens via CSS selector overrides so
+       *  every page gets a coherent, depth-aware dark look with zero component
+       *  changes. The palette uses a slightly desaturated cool navy base with
+       *  progressively brighter surface elevations.
+       * ═══════════════════════════════════════════════════════════════════════ */
+      html.dark {
+        color-scheme: dark;
+      }
+      html.dark body {
+        background-color: #0a0e1a;
+        color: #e6e8ef;
+        background-image:
+          radial-gradient(ellipse 80% 50% at 20% -10%, rgba(37, 99, 235, 0.10), transparent 60%),
+          radial-gradient(ellipse 60% 40% at 90% 10%, rgba(139, 92, 246, 0.07), transparent 60%),
+          radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.045) 1px, transparent 0);
+        background-size: 100% 100%, 100% 100%, 24px 24px;
+        background-attachment: fixed;
+      }
+
+      /* Surface elevation ladder (deeper → brighter) */
+      html.dark .bg-background                { background-color: #0a0e1a !important; }
+      html.dark .bg-surface                   { background-color: #0e1423 !important; }
+      html.dark .bg-surface-bright            { background-color: #10172a !important; }
+      html.dark .bg-surface-dim               { background-color: #080c17 !important; }
+      html.dark .bg-surface-container-lowest  { background-color: #0e1423 !important; }
+      html.dark .bg-surface-container-low     { background-color: #141b2e !important; }
+      html.dark .bg-surface-container         { background-color: #1a2136 !important; }
+      html.dark .bg-surface-container-high    { background-color: #222a41 !important; }
+      html.dark .bg-surface-container-highest { background-color: #2a3249 !important; }
+      html.dark .bg-surface-variant           { background-color: #1a2136 !important; }
+
+      /* Text tokens */
+      html.dark .text-on-background      { color: #e6e8ef !important; }
+      html.dark .text-on-surface         { color: #e6e8ef !important; }
+      html.dark .text-on-surface-variant { color: #8891a8 !important; }
+      html.dark .text-outline            { color: #2a3149 !important; }
+      html.dark .text-outline-variant    { color: #1f2638 !important; }
+
+      /* Border tokens — outline becomes a thin luminous line */
+      html.dark .border-outline            { border-color: #2a3149 !important; }
+      html.dark .border-outline-variant    { border-color: #1f2638 !important; }
+      html.dark .border-surface-container-high   { border-color: #222a41 !important; }
+      html.dark .border-surface-container-highest { border-color: #2a3249 !important; }
+
+      /* Brand accents — slightly brighter than light mode for WCAG contrast on navy */
+      html.dark .bg-primary             { background-color: #3b82f6 !important; }
+      html.dark .bg-primary-container   { background-color: #1e3a8a !important; }
+      html.dark .text-primary           { color: #60a5fa !important; }
+      html.dark .text-primary-container { color: #bfdbfe !important; }
+      html.dark .border-primary         { border-color: #3b82f6 !important; }
+
+      /* Semantic backgrounds used inline (Tailwind utility classes) */
+      html.dark .bg-slate-50   { background-color: #141b2e !important; }
+      html.dark .bg-slate-100  { background-color: #1a2136 !important; }
+      html.dark .bg-slate-200  { background-color: #222a41 !important; }
+      html.dark .bg-white      { background-color: #0e1423 !important; }
+
+      /* Sidebar-specific tune: slightly darker than main to create clear separation */
+      html.dark aside.bg-slate-100,
+      html.dark aside.dark\:bg-slate-900 { background-color: #080c17 !important; }
+
+      /* Glass panel, reworked for dark */
       .glass-panel {
         background: rgba(224, 227, 229, 0.6);
         backdrop-filter: blur(20px);
       }
+      html.dark .glass-panel {
+        background: rgba(20, 27, 46, 0.65);
+        backdrop-filter: blur(20px) saturate(1.2);
+        border: 1px solid rgba(139, 159, 208, 0.08);
+      }
+
+      /* Executive gradient — brighter accent hues in dark */
       .executive-gradient {
         background: linear-gradient(135deg, #00355f 0%, #0f4c81 100%);
       }
+      html.dark .executive-gradient {
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 55%, #06b6d4 100%);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 8px 24px -12px rgba(59, 130, 246, 0.5);
+      }
+
+      /* Input fields readable on the dark palette */
+      html.dark input, html.dark textarea, html.dark select {
+        color: #e6e8ef;
+      }
+      html.dark input::placeholder, html.dark textarea::placeholder {
+        color: #6b748a;
+      }
+
+      /* Better focus ring on dark */
+      html.dark *:focus-visible {
+        outline: 2px solid #60a5fa;
+        outline-offset: 2px;
+      }
+
+      /* Selection color */
+      html.dark ::selection { background: rgba(59, 130, 246, 0.35); color: #ffffff; }
+
       /* Recharts tooltip override */
       .recharts-default-tooltip {
         border-radius: 0.75rem !important;
         border: 1px solid #e6e8ea !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
       }
-      /* Scrollbar styling */
-      ::-webkit-scrollbar { width: 6px; }
+      html.dark .recharts-default-tooltip {
+        background-color: rgba(20, 27, 46, 0.98) !important;
+        border: 1px solid #2a3149 !important;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+        color: #e6e8ef !important;
+      }
+      html.dark .recharts-tooltip-label,
+      html.dark .recharts-tooltip-item { color: #e6e8ef !important; }
+      html.dark .recharts-cartesian-axis-tick-value { fill: #8891a8 !important; }
+      html.dark .recharts-cartesian-grid line { stroke: #1f2638 !important; }
+
+      /* Scrollbar — slim, cool navy, subtle teal glow on hover */
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #c2c7d1; border-radius: 3px; }
-      ::-webkit-scrollbar-thumb:hover { background: #727780; }
+      ::-webkit-scrollbar-thumb { background: #c2c7d1; border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+      ::-webkit-scrollbar-thumb:hover { background: #727780; background-clip: padding-box; border: 2px solid transparent; }
+      html.dark ::-webkit-scrollbar-thumb { background: #2a3249; border: 2px solid transparent; background-clip: padding-box; }
+      html.dark ::-webkit-scrollbar-thumb:hover { background: #3b82f6; background-clip: padding-box; border: 2px solid transparent; }
+      html { scrollbar-color: #c2c7d1 transparent; scrollbar-width: thin; }
+      html.dark { scrollbar-color: #2a3249 transparent; }
+
+      /* Ring/divider default colours adapt to dark */
+      html.dark .divide-surface-container-high > :not([hidden]) ~ :not([hidden]) { border-color: #222a41 !important; }
+      html.dark .divide-slate-700 > :not([hidden]) ~ :not([hidden]) { border-color: #1f2638 !important; }
+
+      /* Dark-mode-aware card lift shadow */
+      .card-lift { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+      .card-lift:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+      }
+      html.dark .card-lift:hover {
+        box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(96, 165, 250, 0.18);
+        transform: translateY(-1px);
+      }
 
       /* ── Page transition ── */
       @keyframes pageEnter {
@@ -155,7 +388,7 @@
       }
     </style>
   </head>
-  <body class="bg-surface text-on-surface antialiased">
+  <body class="bg-background text-on-background antialiased">
     <div id="root"></div>
   </body>
 </html>

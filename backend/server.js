@@ -39,6 +39,8 @@ app.use('/api/rules', require('./routes/ruleRoutes'));
 app.use('/api/dev',    require('./routes/devRoutes'));
 app.use('/api/verify', require('./routes/verifyRoutes')); // public — no auth
 app.use('/api/audit',  require('./routes/auditRoutes'));
+app.use('/api/risk-memos', require('./routes/riskMemoRoutes'));
+app.use('/api/investigations', require('./routes/investigationRoutes'));
 
 // Global error handler
 app.use(errorHandler);

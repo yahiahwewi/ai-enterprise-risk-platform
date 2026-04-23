@@ -29,6 +29,10 @@ import VerifyReport from './pages/VerifyReport';
 import VerifyUpload from './pages/VerifyUpload';
 import AnalystWorkbench from './pages/AnalystWorkbench';
 import AuditDashboard from './pages/AuditDashboard';
+import OwnerAlerts from './pages/OwnerAlerts';
+import PdfTest from './pages/PdfTest';
+import Investigations from './pages/Investigations';
+import InvestigationDetail from './pages/InvestigationDetail';
 
 function ProtectedPage({ children, roles }) {
   return (
@@ -66,6 +70,11 @@ export default function App() {
           <Route path="/reports" element={<ProtectedPage roles={['owner', 'admin', 'auditor']}><Reports /></ProtectedPage>} />
           <Route path="/analyst" element={<ProtectedPage roles={['analyst', 'owner']}><AnalystWorkbench /></ProtectedPage>} />
           <Route path="/audit" element={<ProtectedPage roles={['auditor', 'admin', 'owner']}><AuditDashboard /></ProtectedPage>} />
+          <Route path="/alerts" element={<ProtectedPage roles={['owner', 'admin']}><OwnerAlerts /></ProtectedPage>} />
+          <Route path="/pdfTEST" element={<ProtectedPage><PdfTest /></ProtectedPage>} />
+          <Route path="/pdftest" element={<ProtectedPage><PdfTest /></ProtectedPage>} />
+          <Route path="/investigations" element={<ProtectedPage roles={['auditor', 'owner', 'admin']}><Investigations /></ProtectedPage>} />
+          <Route path="/investigations/:id" element={<ProtectedPage roles={['auditor', 'owner', 'admin']}><InvestigationDetail /></ProtectedPage>} />
           <Route path="/approvals" element={<ProtectedPage roles={['owner', 'admin']}><Approvals /></ProtectedPage>} />
           <Route path="/simulate" element={<ProtectedPage roles={['owner', 'analyst']}><Simulate /></ProtectedPage>} />
           <Route path="/executive" element={<ProtectedPage roles={['owner']}><Executive /></ProtectedPage>} />
