@@ -33,6 +33,7 @@ import OwnerAlerts from './pages/OwnerAlerts';
 import PdfTest from './pages/PdfTest';
 import Investigations from './pages/Investigations';
 import InvestigationDetail from './pages/InvestigationDetail';
+import Permissions from './pages/Permissions';
 
 function ProtectedPage({ children, roles }) {
   return (
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="/pdftest" element={<ProtectedPage><PdfTest /></ProtectedPage>} />
           <Route path="/investigations" element={<ProtectedPage roles={['auditor', 'owner', 'admin']}><Investigations /></ProtectedPage>} />
           <Route path="/investigations/:id" element={<ProtectedPage roles={['auditor', 'owner', 'admin']}><InvestigationDetail /></ProtectedPage>} />
+          <Route path="/permissions" element={<ProtectedPage roles={['admin', 'owner']}><Permissions /></ProtectedPage>} />
           <Route path="/approvals" element={<ProtectedPage roles={['owner', 'admin']}><Approvals /></ProtectedPage>} />
           <Route path="/simulate" element={<ProtectedPage roles={['owner', 'analyst']}><Simulate /></ProtectedPage>} />
           <Route path="/executive" element={<ProtectedPage roles={['owner']}><Executive /></ProtectedPage>} />

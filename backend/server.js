@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
 const { startScheduler } = require('./services/report/scheduler');
+const { seedDefaults: seedPermissions } = require('./services/permissionService');
 
 dotenv.config();
 connectDB();
@@ -41,6 +42,7 @@ app.use('/api/verify', require('./routes/verifyRoutes')); // public — no auth
 app.use('/api/audit',  require('./routes/auditRoutes'));
 app.use('/api/risk-memos', require('./routes/riskMemoRoutes'));
 app.use('/api/investigations', require('./routes/investigationRoutes'));
+app.use('/api/permissions', require('./routes/permissionRoutes'));
 
 // Global error handler
 app.use(errorHandler);
@@ -49,4 +51,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startScheduler();
+  // Seed default permissions on first boot (idempotent — only inserts missing)
+  seedPermissions().catch((e) => console.error('[permissions] seed failed:', e.message));
 });

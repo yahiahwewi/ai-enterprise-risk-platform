@@ -11,6 +11,7 @@ function useNavItems(t, lang) {
       { to: '/dashboard', label: t('nav.dashboard'), icon: 'dashboard' },
       { to: '/users', label: t('nav.manageUsers'), icon: 'group' },
       { to: '/approvals', label: lang === 'fr' ? 'Approbations' : 'Approvals', icon: 'pending_actions' },
+      { to: '/permissions', label: lang === 'fr' ? 'Permissions' : 'Permissions', icon: 'lock_person' },
       { section: t('nav.system') },
       { to: '/activity', label: t('nav.activityLog'), icon: 'history' },
       { to: '/settings', label: t('nav.settings'), icon: 'settings' },
@@ -35,6 +36,7 @@ function useNavItems(t, lang) {
       { to: '/assets', label: t('nav.assets'), icon: 'inventory_2' },
       { section: t('nav.organization') },
       { to: '/team', label: t('nav.team'), icon: 'people' },
+      { to: '/permissions', label: lang === 'fr' ? 'Permissions' : 'Permissions', icon: 'lock_person' },
       { to: '/activity', label: t('nav.activityLog'), icon: 'history' },
     ],
     accountant: [
