@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell,
 } from 'recharts';
@@ -349,6 +349,17 @@ export default function Simulate() {
     }
   };
 
+  // Auto-scroll to result after a fresh run
+  const resultRef = useRef(null);
+  useEffect(() => {
+    if (result && resultRef.current) {
+      const t = setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+      return () => clearTimeout(t);
+    }
+  }, [result]);
+
   const impactCfg = result ? (IMPACT_CFG[result.impact] || IMPACT_CFG.neutral) : null;
 
   // Safely read breakdown — guards against old API response without breakdown field
@@ -496,7 +507,7 @@ export default function Simulate() {
 
       {/* ── Results ─────────────────────────────────────────── */}
       {result && (
-        <div className="space-y-6 animate-fade-in">
+        <div ref={resultRef} className="space-y-6 animate-fade-in scroll-mt-24">
 
           {/* Impact badge */}
           <div className="flex justify-center">

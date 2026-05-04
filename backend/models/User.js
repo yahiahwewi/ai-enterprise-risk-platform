@@ -15,6 +15,11 @@ const userSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending',
   },
+  emailVerified:      { type: Boolean, default: false },
+  emailOtpHash:       { type: String, select: false },
+  emailOtpExpires:    { type: Date,   select: false },
+  emailOtpAttempts:   { type: Number, default: 0, select: false },
+  emailOtpLastSentAt: { type: Date,   select: false },
 }, { timestamps: true });
 
 // Hash password before saving

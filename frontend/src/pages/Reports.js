@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import api from '../services/api';
@@ -393,8 +394,12 @@ export default function Reports() {
           </div>
         );
 
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setCheckDetail(null)}>
+        return createPortal(
+          <div
+            className="fixed inset-0 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            style={{ zIndex: 9999 }}
+            onClick={() => setCheckDetail(null)}
+          >
             <div
               className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto goals-pop"
               onClick={(e) => e.stopPropagation()}
@@ -481,7 +486,8 @@ export default function Reports() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         );
       })()}
 

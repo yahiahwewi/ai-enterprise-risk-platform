@@ -101,7 +101,7 @@ export default function Permissions() {
 
   if (loading || !data) return (
     <div>
-      <Header />
+      <Header search="" onSearch={() => {}} onReset={() => {}} />
       <SkeletonKPIGrid count={3} />
     </div>
   );
@@ -293,7 +293,7 @@ function PermissionRow({ perm, roles, onToggle, onToggleBypass, onThreshold, sav
 }
 
 // ─── Header ──────────────────────────────────────────────────────────
-function Header({ onReset, onSearch, search }) {
+function Header({ onReset = () => {}, onSearch = () => {}, search = '' }) {
   const { lang } = useLang();
   return (
     <section className="mb-6 flex items-start justify-between flex-wrap gap-3">

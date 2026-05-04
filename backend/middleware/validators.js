@@ -65,6 +65,17 @@ const validateAsset = [
   handleValidationErrors,
 ];
 
+const validateVerifyEmail = [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('6-digit code required'),
+  handleValidationErrors,
+];
+
+const validateResendOtp = [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  handleValidationErrors,
+];
+
 const validateInvite = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
@@ -82,4 +93,6 @@ module.exports = {
   validateLoan,
   validateAsset,
   validateInvite,
+  validateVerifyEmail,
+  validateResendOtp,
 };

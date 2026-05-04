@@ -19,11 +19,11 @@ export default function Login() {
       await login(form.email, form.password);
       navigate('/dashboard');
     } catch (err) {
-      const status = err.response?.data?.status;
-      if (status === 'pending' || status === 'rejected') {
-        setPendingStatus(status);
+      const data = err.response?.data || {};
+      if (data.status === 'pending' || data.status === 'rejected') {
+        setPendingStatus(data.status);
       } else {
-        setError(err.response?.data?.message || t('toast.failed'));
+        setError(data.message || t('toast.failed'));
       }
     }
   };

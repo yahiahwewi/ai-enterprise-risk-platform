@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LanguageContext';
@@ -742,6 +742,7 @@ function ScenarioCard({ scenario, selected, recommended, disabled, onClick, isFr
 export default function Goals() {
   const [selectedScenario,   setSelectedScenario]   = useState(null);
   const [result,             setResult]             = useState(null);
+  const resultRef = useRef(null);
   const [loading,            setLoading]            = useState(false);
   const [resultKey,          setResultKey]          = useState(0);
   const [recommendedScenario,setRecommendedScenario] = useState(null);
@@ -823,6 +824,16 @@ export default function Goals() {
 
   const handleScenarioClick = id => { setSelectedScenario(id); setResult(null); setResultKey(0); };
 
+  // Auto-scroll to result section each time a fresh analysis lands
+  useEffect(() => {
+    if (result && resultRef.current) {
+      const t = setTimeout(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 120);
+      return () => clearTimeout(t);
+    }
+  }, [resultKey, result]);
+
   const sc           = selectedScenario ? SCENARIOS.find(s => s.id === selectedScenario) : null;
   const totalSugg    = result ? result.sections.reduce((a, s) => a + (s.suggestions?.length || 0), 0) : 0;
 
@@ -899,7 +910,7 @@ export default function Goals() {
 
       {/* ── Results ─────────────────────────────────────────── */}
       {result && sc && (
-        <div className="relative space-y-5 goals-enter" key={resultKey}>
+        <div ref={resultRef} className="relative space-y-5 goals-enter scroll-mt-24" key={resultKey}>
 
           {/* Switching overlay — visible while loading a new scenario over an existing result */}
           {loading && (
