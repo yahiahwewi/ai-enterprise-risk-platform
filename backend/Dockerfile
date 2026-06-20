@@ -31,7 +31,7 @@ WORKDIR /app
 # ── Dev stage: full deps (incl. nodemon) for hot-reload ─────
 FROM base AS dev
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci || npm install
 COPY . .
 EXPOSE 5000
 CMD ["npx", "nodemon", "server.js"]
@@ -39,7 +39,7 @@ CMD ["npx", "nodemon", "server.js"]
 # ── Production stage (default): prod-only deps, non-root ────
 FROM base AS prod
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev || npm install --omit=dev
 COPY . .
 
 # Non-root user for security

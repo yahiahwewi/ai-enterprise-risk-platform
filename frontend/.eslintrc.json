@@ -1,6 +1,6 @@
 {
   "root": true,
-  "extends": ["react-app", "react-app/jest", "prettier"],
+  "extends": ["react-app", "react-app/jest"],
   "rules": {
     "no-unused-vars": "warn",
     "react-hooks/exhaustive-deps": "warn"
