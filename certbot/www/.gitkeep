@@ -1,0 +1,2 @@
+# ACME http-01 challenge webroot. Certbot writes challenge files here and the
+# edge nginx serves them from /var/www/certbot during certificate issuance.

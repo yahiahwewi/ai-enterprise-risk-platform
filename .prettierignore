@@ -1,0 +1,14 @@
+node_modules
+build
+dist
+coverage
+uploads
+reports
+certs
+logs
+*.log
+*.err
+package-lock.json
+AiModule
+*.pkl
+*.csv

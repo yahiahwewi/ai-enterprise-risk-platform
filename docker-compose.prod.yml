@@ -1,0 +1,50 @@
+version: '3.9'
+
+# Production overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Adds an edge Nginx (SSL + reverse proxy) in front of all services and
+# stops exposing internal service ports directly to the host.
+services:
+  mongo:
+    ports: [] # do not expose the database to the host in production
+    restart: always
+
+  backend:
+    restart: always
+    environment:
+      - NODE_ENV=production
+    ports: [] # reached only via the edge proxy
+    expose:
+      - '5000'
+
+  aimodule:
+    restart: always
+    ports: []
+    expose:
+      - '8001'
+
+  frontend:
+    restart: always
+    ports: []
+    expose:
+      - '80'
+
+  # ── Edge reverse proxy (SSL termination) ───────────────────
+  edge:
+    image: nginx:alpine
+    container_name: tactic-edge
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+      - aimodule
+    networks:
+      - tactic-net

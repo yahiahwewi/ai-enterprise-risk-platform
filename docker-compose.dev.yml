@@ -1,0 +1,40 @@
+version: '3.9'
+
+# Development overrides — use with: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: dev # dev stage includes nodemon (devDependencies)
+    command: npx nodemon server.js
+    environment:
+      - NODE_ENV=development
+      - AI_MODULE_URL=http://aimodule:8001
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - '5000:5000'
+
+  aimodule:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
+    volumes:
+      - ./AiModule:/app
+    ports:
+      - '8001:8001'
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: build # the build stage has Node; final stage is Nginx-only
+    # In dev, use React dev server instead of Nginx
+    command: npm start
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - '3000:3000'
+    environment:
+      - CHOKIDAR_USEPOLLING=true

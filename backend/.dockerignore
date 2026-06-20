@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log*
+.env
+.env.local
+*.log
+*.err
+uploads/
+certs/
+reports/
+.git
+.gitignore
+README.md
+nodemon.json

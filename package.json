@@ -1,0 +1,45 @@
+{
+  "name": "tactic-erm",
+  "version": "1.0.0",
+  "description": "Tac-Tic ERM — AI-powered Enterprise Risk Management platform (monorepo root for DevOps tooling)",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n backend,frontend,ai -c blue,green,magenta \"npm:dev:backend\" \"npm:dev:frontend\" \"npm:dev:ai\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev:ai": "cd AiModule && uvicorn app.main:app --reload --port 8001",
+    "lint": "npm run lint:backend",
+    "lint:backend": "cd backend && npx eslint utils __tests__ server.js jest.config.js ecosystem.config.js --max-warnings=0",
+    "lint:frontend": "cd frontend && npx eslint src",
+    "lint:all": "cd backend && npx eslint .",
+    "format": "prettier --write \"backend/utils/**/*.js\" \"backend/__tests__/**/*.js\" \"backend/jest.config.js\" \"backend/ecosystem.config.js\" \"package.json\" \"DEVOPS_REPORT.md\" \"DEVOPS_SETUP.md\" \"docker-compose*.yml\" \".github/**/*.yml\"",
+    "format:check": "prettier --check \"backend/utils/**/*.js\" \"backend/__tests__/**/*.js\" \"backend/jest.config.js\" \"backend/ecosystem.config.js\" \"package.json\" \"DEVOPS_REPORT.md\" \"DEVOPS_SETUP.md\" \"docker-compose*.yml\" \".github/**/*.yml\"",
+    "test": "npm run test:backend",
+    "test:backend": "cd backend && npm test",
+    "docker:up": "docker compose up --build",
+    "docker:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "docker:down": "docker compose down",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "backend/**/*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "frontend/src/**/*.{js,jsx}": [
+      "prettier --write"
+    ],
+    "**/*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-security": "^3.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3"
+  }
+}

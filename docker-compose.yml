@@ -1,0 +1,86 @@
+version: '3.9'
+
+services:
+  # ── MongoDB ────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: tactic-mongo
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - tactic-net
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Backend (Node.js + Express) ────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tactic-backend
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    env_file:
+      - ./backend/.env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/erm_platform
+      - AI_MODULE_URL=http://aimodule:8001
+      - NODE_ENV=production
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - tactic-net
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_reports:/app/reports
+      - backend_certs:/app/certs
+
+  # ── AI Module (Python FastAPI) ─────────────────────────────
+  aimodule:
+    build:
+      context: ./AiModule
+      dockerfile: Dockerfile
+    container_name: tactic-aimodule
+    restart: unless-stopped
+    ports:
+      - '8001:8001'
+    networks:
+      - tactic-net
+    volumes:
+      - ai_models:/app/app/ml
+
+  # ── Frontend (React → Nginx) ──────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_GOOGLE_CLIENT_ID=${REACT_APP_GOOGLE_CLIENT_ID:-}
+    container_name: tactic-frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+      - aimodule
+    networks:
+      - tactic-net
+
+volumes:
+  mongo_data:
+  backend_uploads:
+  backend_reports:
+  backend_certs:
+  ai_models:
+
+networks:
+  tactic-net:
+    driver: bridge
