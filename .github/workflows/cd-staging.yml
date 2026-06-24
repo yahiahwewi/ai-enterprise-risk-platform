@@ -1,0 +1,83 @@
+name: CD — Staging
+
+# Builds the service images and publishes them to the GitHub Container Registry
+# (ghcr.io). Runs on pushes to `develop` and on manual dispatch. The optional
+# deploy job runs only if a STAGING_SSH_HOST secret is configured.
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build-and-push:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - { name: backend, context: ./backend }
+          - { name: frontend, context: ./frontend }
+          - { name: aimodule, context: ./AiModule }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set lowercase image name
+        run: echo "IMAGE=${REGISTRY}/${OWNER,,}/tactic-${{ matrix.name }}" >> "$GITHUB_ENV"
+        env:
+          OWNER: ${{ github.repository_owner }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:staging
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to staging host
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Only attempt a real deploy when an SSH host secret is configured.
+    if: ${{ vars.STAGING_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/tactic-erm
+            docker compose pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+  deploy-skipped-notice:
+    name: Deploy (not configured)
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ vars.STAGING_ENABLED != 'true' }}
+    steps:
+      - run: |
+          echo "Images pushed to GHCR. Live deploy skipped:"
+          echo "set repo variable STAGING_ENABLED=true and secrets"
+          echo "STAGING_SSH_HOST / STAGING_SSH_USER / STAGING_SSH_KEY to enable it."

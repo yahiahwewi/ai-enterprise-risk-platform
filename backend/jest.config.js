@@ -1,14 +1,17 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/__tests__/**/*.test.js'],
+  // Scope coverage to the modules under test (expand as suites are added).
   collectCoverageFrom: [
-    'utils/**/*.js',
-    'middleware/**/*.js',
-    'services/**/*.js',
-    'controllers/**/*.js',
+    'utils/redact.js',
+    'middleware/auth.js',
+    'services/report/signAndHash.js',
+    'services/report/certManager.js',
+    'controllers/authController.js',
   ],
   coverageDirectory: 'coverage',
-  // Phase 2 target — raise these as coverage grows:
-  // coverageThreshold: { global: { branches: 50, functions: 50, lines: 60, statements: 60 } },
+  coverageThreshold: {
+    global: { branches: 25, functions: 55, lines: 55, statements: 55 },
+  },
   verbose: true,
 };

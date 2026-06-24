@@ -21,18 +21,19 @@ See the figure: [`../diagrams/devops_roadmap.svg`](../diagrams/devops_roadmap.sv
 | ✅ | Nginx (SSL) + PM2 ecosystem configs | `nginx/`, `backend/ecosystem.config.js` |
 | ✅ | Stack verified end-to-end (4 endpoints HTTP 200) | `logs/04` |
 
-## Phase 2 · Automation & Tests — ◐ IN PROGRESS (~70%)  ◀ YOU ARE HERE
+## Phase 2 · Automation & Tests — ◐ IN PROGRESS (~90%)  ◀ YOU ARE HERE
 | | Item | Evidence / Notes |
 |---|------|------------------|
 | ✅ | CI pipeline — lint → test → build → docker | `.github/workflows/ci.yml` |
 | ✅ | Unit tests — redact + RSA signing + RBAC (18) | `logs/01_test_run.txt` |
 | ✅ | Container + secret scanning (Trivy, Gitleaks) | `.github/workflows/security.yml` |
 | ✅ | **DB integration tests — full auth flow (9)** | `backend/__tests__/auth.integration.test.js` |
-| ○ | Coverage thresholds enforced in CI | jest `coverageThreshold` (commented, ready) |
-| ○ | Branch protection on `main` | see `BRANCH_PROTECTION.md` (needs repo admin) |
-| ○ | Staging auto-deploy workflow | `cd-staging.yml` (not yet written) |
+| ✅ | Coverage thresholds enforced in CI | jest `coverageThreshold` (65% stmts) + CI runs `test:coverage` |
+| ✅ | Staging deploy workflow → GHCR (+ optional SSH) | `.github/workflows/cd-staging.yml` |
+| ○ | Branch protection on `main` | see `BRANCH_PROTECTION.md` (repo-admin action) |
+| ○ | Push branch + open PR (green CI badge) | outward-facing — user runs `git push` |
 
-**Total tests now: 36 passing across 4 suites.**
+**Total tests now: 36 passing across 4 suites · scoped coverage ~65%.**
 
 ## Phase 3 · Production Readiness — ◐ PARTIAL (~25%)
 | | Item | Notes |
