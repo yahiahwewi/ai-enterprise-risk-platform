@@ -11,6 +11,10 @@ COPY . .
 
 ARG REACT_APP_GOOGLE_CLIENT_ID
 ENV REACT_APP_GOOGLE_CLIENT_ID=$REACT_APP_GOOGLE_CLIENT_ID
+# Default to a relative /api so the nginx-served build proxies to the backend.
+# Override at build time for a remote API (e.g. on Vercel).
+ARG REACT_APP_API_URL=/api
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 # The image build produces the bundle; linting is enforced separately in CI.
 # Decouple them so source lint issues don't block the production build.
 ENV CI=false

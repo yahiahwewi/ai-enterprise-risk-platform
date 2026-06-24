@@ -69,7 +69,9 @@ jobs:
       - name: Install frontend deps
         run: cd frontend && (npm ci --no-audit --no-fund || npm install --no-audit --no-fund)
       - name: Build
-        run: cd frontend && CI=false npm run build
+        # CI=false: warnings don't fail the build. DISABLE_ESLINT_PLUGIN: the
+        # bundle build is decoupled from lint (lint runs as its own concern).
+        run: cd frontend && CI=false DISABLE_ESLINT_PLUGIN=true npm run build
 
   # ── AI module check ────────────────────────────────────────
   test-ai:
