@@ -1,0 +1,13 @@
+﻿=== npm run lint:backend ===
+
+> tactic-erm@1.0.0 lint:backend
+> cd backend && npx eslint utils __tests__ server.js jest.config.js ecosystem.config.js --max-warnings=0
+
+
+=== npm run format:check ===
+
+> tactic-erm@1.0.0 format:check
+> prettier --check "backend/utils/**/*.js" "backend/__tests__/**/*.js" "backend/jest.config.js" "backend/ecosystem.config.js" "package.json" "DEVOPS_REPORT.md" "DEVOPS_SETUP.md" "docker-compose*.yml" ".github/**/*.yml"
+
+Checking formatting...
+All matched files use Prettier code style!

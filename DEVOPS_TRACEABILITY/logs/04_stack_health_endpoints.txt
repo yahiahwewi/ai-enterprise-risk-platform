@@ -1,0 +1,44 @@
+================================================================
+RUNNING STACK — END-TO-END HEALTH CHECK (EVIDENCE LOG)
+Project: Tac-Tic ERM   |   Date: 2026-06-20
+================================================================
+
+All containers started; backend connected to MongoDB; backend reached the
+AI module over the Docker network; nginx (frontend) proxied /api to backend.
+
+----------------------------------------------------------------
+ENDPOINT PROBES (curl, all returned HTTP 200)
+----------------------------------------------------------------
+
+[AI module  :8001 / ]
+HTTP 200
+{"service":"AiModule","status":"healthy","version":"1.0.0",
+ "endpoints":["POST /ai/predict","POST /ai/anomalies","POST /ai/explain", ...]}
+
+[Backend  :5000 /api/health]
+HTTP 200
+{"status":"healthy","uptime":71,"mongo":"connected","aiModule":"reachable",
+ "version":"1.0.0","environment":"production","timestamp":"2026-06-20T..."}
+
+[Frontend static  :8080 / ]
+HTTP 200
+<!doctype html><html class="light" lang="en"><head><meta charset="utf-8"/>
+ <meta name="viewport" content="width=device-width,initial-scale=1"/> ...
+
+[Frontend -> /api/health proxy  (nginx reverse proxy to backend)]
+HTTP 200
+{"status":"healthy","uptime":71,"mongo":"connected","aiModule":"reachable",
+ "version":"1.0.0","environment":"production","timestamp":"2026-06-20T..."}
+
+----------------------------------------------------------------
+WHAT THIS PROVES
+----------------------------------------------------------------
+- All 3 images build AND run.
+- Backend <-> MongoDB connectivity works (mongo: connected).
+- Backend <-> AI module connectivity works (aiModule: reachable).
+- nginx reverse proxy correctly forwards /api to the backend container.
+- Inter-container networking on the tactic-net bridge is functional.
+
+NOTE: docker-compose maps mongo 27017:27017, which collides with a local
+MongoDB already on 27017. For this verification the backend was pointed at
+the host Mongo via host.docker.internal to avoid disturbing the local DB.

@@ -1,0 +1,49 @@
+﻿PASS __tests__/redact.test.js
+  isSensitiveKey
+    √ flags exact sensitive keys (8 ms)
+    √ flags keys that contain a sensitive substring, case-insensitively (1 ms)
+    √ does not flag safe keys
+  redactSensitive
+    √ redacts top-level sensitive fields (1 ms)
+    √ redacts nested sensitive fields
+    √ walks arrays of objects
+    √ leaves primitives untouched (1 ms)
+    √ does not mutate the original object
+
+  console.log
+    [CERT] Loaded existing signing certificate
+
+      at log (services/report/certManager.js:67:13)
+
+PASS __tests__/signAndHash.test.js
+  signPDF
+    √ returns a 64-char hex SHA-256 hash (10 ms)
+    √ returns a non-empty base64 signature (1 ms)
+    √ returns the signer certificate (PEM) and CN
+    √ stamps a signedAt Date (1 ms)
+    √ produces a deterministic hash for identical input (72 ms)
+  verifyPDF
+    √ validates an untampered PDF (hash + signature) (4 ms)
+    √ detects a tampered PDF body via hash mismatch (3 ms)
+    √ rejects a corrupted signature (2 ms)
+    √ rejects when the stored hash was altered (signature no longer matches) (3 ms)
+    √ returns signatureValid=false instead of throwing on a malformed cert (1 ms)
+
+PASS __tests__/auth.test.js (15.429 s)
+  authorize (RBAC)
+    √ calls next() when the user role is allowed (14 ms)
+    √ returns 403 when the user role is not allowed (2 ms)
+    √ enforces a single-role restriction (2 ms)
+  protect (JWT auth)
+    √ rejects with 401 when no token is present (1 ms)
+    √ accepts a valid Bearer token for an approved user (2 ms)
+    √ accepts a token passed via query param (file downloads) (2 ms)
+    √ returns 401 when the user no longer exists (1 ms)
+    √ returns 403 when the account is not approved (1 ms)
+    √ returns 401 when token verification throws (1 ms)
+
+Test Suites: 3 passed, 3 total
+Tests:       27 passed, 27 total
+Snapshots:   0 total
+Time:        16.918 s
+Ran all test suites.

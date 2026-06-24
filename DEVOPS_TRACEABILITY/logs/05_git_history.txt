@@ -1,0 +1,45 @@
+﻿=== git log (DevOps work) ===
+7df2220 Add Phase 2 tests: RSA report signing + RBAC/JWT auth
+01088c9 Fix Docker/CI build robustness after end-to-end verification
+07a04cc Add DevOps Phase 1 infrastructure
+a8e910e Email OTP signup verification + verify modal portal fix
+2fc9daf Permissions panel — 48 dynamic RBAC rules across 10 modules
+
+=== files changed in 07a04cc (Phase 1) ===
+07a04cc Add DevOps Phase 1 infrastructure
+ .env.example                     |    7 +
+ .github/dependabot.yml           |   33 +
+ .github/workflows/ci.yml         |  101 +
+ .github/workflows/security.yml   |   51 +
+ .husky/pre-commit                |    1 +
+ .prettierignore                  |   14 +
+ .prettierrc                      |    9 +
+ AiModule/.dockerignore           |    9 +
+ AiModule/Dockerfile              |   28 +
+ DEVOPS_REPORT.md                 |  474 +++
+ DEVOPS_SETUP.md                  |  156 +
+ backend/.dockerignore            |   13 +
+ backend/.env.example             |   14 +
+ backend/.eslintignore            |    7 +
+ backend/.eslintrc.json           |   25 +
+ backend/Dockerfile               |   55 +
+ backend/__tests__/redact.test.js |   55 +
+ backend/ecosystem.config.js      |   39 +
+ backend/jest.config.js           |   14 +
+ backend/package-lock.json        | 7394 +++++++++++++++++++++++++++++++-------
+ backend/package.json             |   17 +-
+ backend/utils/logger.js          |   80 +
+ backend/utils/redact.js          |   42 +
+ certbot/conf/.gitkeep            |    4 +
+ certbot/www/.gitkeep             |    2 +
+ docker-compose.dev.yml           |   40 +
+ docker-compose.prod.yml          |   50 +
+ docker-compose.yml               |   86 +
+ frontend/.dockerignore           |    8 +
+ frontend/.eslintrc.json          |    8 +
+ frontend/Dockerfile              |   26 +
+ frontend/nginx.conf              |   43 +
+ nginx/nginx.prod.conf            |   74 +
+ package-lock.json                | 2328 ++++++++++++
+ package.json                     |   45 +
+ 35 files changed, 10012 insertions(+), 1340 deletions(-)
