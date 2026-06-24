@@ -61,7 +61,11 @@ monthly grant covers a low-traffic demo, GHCR free). Comfortably inside the $100
 4. **Google OAuth** — add the Vercel domain to _Authorized JavaScript origins_ in
    Google Cloud Console (otherwise Google login breaks on the live site).
 
-> I can make changes 1–2 for you in one pass — just say so.
+> ✅ Changes 1 & 2 are **DONE** (commit `88ce7ea`): `api.js` exports `API_BASE`
+> from `REACT_APP_API_URL`, and the hardcoded PDF/export URLs in
+> InvestigationDetail / Invoices / Transactions now use it. The frontend
+> Dockerfile + compose pass `REACT_APP_API_URL` (default `/api`). Verified: the
+> build succeeds and bakes the URL into the bundle.
 
 ---
 
@@ -167,15 +171,16 @@ build + push images to GHCR → deploy to Azure with `az containerapp update`.
 
 | Step                                                      | Status                              |
 | --------------------------------------------------------- | ----------------------------------- |
-| Code: env-driven API base URL (`api.js` + hardcoded URLs) | ☐ TODO (I can do this)              |
-| Atlas M0 cluster + MONGO_URI                              | ☐                                   |
-| Images on GHCR (cd-staging)                               | ✅ workflow ready — needs first run |
-| Backend + AI on Azure Container Apps                      | ☐                                   |
-| Frontend on Vercel                                        | ☐                                   |
-| Env + CORS + Google origins wired                         | ☐                                   |
-| cd-production.yml (auto-deploy on main)                   | ☐ (template above)                  |
-| Monitoring + health probe + budget alert                  | ☐                                   |
+| Code: env-driven API base URL (`api.js` + hardcoded URLs) | ✅ done (`88ce7ea`)                 |
+| cd-production.yml (auto-deploy on main)                   | ✅ done (workflow added)            |
+| Images on GHCR (cd-staging / cd-production)               | ✅ workflows ready — need first run |
+| Atlas M0 cluster + MONGO_URI                              | ☐ (user — needs account)            |
+| Backend + AI on Azure Container Apps                      | ☐ (user — `az` cmds, Phase D)       |
+| Frontend on Vercel                                        | ☐ (user — import repo + env)        |
+| Env + CORS + Google origins wired                         | ☐ (user)                            |
+| Monitoring + health probe + budget alert                  | ☐ (user)                            |
 | Branch protection + push branch/PR                        | ☐ (user)                            |
 
-**First action:** make the frontend API base URL configurable (the one true code
-blocker), then run cd-staging to populate GHCR. Everything else is Azure/Vercel console + CLI.
+**Code blockers are cleared.** Next action is yours: create the Atlas cluster +
+Azure/Vercel accounts, then run the `az` / Vercel steps (Phases B–E). Pushing the
+branch triggers `cd-production` which populates GHCR automatically.
