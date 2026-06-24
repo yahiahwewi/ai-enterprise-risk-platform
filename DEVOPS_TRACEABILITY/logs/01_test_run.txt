@@ -1,14 +1,14 @@
 ﻿PASS __tests__/redact.test.js
   isSensitiveKey
-    √ flags exact sensitive keys (8 ms)
-    √ flags keys that contain a sensitive substring, case-insensitively (1 ms)
-    √ does not flag safe keys
+    √ flags exact sensitive keys (21 ms)
+    √ flags keys that contain a sensitive substring, case-insensitively (2 ms)
+    √ does not flag safe keys (1 ms)
   redactSensitive
-    √ redacts top-level sensitive fields (1 ms)
-    √ redacts nested sensitive fields
-    √ walks arrays of objects
-    √ leaves primitives untouched (1 ms)
-    √ does not mutate the original object
+    √ redacts top-level sensitive fields (3 ms)
+    √ redacts nested sensitive fields (1 ms)
+    √ walks arrays of objects (2 ms)
+    √ leaves primitives untouched (2 ms)
+    √ does not mutate the original object (1 ms)
 
   console.log
     [CERT] Loaded existing signing certificate
@@ -17,33 +17,48 @@
 
 PASS __tests__/signAndHash.test.js
   signPDF
-    √ returns a 64-char hex SHA-256 hash (10 ms)
-    √ returns a non-empty base64 signature (1 ms)
-    √ returns the signer certificate (PEM) and CN
+    √ returns a 64-char hex SHA-256 hash (15 ms)
+    √ returns a non-empty base64 signature (2 ms)
+    √ returns the signer certificate (PEM) and CN (2 ms)
     √ stamps a signedAt Date (1 ms)
-    √ produces a deterministic hash for identical input (72 ms)
+    √ produces a deterministic hash for identical input (117 ms)
   verifyPDF
-    √ validates an untampered PDF (hash + signature) (4 ms)
-    √ detects a tampered PDF body via hash mismatch (3 ms)
-    √ rejects a corrupted signature (2 ms)
-    √ rejects when the stored hash was altered (signature no longer matches) (3 ms)
+    √ validates an untampered PDF (hash + signature) (9 ms)
+    √ detects a tampered PDF body via hash mismatch (8 ms)
+    √ rejects a corrupted signature (5 ms)
+    √ rejects when the stored hash was altered (signature no longer matches) (9 ms)
     √ returns signatureValid=false instead of throwing on a malformed cert (1 ms)
 
-PASS __tests__/auth.test.js (15.429 s)
+PASS __tests__/auth.test.js
   authorize (RBAC)
-    √ calls next() when the user role is allowed (14 ms)
-    √ returns 403 when the user role is not allowed (2 ms)
+    √ calls next() when the user role is allowed (11 ms)
+    √ returns 403 when the user role is not allowed (4 ms)
     √ enforces a single-role restriction (2 ms)
   protect (JWT auth)
-    √ rejects with 401 when no token is present (1 ms)
-    √ accepts a valid Bearer token for an approved user (2 ms)
-    √ accepts a token passed via query param (file downloads) (2 ms)
-    √ returns 401 when the user no longer exists (1 ms)
-    √ returns 403 when the account is not approved (1 ms)
+    √ rejects with 401 when no token is present (2 ms)
+    √ accepts a valid Bearer token for an approved user (3 ms)
+    √ accepts a token passed via query param (file downloads) (1 ms)
+    √ returns 401 when the user no longer exists (3 ms)
+    √ returns 403 when the account is not approved (2 ms)
     √ returns 401 when token verification throws (1 ms)
 
-Test Suites: 3 passed, 3 total
-Tests:       27 passed, 27 total
+PASS __tests__/auth.integration.test.js (11.382 s)
+  POST /api/auth/register
+    √ creates a pending unverified user and issues a 6-digit OTP (660 ms)
+    √ rejects invalid input via the validator (400) (18 ms)
+  POST /api/auth/verify-email
+    √ verifies the account with the correct OTP (604 ms)
+    √ rejects an incorrect OTP and counts the attempt (553 ms)
+  POST /api/auth/login
+    √ blocks login while the account is still pending (403) (893 ms)
+    √ issues a JWT once the account is approved (1172 ms)
+    √ rejects a wrong password (401) (916 ms)
+  GET /api/auth/me (protected)
+    √ returns the current user with a valid token (818 ms)
+    √ rejects access without a token (401) (5 ms)
+
+Test Suites: 4 passed, 4 total
+Tests:       36 passed, 36 total
 Snapshots:   0 total
-Time:        16.918 s
+Time:        11.833 s
 Ran all test suites.

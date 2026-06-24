@@ -59,8 +59,13 @@ A chronological trace of every DevOps step, for the academic report.
 ## Step 10 — Tests (Phase 2, round 1)
 
 - Wrote `signAndHash.test.js` (real RSA-2048 sign/verify + tamper detection) and `auth.test.js` (RBAC matrix + JWT middleware).
-- **Total: 27/27 passing** (see [`logs/01_test_run.txt`](logs/01_test_run.txt)).
-- **Committed:** `7df2220`.
+- 18 unit tests added (27 total at this point). **Committed:** `7df2220`.
+
+## Step 11 — Tests (Phase 2, round 2)
+
+- Added `mongodb-memory-server`; wrote `auth.integration.test.js` — the full auth flow (register → OTP → verify → admin-approve → login → protected `/me`) against an in-memory MongoDB, with the SMTP mailer + event dispatcher mocked (OTP captured from the mailer mock).
+- 9 integration tests added. **Total: 36/36 passing** (see [`logs/01_test_run.txt`](logs/01_test_run.txt)).
+- Added the roadmap (`reports/ROADMAP.md` + `diagrams/devops_roadmap.svg`) and branch-protection guide (`reports/BRANCH_PROTECTION.md`).
 
 ---
 
@@ -73,8 +78,8 @@ A chronological trace of every DevOps step, for the academic report.
 | `7df2220` | Add Phase 2 tests: RSA report signing + RBAC/JWT auth        |
 | `a5940ee` | Add DevOps traceability folder for academic report           |
 
-## Still pending (Phase 2 round 2 → Phase 4)
+## Still pending (Phase 2 finish → Phase 4)
 
-- DB-backed integration tests (auth register→OTP→verify→login) via `mongodb-memory-server`
-- Cypress E2E, GitHub branch protection
-- Prometheus + Grafana monitoring, Kubernetes, MongoDB replica set
+- Coverage thresholds in CI; **branch protection** (see [`reports/BRANCH_PROTECTION.md`](reports/BRANCH_PROTECTION.md)); staging deploy workflow
+- Cypress E2E; Prometheus + Grafana monitoring; live deploy
+- Kubernetes, Redis, load testing, MongoDB replica set, ELK, SonarQube
