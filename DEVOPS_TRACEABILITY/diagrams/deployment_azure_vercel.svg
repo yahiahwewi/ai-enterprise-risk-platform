@@ -1,0 +1,60 @@
+<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="900" height="560" fill="#ffffff"/>
+  <text x="450" y="34" text-anchor="middle" font-size="20" font-weight="800" fill="#0B1D3A">Architecture de déploiement — Azure for Students + Vercel</text>
+  <text x="450" y="55" text-anchor="middle" font-size="12" fill="#6b7280">HTTPS managé partout · scale-to-zero · ~0–5 $/mois (crédit étudiant)</text>
+
+  <!-- user -->
+  <rect x="380" y="80" width="140" height="44" rx="22" fill="#0B1D3A"/>
+  <text x="450" y="107" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">Utilisateurs</text>
+  <line x1="450" y1="124" x2="450" y2="156" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+  <text x="462" y="146" font-size="10" fill="#6b7280">HTTPS</text>
+
+  <!-- Vercel -->
+  <rect x="300" y="158" width="300" height="64" rx="10" fill="#ecfeff" stroke="#0EA5A0" stroke-width="1.5"/>
+  <text x="450" y="184" text-anchor="middle" font-size="14" font-weight="800" fill="#0B1D3A">Vercel — Frontend (React)</text>
+  <text x="450" y="204" text-anchor="middle" font-size="11" fill="#6b7280">CDN global · auto-HTTPS · auto-deploy sur push · gratuit</text>
+
+  <line x1="450" y1="222" x2="450" y2="254" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+  <text x="462" y="244" font-size="10" fill="#6b7280">REACT_APP_API_URL</text>
+
+  <!-- Azure Container Apps env -->
+  <rect x="120" y="256" width="660" height="150" rx="12" fill="#f0f7ff" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="140" y="280" font-size="13" font-weight="800" fill="#1d4ed8">Azure Container Apps — env « tactic-env »</text>
+  <text x="775" y="280" text-anchor="end" font-size="10" fill="#3b82f6">*.azurecontainerapps.io · HTTPS managé · scale-to-zero</text>
+
+  <rect x="160" y="296" width="270" height="92" rx="10" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="295" y="322" text-anchor="middle" font-size="13" font-weight="700" fill="#0B1D3A">tactic-backend</text>
+  <text x="295" y="342" text-anchor="middle" font-size="11" fill="#6b7280">Node/Express :5000 · 1 vCPU / 2 GiB</text>
+  <text x="295" y="360" text-anchor="middle" font-size="11" fill="#6b7280">/api/health · Winston · JWT</text>
+  <text x="295" y="378" text-anchor="middle" font-size="10" fill="#94a3b8">secrets: MONGO_URI, JWT, GROQ, SMTP</text>
+
+  <rect x="470" y="296" width="270" height="92" rx="10" fill="#ffffff" stroke="#7c3aed"/>
+  <text x="605" y="322" text-anchor="middle" font-size="13" font-weight="700" fill="#0B1D3A">tactic-aimodule</text>
+  <text x="605" y="342" text-anchor="middle" font-size="11" fill="#6b7280">FastAPI :8001 · 0.5 vCPU / 1 GiB</text>
+  <text x="605" y="360" text-anchor="middle" font-size="11" fill="#6b7280">scikit-learn · Gemini</text>
+
+  <!-- backend -> ai -->
+  <line x1="430" y1="342" x2="470" y2="342" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#a)"/>
+
+  <!-- backend -> atlas -->
+  <line x1="295" y1="388" x2="295" y2="436" stroke="#94a3b8" stroke-width="2" marker-end="url(#a)"/>
+  <text x="307" y="418" font-size="10" fill="#6b7280">MONGO_URI (srv)</text>
+
+  <rect x="170" y="438" width="250" height="50" rx="10" fill="#f0fdf4" stroke="#10b981" stroke-width="1.5"/>
+  <text x="295" y="460" text-anchor="middle" font-size="13" font-weight="700" fill="#0B1D3A">MongoDB Atlas — M0</text>
+  <text x="295" y="478" text-anchor="middle" font-size="10" fill="#6b7280">512 MB · gratuit · backups</text>
+
+  <!-- registry + CI -->
+  <rect x="470" y="438" width="270" height="50" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="605" y="460" text-anchor="middle" font-size="12" font-weight="700" fill="#0B1D3A">GHCR — images Docker</text>
+  <text x="605" y="478" text-anchor="middle" font-size="10" fill="#6b7280">poussées par GitHub Actions (gratuit)</text>
+  <line x1="605" y1="438" x2="605" y2="388" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2 3" marker-end="url(#a)"/>
+
+  <!-- footer -->
+  <rect x="120" y="506" width="660" height="38" rx="8" fill="#eff6ff" stroke="#3b82f6" stroke-width="1"/>
+  <text x="450" y="530" text-anchor="middle" font-size="11" font-weight="700" fill="#1d4ed8">CI/CD : push → GitHub Actions build+push GHCR → az containerapp update (backend/ai) · Vercel auto-deploy (frontend)</text>
+
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#94a3b8"/></marker>
+  </defs>
+</svg>
