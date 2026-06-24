@@ -3,7 +3,7 @@
 Evidence folder documenting the DevOps implementation, intended for the academic
 report (PFE). Everything here is real, captured output — not mock-ups.
 
-**Work date:** 2026-06-20 · **Branch:** `devops/phase-1` · **Maturity:** ~15% → ~85%
+**Dates:** 20–24 June 2026 · **Branch:** `devops/phase-1` · **Maturity:** ~15% → ~85%
 
 ## Contents
 

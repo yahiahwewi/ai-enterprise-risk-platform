@@ -1,7 +1,7 @@
 # DevOps Implementation Journal — Tac-Tic ERM
 
 A chronological trace of every DevOps step, for the academic report.
-**Date of work:** 2026-06-20 **Branch:** `devops/phase-1` (3 commits)
+**Dates:** 20–24 June 2026 **Branch:** `devops/phase-1` (4 commits)
 
 ---
 
@@ -71,6 +71,7 @@ A chronological trace of every DevOps step, for the academic report.
 | `07a04cc` | Add DevOps Phase 1 infrastructure                            |
 | `01088c9` | Fix Docker/CI build robustness after end-to-end verification |
 | `7df2220` | Add Phase 2 tests: RSA report signing + RBAC/JWT auth        |
+| `a5940ee` | Add DevOps traceability folder for academic report           |
 
 ## Still pending (Phase 2 round 2 → Phase 4)
 
