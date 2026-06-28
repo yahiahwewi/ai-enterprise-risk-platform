@@ -1,11 +1,13 @@
 name: CD — Production
 
 # Builds + publishes images to GHCR and deploys the backend + AI module to
-# Azure Container Apps. Triggered by pushes to `main` or version tags.
-# The frontend is deployed automatically by Vercel (no job needed here).
+# Azure App Service (Web App for Containers). Triggered by pushes to `main`
+# or version tags. The frontend is deployed automatically by Vercel.
 #
 # Enable the Azure deploy by setting repo variable AZURE_DEPLOY_ENABLED=true and
-# secret AZURE_CREDENTIALS (output of `az ad sp create-for-rbac --sdk-auth`).
+# the publish-profile secrets AZURE_WEBAPP_PUBLISH_PROFILE_BACKEND and
+# AZURE_WEBAPP_PUBLISH_PROFILE_AIMODULE (Azure portal → each Web App →
+# "Get publish profile", or `az webapp deployment list-publishing-profiles --xml`).
 
 on:
   push:
@@ -55,29 +57,37 @@ jobs:
           cache-to: type=gha,mode=max
 
   deploy-azure:
-    name: Deploy to Azure Container Apps
+    name: Deploy to Azure App Service
     needs: build-and-push
     runs-on: ubuntu-latest
     if: ${{ vars.AZURE_DEPLOY_ENABLED == 'true' }}
     steps:
-      - name: Azure login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
       - name: Set image owner (lowercase)
         run: echo "OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
-      - name: Update backend container app
-        uses: azure/cli@v2
+      - name: Deploy backend (Web App for Containers)
+        uses: azure/webapps-deploy@v3
         with:
-          inlineScript: |
-            az containerapp update -n tactic-backend -g tactic-rg \
-              --image ghcr.io/${{ env.OWNER }}/tactic-backend:${{ github.sha }}
-      - name: Update AI module container app
-        uses: azure/cli@v2
+          app-name: tactic-backend-d1452d
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_BACKEND }}
+          images: ghcr.io/${{ env.OWNER }}/tactic-backend:${{ github.sha }}
+      - name: Deploy AI module (Web App for Containers)
+        uses: azure/webapps-deploy@v3
         with:
-          inlineScript: |
-            az containerapp update -n tactic-aimodule -g tactic-rg \
-              --image ghcr.io/${{ env.OWNER }}/tactic-aimodule:${{ github.sha }}
+          app-name: tactic-aimodule-d1452d
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_AIMODULE }}
+          images: ghcr.io/${{ env.OWNER }}/tactic-aimodule:${{ github.sha }}
+      - name: Smoke test — wait for /api/health to report healthy
+        run: |
+          url="https://tactic-backend-d1452d.azurewebsites.net/api/health"
+          for i in $(seq 1 24); do
+            body=$(curl -s -m 10 "$url" || true)
+            echo "attempt $i/24: $body"
+            if echo "$body" | grep -q '"status":"healthy"'; then
+              echo "✅ deployment healthy"; exit 0
+            fi
+            sleep 15
+          done
+          echo "❌ /api/health did not report healthy within ~6 min"; exit 1
 
   deploy-skipped-notice:
     name: Deploy (not configured)
@@ -87,6 +97,8 @@ jobs:
     steps:
       - run: |
           echo "Images pushed to GHCR with tags :latest and :${{ github.sha }}."
-          echo "Azure deploy skipped — set repo variable AZURE_DEPLOY_ENABLED=true"
-          echo "and secret AZURE_CREDENTIALS to enable automatic deployment."
+          echo "Azure deploy skipped — to enable automatic deployment:"
+          echo "  1) Add secrets AZURE_WEBAPP_PUBLISH_PROFILE_BACKEND and"
+          echo "     AZURE_WEBAPP_PUBLISH_PROFILE_AIMODULE (each app's publish profile)."
+          echo "  2) Set repo variable AZURE_DEPLOY_ENABLED=true."
           echo "Frontend deploys automatically via Vercel's GitHub integration."
