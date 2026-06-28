@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { sendApprovalEmail } = require('../services/mailer');
+const { dispatchEvent } = require('../services/eventDispatcher');
 
 // GET /api/users — all users
 exports.getUsers = async (req, res) => {
@@ -30,12 +31,16 @@ exports.approveUser = async (req, res) => {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.status !== 'pending') return res.status(400).json({ message: 'User is not pending' });
-    if (!user.emailVerified) return res.status(400).json({ message: 'User has not verified their email yet' });
+    if (!user.emailVerified)
+      return res.status(400).json({ message: 'User has not verified their email yet' });
 
     user.status = 'approved';
     await user.save();
-    sendApprovalEmail({ to: user.email, name: user.name, approved: true })
-      .catch((e) => console.error('[mailer] approval email failed:', e.message));
+    dispatchEvent(
+      'auth.account_approved',
+      { user: { name: user.name, email: user.email, role: user.role } },
+      { extraRecipients: [{ _id: user._id, email: user.email, name: user.name }] }
+    ).catch(() => {});
     res.json({ message: `${user.name} has been approved`, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -51,8 +56,12 @@ exports.rejectUser = async (req, res) => {
 
     user.status = 'rejected';
     await user.save();
-    sendApprovalEmail({ to: user.email, name: user.name, approved: false, reason: req.body?.reason })
-      .catch((e) => console.error('[mailer] rejection email failed:', e.message));
+    const reason = req.body?.reason ? `\n\nMotif : ${req.body.reason}` : '';
+    dispatchEvent(
+      'auth.account_rejected',
+      { user: { name: user.name, email: user.email, role: user.role }, reason },
+      { extraRecipients: [{ _id: user._id, email: user.email, name: user.name }] }
+    ).catch(() => {});
     res.json({ message: `${user.name} has been rejected`, user });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -73,7 +82,14 @@ exports.inviteUser = async (req, res) => {
     }
 
     // Invited users are auto-approved (trusted by admin/owner)
-    const user = await User.create({ name, email, password, role, status: 'approved', emailVerified: true });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role,
+      status: 'approved',
+      emailVerified: true,
+    });
 
     res.locals.createdEntityId = user._id;
     res.status(201).json(user);

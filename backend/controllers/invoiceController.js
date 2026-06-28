@@ -1,24 +1,44 @@
 const Invoice = require('../models/Invoice');
 const { evaluateRules, applyRuleActions } = require('../services/ruleEngine');
 const { computeHash, checkIntegrity } = require('../services/invoiceIntegrity');
+const { dispatchEvent } = require('../services/eventDispatcher');
 
 exports.createInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.create({ ...req.body, submittedBy: req.user._id, workflowStatus: 'draft' });
+    const invoice = await Invoice.create({
+      ...req.body,
+      submittedBy: req.user._id,
+      workflowStatus: 'draft',
+    });
 
     // Stamp integrity fingerprint immediately after creation
     const { hash, snapshot } = computeHash(invoice.toObject());
-    invoice.integrityHash      = hash;
-    invoice.integrityHashedAt  = new Date();
-    invoice.integritySnapshot  = snapshot;
+    invoice.integrityHash = hash;
+    invoice.integrityHashedAt = new Date();
+    invoice.integritySnapshot = snapshot;
     await invoice.save();
 
     const triggered = await evaluateRules('invoice', invoice, req.user._id);
     if (triggered.length > 0) {
-      const { requiresApproval } = await applyRuleActions('invoice', invoice, invoice._id, triggered, req.user._id);
+      const { requiresApproval } = await applyRuleActions(
+        'invoice',
+        invoice,
+        invoice._id,
+        triggered,
+        req.user._id
+      );
       if (requiresApproval) {
         invoice.workflowStatus = 'pending_approval';
         await invoice.save();
+        // Notify approvers (Owner + Finance by default — admin can change)
+        dispatchEvent('invoice.approval_needed', {
+          invoice: {
+            clientName: invoice.clientName,
+            amount: invoice.amount,
+            dueDate: invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString('fr-FR') : '—',
+          },
+          actor: { name: req.user?.name || '—' },
+        }).catch(() => {});
       }
     } else {
       invoice.workflowStatus = 'approved';
@@ -65,7 +85,10 @@ exports.getInvoices = async (req, res) => {
 
 exports.updateInvoice = async (req, res) => {
   try {
-    const invoice = await Invoice.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const invoice = await Invoice.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
     if (!invoice) return res.status(404).json({ message: 'Invoice not found' });
     res.json(invoice);
   } catch (error) {
@@ -102,22 +125,22 @@ exports.checkAllIntegrity = async (req, res) => {
     const results = invoices.map((inv) => {
       const r = checkIntegrity(inv.toObject());
       return {
-        invoiceId:   inv._id,
-        clientName:  inv.clientName,
-        reference:   inv.reference,
-        amount:      inv.amount,
-        issueDate:   inv.issueDate,
-        hashedAt:    inv.integrityHashedAt,
-        intact:      r.intact,
+        invoiceId: inv._id,
+        clientName: inv.clientName,
+        reference: inv.reference,
+        amount: inv.amount,
+        issueDate: inv.issueDate,
+        hashedAt: inv.integrityHashedAt,
+        intact: r.intact,
         changedFields: r.changedFields,
-        reason:      r.reason,
+        reason: r.reason,
       };
     });
     const summary = {
-      total:        results.length,
-      original:     results.filter(r => r.intact === true).length,
-      modified:     results.filter(r => r.intact === false).length,
-      untracked:    results.filter(r => r.intact === null).length,
+      total: results.length,
+      original: results.filter((r) => r.intact === true).length,
+      modified: results.filter((r) => r.intact === false).length,
+      untracked: results.filter((r) => r.intact === null).length,
     };
     res.json({ summary, invoices: results });
   } catch (error) {

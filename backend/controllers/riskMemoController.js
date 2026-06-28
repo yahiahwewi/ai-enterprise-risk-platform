@@ -2,6 +2,7 @@ const RiskMemo = require('../models/RiskMemo');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { createNotification } = require('../services/notificationService');
+const { dispatchEvent } = require('../services/eventDispatcher');
 
 // GET /api/risk-memos — latest memos (analyst sees own, owner/auditor/admin see all)
 exports.list = async (req, res) => {
@@ -19,10 +20,13 @@ exports.list = async (req, res) => {
 exports.pendingAlerts = async (req, res) => {
   try {
     const memos = await RiskMemo.find({
-      severity:     'critical',
-      escalated:    true,
+      severity: 'critical',
+      escalated: true,
       acknowledged: false,
-    }).sort({ createdAt: -1 }).limit(50).lean();
+    })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
     res.json(memos);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -37,43 +41,67 @@ exports.create = async (req, res) => {
 
     const anyContent = Object.values(sections || {}).some((v) => (v || '').trim().length > 0);
     if (!anyContent) {
-      return res.status(400).json({ message: 'Le mémo est vide. Remplissez au moins une section.' });
+      return res
+        .status(400)
+        .json({ message: 'Le mémo est vide. Remplissez au moins une section.' });
     }
 
     const isCritical = severity === 'critical';
     const memo = await RiskMemo.create({
-      authorId:      req.user._id,
-      authorName:    req.user.name,
-      severity:      severity || 'info',
-      sections:      sections || {},
+      authorId: req.user._id,
+      authorName: req.user.name,
+      severity: severity || 'info',
+      sections: sections || {},
       snapshotScore: typeof snapshotScore === 'number' ? snapshotScore : undefined,
       snapshotLevel: snapshotLevel || undefined,
-      escalated:     isCritical,
-      escalatedAt:   isCritical ? new Date() : undefined,
+      escalated: isCritical,
+      escalatedAt: isCritical ? new Date() : undefined,
     });
 
     // ── Critical memos trigger an immediate Owner-targeted alert ──────────────
     let alertSent = false;
     if (isCritical) {
-      const owners = await User.find({ role: { $in: ['owner', 'admin'] }, status: 'approved' }).select('_id');
-      const excerpt = (sections?.observations || sections?.contexte || sections?.recommandations || '')
-        .slice(0, 200);
+      const owners = await User.find({
+        role: { $in: ['owner', 'admin'] },
+        status: 'approved',
+      }).select('_id');
+      const excerpt = (
+        sections?.observations ||
+        sections?.contexte ||
+        sections?.recommandations ||
+        ''
+      ).slice(0, 200);
       const title = `Alerte critique - ${req.user.name}`;
       const message = excerpt
         ? `L'analyste signale un risque critique : ${excerpt}${excerpt.length >= 200 ? '…' : ''}`
         : `L'analyste ${req.user.name} a signalé un risque critique. Ouvrez le mémo pour consulter le détail.`;
 
-      await Promise.all(owners.map((u) => createNotification({
-        userId:   u._id,
-        type:     'analyst_alert',
-        title,
-        message,
-        severity: 'critical',
-        priority: 100, // max — always floats to the top of the bell
-        group:    'ai_prediction',
-        metadata: { memoId: memo._id, authorId: req.user._id, authorName: req.user.name, snapshotScore },
-      })));
+      await Promise.all(
+        owners.map((u) =>
+          createNotification({
+            userId: u._id,
+            type: 'analyst_alert',
+            title,
+            message,
+            severity: 'critical',
+            priority: 100, // max — always floats to the top of the bell
+            group: 'ai_prediction',
+            metadata: {
+              memoId: memo._id,
+              authorId: req.user._id,
+              authorName: req.user.name,
+              snapshotScore,
+            },
+          })
+        )
+      );
       alertSent = owners.length > 0;
+
+      // Email notification — Owner role(s) by default; admin can change in /email-config
+      dispatchEvent('risk.memo_critical', {
+        memo: { title, description: excerpt },
+        actor: { name: req.user.name },
+      }).catch(() => {});
     }
 
     res.status(201).json({ memo, alertSent });
@@ -88,15 +116,15 @@ exports.acknowledge = async (req, res) => {
     const memo = await RiskMemo.findById(req.params.id);
     if (!memo) return res.status(404).json({ message: 'Mémo introuvable' });
     if (memo.severity !== 'critical' || !memo.escalated) {
-      return res.status(400).json({ message: 'Ce mémo n\'est pas en attente d\'acquittement.' });
+      return res.status(400).json({ message: "Ce mémo n'est pas en attente d'acquittement." });
     }
     if (memo.acknowledged) {
       return res.json({ memo, alreadyAcknowledged: true });
     }
 
-    memo.acknowledged       = true;
-    memo.acknowledgedAt     = new Date();
-    memo.acknowledgedBy     = req.user._id;
+    memo.acknowledged = true;
+    memo.acknowledgedAt = new Date();
+    memo.acknowledgedBy = req.user._id;
     memo.acknowledgedByName = req.user.name;
     await memo.save();
 
@@ -108,10 +136,10 @@ exports.acknowledge = async (req, res) => {
 
     // Notify the analyst that their alert was acknowledged
     await createNotification({
-      userId:   memo.authorId,
-      type:     'alert_acknowledged',
-      title:    'Alerte acquittée',
-      message:  `${req.user.name} a acquitté votre alerte critique du ${new Date(memo.escalatedAt).toLocaleDateString('fr-FR')}.`,
+      userId: memo.authorId,
+      type: 'alert_acknowledged',
+      title: 'Alerte acquittée',
+      message: `${req.user.name} a acquitté votre alerte critique du ${new Date(memo.escalatedAt).toLocaleDateString('fr-FR')}.`,
       severity: 'info',
       metadata: { memoId: memo._id },
     });

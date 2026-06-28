@@ -1,7 +1,17 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { dispatchEvent } = require('./eventDispatcher');
 
-async function createNotification({ userId, type, title, message, severity = 'info', metadata = {}, priority, group }) {
+async function createNotification({
+  userId,
+  type,
+  title,
+  message,
+  severity = 'info',
+  metadata = {},
+  priority,
+  group,
+}) {
   try {
     const doc = { userId, type, title, message, severity, metadata };
     if (priority !== undefined) doc.priority = priority;
@@ -19,9 +29,10 @@ async function checkAndNotifyRiskAlerts(globalScore, level) {
 
   const severity = globalScore >= 75 ? 'critical' : 'warning';
   const title = globalScore >= 75 ? 'Critical Risk Alert' : 'Elevated Risk Warning';
-  const message = globalScore >= 75
-    ? `Risk score has reached ${globalScore}/100 (critical). Immediate action is recommended.`
-    : `Risk score is ${globalScore}/100 (high). Review the risk report for details.`;
+  const message =
+    globalScore >= 75
+      ? `Risk score has reached ${globalScore}/100 (critical). Immediate action is recommended.`
+      : `Risk score is ${globalScore}/100 (high). Review the risk report for details.`;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -42,6 +53,10 @@ async function checkAndNotifyRiskAlerts(globalScore, level) {
   }));
 
   await Notification.insertMany(notifications).catch(() => {});
+
+  // Email pipeline — admin can change recipients/templates from /email-config
+  const eventKey = globalScore >= 75 ? 'risk.threshold_critical' : 'risk.threshold_high';
+  dispatchEvent(eventKey, { score: globalScore, topCause: 'Cash flow / Invoices' }).catch(() => {});
 }
 
 async function checkOverdueInvoices(lateInvoices) {
@@ -95,4 +110,9 @@ async function checkNegativeCashFlow(cashFlow) {
   });
 }
 
-module.exports = { createNotification, checkAndNotifyRiskAlerts, checkOverdueInvoices, checkNegativeCashFlow };
+module.exports = {
+  createNotification,
+  checkAndNotifyRiskAlerts,
+  checkOverdueInvoices,
+  checkNegativeCashFlow,
+};

@@ -1,18 +1,22 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 const { sendOtpEmail } = require('../services/mailer');
+const { dispatchEvent } = require('../services/eventDispatcher');
 
-const OTP_TTL_MIN = 15;        // code valid for 15 minutes
+const googleClient = process.env.GOOGLE_CLIENT_ID
+  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+  : null;
+
+const OTP_TTL_MIN = 15; // code valid for 15 minutes
 const OTP_RESEND_COOLDOWN = 60; // seconds between resend requests
 const OTP_MAX_ATTEMPTS = 6;
 
-const generateToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-const generateOtp = () =>
-  String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
+const generateOtp = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 
 async function issueOtpForUser(user) {
   const code = generateOtp();
@@ -22,8 +26,9 @@ async function issueOtpForUser(user) {
   user.emailOtpLastSentAt = new Date();
   await user.save();
   // Fire-and-log the email; don't block the response if SMTP is slow.
-  sendOtpEmail({ to: user.email, name: user.name, code, minutes: OTP_TTL_MIN })
-    .catch((err) => console.error('[mailer] sendOtpEmail failed:', err.message));
+  sendOtpEmail({ to: user.email, name: user.name, code, minutes: OTP_TTL_MIN }).catch((err) =>
+    console.error('[mailer] sendOtpEmail failed:', err.message)
+  );
   return code;
 }
 
@@ -112,8 +117,14 @@ exports.verifyEmail = async (req, res) => {
     user.emailOtpAttempts = 0;
     await user.save();
 
+    // Notify admins that a verified signup is awaiting their approval
+    dispatchEvent('auth.signup_pending', {
+      user: { name: user.name, email: user.email, role: user.role },
+    }).catch(() => {});
+
     res.json({
-      message: 'Email vérifié. Votre compte est désormais en attente de validation par l\'administrateur.',
+      message:
+        "Email vérifié. Votre compte est désormais en attente de validation par l'administrateur.",
       verified: true,
       pending: true,
     });
@@ -160,14 +171,14 @@ exports.login = async (req, res) => {
 
     if (user.status === 'pending') {
       return res.status(403).json({
-        message: 'Votre compte est en attente de validation par l\'administrateur.',
+        message: "Votre compte est en attente de validation par l'administrateur.",
         status: 'pending',
       });
     }
 
     if (user.status === 'rejected') {
       return res.status(403).json({
-        message: 'Votre demande d\'accès a été refusée.',
+        message: "Votre demande d'accès a été refusée.",
         status: 'rejected',
       });
     }
@@ -175,6 +186,81 @@ exports.login = async (req, res) => {
     res.json({ user, token: generateToken(user._id) });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/google — sign in / sign up with a Google ID token
+exports.googleLogin = async (req, res) => {
+  try {
+    if (!googleClient) {
+      return res.status(503).json({
+        message: 'Google OAuth non configuré côté serveur (GOOGLE_CLIENT_ID manquant).',
+      });
+    }
+    const { credential, role } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: 'Token Google requis' });
+    }
+
+    // Verify the ID token signature + audience
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const { email, name, email_verified } = payload || {};
+    if (!email || !email_verified) {
+      return res.status(400).json({ message: 'Compte Google non vérifié' });
+    }
+
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // First Google sign-in → create a pending account, awaiting admin approval
+      const allowedRoles = ['accountant', 'finance', 'analyst', 'auditor'];
+      const safeRole = allowedRoles.includes(role) ? role : 'accountant';
+      // random password — user won't use it (Google flow only) but the schema requires one
+      const randomPwd = crypto.randomBytes(24).toString('hex');
+      user = await User.create({
+        name: name || email.split('@')[0],
+        email,
+        password: randomPwd,
+        role: safeRole,
+        status: 'pending',
+        emailVerified: true, // Google already vouched for the address
+      });
+      return res.status(201).json({
+        message: "Compte Google créé. En attente de validation par l'administrateur.",
+        pending: true,
+        status: 'pending',
+        email: user.email,
+      });
+    }
+
+    // Existing user
+    if (!user.emailVerified) {
+      // Mark as verified now that Google confirmed the address
+      user.emailVerified = true;
+      await user.save();
+    }
+
+    if (user.status === 'pending') {
+      return res.status(403).json({
+        message: "Votre compte est en attente de validation par l'administrateur.",
+        status: 'pending',
+      });
+    }
+    if (user.status === 'rejected') {
+      return res.status(403).json({
+        message: "Votre demande d'accès a été refusée.",
+        status: 'rejected',
+      });
+    }
+
+    res.json({ user, token: generateToken(user._id) });
+  } catch (error) {
+    console.error('[google-login]', error.message);
+    res.status(401).json({ message: "Échec de l'authentification Google" });
   }
 };
 

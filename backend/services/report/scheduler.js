@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const { generatePDF } = require('./pdfGenerator');
 const { analyzeRisk } = require('../aiService');
 const { createNotification } = require('../notificationService');
+const { dispatchEvent } = require('../eventDispatcher');
 const User = require('../../models/User');
 const Transaction = require('../../models/Transaction');
 
@@ -36,6 +37,10 @@ async function runMonthlyReports() {
   try {
     const report = await generatePDF({ type: 'monthly', language: 'fr', generatedBy: 'scheduler' });
     console.log(`[SCHEDULER] Monthly report: ${report.title}`);
+    dispatchEvent('report.monthly_ready', {
+      month: new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+      hash: (report.hash || '').slice(0, 16) + '…',
+    }).catch(() => {});
     return [{ status: 'success', reportId: report._id }];
   } catch (error) {
     console.error('[SCHEDULER] Monthly failed:', error.message);
@@ -46,11 +51,12 @@ async function runMonthlyReports() {
 async function runDailySummary() {
   try {
     const yesterday = new Date(Date.now() - 86400000);
-    const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     const txs = await Transaction.find({ date: { $gte: yesterday, $lt: todayStart } });
-    const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const expenses = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const income = txs.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const expenses = txs.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
     const report = await analyzeRisk('fr');
 
@@ -69,6 +75,15 @@ async function runDailySummary() {
       });
     }
     console.log('[SCHEDULER] Daily summary sent');
+
+    dispatchEvent('risk.daily_digest', {
+      date: new Date().toLocaleDateString('fr-FR'),
+      txCount: txs.length,
+      income: income.toLocaleString('fr-FR'),
+      expense: expenses.toLocaleString('fr-FR'),
+      invCount: 0,
+      score: report.globalScore,
+    }).catch(() => {});
   } catch (error) {
     console.error('[SCHEDULER] Daily failed:', error.message);
   }
@@ -96,6 +111,13 @@ async function runWeeklyDigest() {
       });
     }
     console.log('[SCHEDULER] Weekly digest sent');
+
+    dispatchEvent('risk.weekly_digest', {
+      score: report.globalScore,
+      trend: f30 < 0 ? 'tendance baissière' : 'tendance stable',
+      actions: 'Voir le tableau de bord pour la liste détaillée.',
+      topClients: '—',
+    }).catch(() => {});
   } catch (error) {
     console.error('[SCHEDULER] Weekly failed:', error.message);
   }

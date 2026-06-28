@@ -8,6 +8,14 @@ frontend/build/
 
 # Environment
 backend/.env
+frontend/.env
+
+# Test coverage
+coverage/
+backend/coverage/
+
+# Archives / local report bundles
+*.zip
 
 # Python
 AiModule/app/ml/trained_model.pkl

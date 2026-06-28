@@ -34,6 +34,7 @@ import PdfTest from './pages/PdfTest';
 import Investigations from './pages/Investigations';
 import InvestigationDetail from './pages/InvestigationDetail';
 import Permissions from './pages/Permissions';
+import EmailConfig from './pages/EmailConfig';
 
 function ProtectedPage({ children, roles }) {
   return (
@@ -58,31 +59,214 @@ export default function App() {
           <Route path="/verify/:id" element={<VerifyReport />} />
           <Route path="/verify-upload" element={<VerifyUpload />} />
 
-          <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
-          <Route path="/risk-report" element={<ProtectedPage roles={['owner', 'analyst']}><RiskReport /></ProtectedPage>} />
-          <Route path="/final-decision" element={<ProtectedPage roles={['owner', 'analyst']}><FinalDecision /></ProtectedPage>} />
-          <Route path="/team" element={<ProtectedPage roles={['owner']}><Team /></ProtectedPage>} />
-          <Route path="/transactions" element={<ProtectedPage roles={['owner', 'accountant', 'auditor']}><Transactions /></ProtectedPage>} />
-          <Route path="/invoices" element={<ProtectedPage roles={['owner', 'accountant', 'auditor']}><Invoices /></ProtectedPage>} />
-          <Route path="/extract-invoice" element={<ProtectedPage roles={['owner', 'accountant']}><ExtractInvoice /></ProtectedPage>} />
-          <Route path="/loans" element={<ProtectedPage roles={['owner', 'finance', 'auditor']}><Loans /></ProtectedPage>} />
-          <Route path="/assets" element={<ProtectedPage roles={['owner', 'finance', 'auditor']}><Assets /></ProtectedPage>} />
-          <Route path="/activity" element={<ProtectedPage roles={['owner', 'admin', 'auditor']}><ActivityLog /></ProtectedPage>} />
-          <Route path="/reports" element={<ProtectedPage roles={['owner', 'admin', 'auditor']}><Reports /></ProtectedPage>} />
-          <Route path="/analyst" element={<ProtectedPage roles={['analyst', 'owner']}><AnalystWorkbench /></ProtectedPage>} />
-          <Route path="/audit" element={<ProtectedPage roles={['auditor', 'admin', 'owner']}><AuditDashboard /></ProtectedPage>} />
-          <Route path="/alerts" element={<ProtectedPage roles={['owner', 'admin']}><OwnerAlerts /></ProtectedPage>} />
-          <Route path="/pdfTEST" element={<ProtectedPage><PdfTest /></ProtectedPage>} />
-          <Route path="/pdftest" element={<ProtectedPage><PdfTest /></ProtectedPage>} />
-          <Route path="/investigations" element={<ProtectedPage roles={['auditor', 'owner', 'admin']}><Investigations /></ProtectedPage>} />
-          <Route path="/investigations/:id" element={<ProtectedPage roles={['auditor', 'owner', 'admin']}><InvestigationDetail /></ProtectedPage>} />
-          <Route path="/permissions" element={<ProtectedPage roles={['admin', 'owner']}><Permissions /></ProtectedPage>} />
-          <Route path="/approvals" element={<ProtectedPage roles={['owner', 'admin']}><Approvals /></ProtectedPage>} />
-          <Route path="/simulate" element={<ProtectedPage roles={['owner', 'analyst']}><Simulate /></ProtectedPage>} />
-          <Route path="/executive" element={<ProtectedPage roles={['owner']}><Executive /></ProtectedPage>} />
-          <Route path="/goals" element={<ProtectedPage roles={['owner']}><Goals /></ProtectedPage>} />
-          <Route path="/settings" element={<ProtectedPage roles={['admin']}><Settings /></ProtectedPage>} />
-          <Route path="/users" element={<ProtectedPage roles={['admin']}><Dashboard /></ProtectedPage>} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedPage>
+                <Dashboard />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/risk-report"
+            element={
+              <ProtectedPage roles={['owner', 'analyst']}>
+                <RiskReport />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/final-decision"
+            element={
+              <ProtectedPage roles={['owner', 'analyst']}>
+                <FinalDecision />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <ProtectedPage roles={['owner']}>
+                <Team />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/transactions"
+            element={
+              <ProtectedPage roles={['owner', 'accountant', 'auditor']}>
+                <Transactions />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedPage roles={['owner', 'accountant', 'auditor']}>
+                <Invoices />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/extract-invoice"
+            element={
+              <ProtectedPage roles={['owner', 'accountant']}>
+                <ExtractInvoice />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/loans"
+            element={
+              <ProtectedPage roles={['owner', 'finance', 'auditor']}>
+                <Loans />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/assets"
+            element={
+              <ProtectedPage roles={['owner', 'finance', 'auditor']}>
+                <Assets />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/activity"
+            element={
+              <ProtectedPage roles={['owner', 'admin', 'auditor']}>
+                <ActivityLog />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedPage roles={['owner', 'admin', 'auditor']}>
+                <Reports />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/analyst"
+            element={
+              <ProtectedPage roles={['analyst', 'owner']}>
+                <AnalystWorkbench />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/audit"
+            element={
+              <ProtectedPage roles={['auditor', 'admin', 'owner']}>
+                <AuditDashboard />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/alerts"
+            element={
+              <ProtectedPage roles={['owner', 'admin']}>
+                <OwnerAlerts />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/pdfTEST"
+            element={
+              <ProtectedPage>
+                <PdfTest />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/pdftest"
+            element={
+              <ProtectedPage>
+                <PdfTest />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/investigations"
+            element={
+              <ProtectedPage roles={['auditor', 'owner', 'admin']}>
+                <Investigations />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/investigations/:id"
+            element={
+              <ProtectedPage roles={['auditor', 'owner', 'admin']}>
+                <InvestigationDetail />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/permissions"
+            element={
+              <ProtectedPage roles={['admin', 'owner']}>
+                <Permissions />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/email-config"
+            element={
+              <ProtectedPage roles={['admin', 'owner']}>
+                <EmailConfig />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/approvals"
+            element={
+              <ProtectedPage roles={['owner', 'admin']}>
+                <Approvals />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/simulate"
+            element={
+              <ProtectedPage roles={['owner', 'analyst']}>
+                <Simulate />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/executive"
+            element={
+              <ProtectedPage roles={['owner']}>
+                <Executive />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/goals"
+            element={
+              <ProtectedPage roles={['owner']}>
+                <Goals />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedPage roles={['admin']}>
+                <Settings />
+              </ProtectedPage>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <ProtectedPage roles={['admin']}>
+                <Dashboard />
+              </ProtectedPage>
+            }
+          />
 
           <Route path="*" element={<Navigate to="/dashboard" />} />
         </Routes>
