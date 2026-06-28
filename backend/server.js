@@ -51,10 +51,10 @@ app.get('/api/health', async (req, res) => {
   const mongoStatus = mongoStates[mongoose.connection.readyState] || 'unknown';
   let aiStatus = 'unknown';
   try {
-    const http = require('http');
     const aiUrl = process.env.AI_MODULE_URL || 'http://localhost:8001';
+    const client = aiUrl.startsWith('https') ? require('https') : require('http');
     await new Promise((resolve) => {
-      const r = http.get(`${aiUrl}/`, { timeout: 3000 }, (resp) => {
+      const r = client.get(`${aiUrl}/`, { timeout: 3000 }, (resp) => {
         aiStatus = resp.statusCode === 200 ? 'reachable' : 'error';
         resp.resume();
         resolve();
