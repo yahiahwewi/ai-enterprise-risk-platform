@@ -12,7 +12,7 @@
     "whatsapp": {
       "dmPolicy": "pairing",
       // Only these numbers may talk to the bot (allowlist). Replace with yours:
-      "allowFrom": ["+216XXXXXXXXX"]
+      "allowFrom": ["+21694702014"]
     }
   },
 
@@ -20,8 +20,8 @@
     "defaults": {
       "model": {
         // Use ANY provider — swap freely:
-        "primary": "anthropic/claude-sonnet-4-6",
-        "fallbacks": ["groq/llama-3.3-70b"]
+        "primary": "groq/llama-3.3-70b-versatile",
+        "fallbacks": ["groq/llama-3.1-8b-instant"]
       },
       // Periodic check-in lets the agent push proactive alerts (see the skill).
       "heartbeat": { "every": "30m", "target": "last" }
