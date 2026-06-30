@@ -6,8 +6,9 @@
  * Returns: { hash, signature, certCN, certPem, signedAt }
  */
 const crypto = require('crypto');
-const forge  = require('node-forge');
+const forge = require('node-forge');
 const { loadOrCreateCert } = require('./certManager');
+const { business } = require('../../middleware/metrics');
 
 /**
  * @param {Buffer} pdfBuffer - Raw PDF bytes
@@ -27,6 +28,8 @@ function signPDF(pdfBuffer) {
 
   const certCN = certificate.subject.getField('CN')?.value || 'Tac-Tic ERM';
 
+  business.signatures.inc();
+
   return {
     hash,
     signature,
@@ -43,15 +46,15 @@ function signPDF(pdfBuffer) {
 function verifyPDF(pdfBuffer, storedHash, storedSignature, storedCertPem) {
   // Re-compute hash
   const currentHash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
-  const hashMatch   = currentHash === storedHash;
+  const hashMatch = currentHash === storedHash;
 
   let signatureValid = false;
   try {
-    const cert      = forge.pki.certificateFromPem(storedCertPem);
-    const md        = forge.md.sha256.create();
+    const cert = forge.pki.certificateFromPem(storedCertPem);
+    const md = forge.md.sha256.create();
     md.update(Buffer.from(storedHash, 'hex').toString('binary'));
-    const sigBytes  = forge.util.decode64(storedSignature);
-    signatureValid  = cert.publicKey.verify(md.digest().bytes(), sigBytes);
+    const sigBytes = forge.util.decode64(storedSignature);
+    signatureValid = cert.publicKey.verify(md.digest().bytes(), sigBytes);
   } catch {
     signatureValid = false;
   }

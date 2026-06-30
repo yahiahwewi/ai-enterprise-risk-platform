@@ -22,6 +22,33 @@ const httpRequestsTotal = new client.Counter({
 });
 register.registerMetric(httpRequestsTotal);
 
+// ── Business / domain metrics — count meaningful ERM events ──────────────
+const business = {
+  signups: new client.Counter({
+    name: 'app_signups_total',
+    help: 'User account signups',
+    labelNames: ['role'],
+  }),
+  logins: new client.Counter({
+    name: 'app_logins_total',
+    help: 'Login attempts',
+    labelNames: ['result'],
+  }),
+  transactions: new client.Counter({
+    name: 'app_transactions_total',
+    help: 'Transactions created',
+  }),
+  riskScores: new client.Counter({
+    name: 'app_risk_scores_total',
+    help: 'Risk reports computed by the AI engine',
+  }),
+  signatures: new client.Counter({
+    name: 'app_signatures_total',
+    help: 'Certified PDF signatures issued (RSA-SHA256)',
+  }),
+};
+Object.values(business).forEach((m) => register.registerMetric(m));
+
 // Times every request and records it under the matched route pattern
 // (e.g. /api/invoices/:id) to keep label cardinality bounded.
 function metricsMiddleware(req, res, next) {
@@ -42,4 +69,4 @@ async function metricsHandler(_req, res) {
   res.end(await register.metrics());
 }
 
-module.exports = { register, metricsMiddleware, metricsHandler };
+module.exports = { register, metricsMiddleware, metricsHandler, business };

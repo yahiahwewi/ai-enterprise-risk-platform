@@ -1,16 +1,22 @@
 const { analyzeRisk } = require('../services/aiService');
 const { getGoalAdvice, getRecommendedScenario } = require('../services/goalAdvisorService');
 const { generateFinalDecision } = require('../services/decisionEngine');
-const { checkAndNotifyRiskAlerts, checkOverdueInvoices, checkNegativeCashFlow } = require('../services/notificationService');
+const {
+  checkAndNotifyRiskAlerts,
+  checkOverdueInvoices,
+  checkNegativeCashFlow,
+} = require('../services/notificationService');
 const { calculateHealthIndex } = require('../services/healthIndex');
 const { simulateScenario } = require('../services/scenarioEngine');
 const { answerQuestion } = require('../services/copilotService');
 const { suggestCategory } = require('../services/categoryService');
+const { business } = require('../middleware/metrics');
 
 exports.getRiskReport = async (req, res) => {
   try {
     const lang = req.query.language || req.body.language || 'fr';
     const report = await analyzeRisk(lang);
+    business.riskScores.inc();
     checkAndNotifyRiskAlerts(report.globalScore, report.level).catch(() => {});
     checkOverdueInvoices(report.lateInvoicesList).catch(() => {});
     checkNegativeCashFlow(report.metrics.cashFlow).catch(() => {});
@@ -84,7 +90,14 @@ exports.getGoalAdvice = async (req, res) => {
   try {
     const { scenario } = req.params;
     const lang = req.query.language || 'fr';
-    const validScenarios = ['growth', 'stability', 'debt_reduction', 'revenue_optimization', 'recovery', 'excellence'];
+    const validScenarios = [
+      'growth',
+      'stability',
+      'debt_reduction',
+      'revenue_optimization',
+      'recovery',
+      'excellence',
+    ];
     if (!validScenarios.includes(scenario)) {
       return res.status(400).json({ message: 'Scénario invalide' });
     }

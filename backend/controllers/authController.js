@@ -14,6 +14,8 @@ const OTP_TTL_MIN = 15; // code valid for 15 minutes
 const OTP_RESEND_COOLDOWN = 60; // seconds between resend requests
 const OTP_MAX_ATTEMPTS = 6;
 
+const { business } = require('../middleware/metrics');
+
 const generateToken = (id) => jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 const generateOtp = () => String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
@@ -72,6 +74,7 @@ exports.register = async (req, res) => {
     });
 
     await issueOtpForUser(user);
+    business.signups.inc({ role: safeRole });
 
     res.status(201).json({
       message: 'Compte créé. Un code de vérification vous a été envoyé par email.',
@@ -166,6 +169,7 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user || !(await user.comparePassword(password))) {
+      business.logins.inc({ result: 'failed' });
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
@@ -183,6 +187,7 @@ exports.login = async (req, res) => {
       });
     }
 
+    business.logins.inc({ result: 'success' });
     res.json({ user, token: generateToken(user._id) });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -257,6 +262,7 @@ exports.googleLogin = async (req, res) => {
       });
     }
 
+    business.logins.inc({ result: 'success' });
     res.json({ user, token: generateToken(user._id) });
   } catch (error) {
     console.error('[google-login]', error.message);

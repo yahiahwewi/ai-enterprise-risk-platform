@@ -1,14 +1,25 @@
 const Transaction = require('../models/Transaction');
 const { evaluateRules, applyRuleActions } = require('../services/ruleEngine');
+const { business } = require('../middleware/metrics');
 
 exports.createTransaction = async (req, res) => {
   try {
-    const transaction = await Transaction.create({ ...req.body, submittedBy: req.user._id, workflowStatus: 'draft' });
+    const transaction = await Transaction.create({
+      ...req.body,
+      submittedBy: req.user._id,
+      workflowStatus: 'draft',
+    });
 
     // Evaluate rules
     const triggered = await evaluateRules('transaction', transaction, req.user._id);
     if (triggered.length > 0) {
-      const { requiresApproval } = await applyRuleActions('transaction', transaction, transaction._id, triggered, req.user._id);
+      const { requiresApproval } = await applyRuleActions(
+        'transaction',
+        transaction,
+        transaction._id,
+        triggered,
+        req.user._id
+      );
       if (requiresApproval) {
         transaction.workflowStatus = 'pending_approval';
         await transaction.save();
@@ -20,6 +31,7 @@ exports.createTransaction = async (req, res) => {
     }
 
     res.locals.createdEntityId = transaction._id;
+    business.transactions.inc();
     res.status(201).json(transaction);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -47,7 +59,10 @@ exports.getTransactions = async (req, res) => {
 
 exports.updateTransaction = async (req, res) => {
   try {
-    const transaction = await Transaction.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const transaction = await Transaction.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
     if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
     res.json(transaction);
   } catch (error) {
