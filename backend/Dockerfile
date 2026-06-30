@@ -1,6 +1,6 @@
 # ── Backend Dockerfile ──────────────────────────────────────
 # base → dev (with devDeps) → prod (slim, non-root). Default target = prod.
-FROM node:20-slim AS base
+FROM node:26-slim AS base
 
 # Puppeteer needs these system deps for headless Chrome
 RUN apt-get update && apt-get install -y --no-install-recommends \
