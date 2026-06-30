@@ -1,0 +1,54 @@
+// ─────────────────────────────────────────────────────────────────────────
+// Tac-Tic ERM × OpenClaw — WhatsApp assistant configuration (JSON5)
+// Copy this to ~/.openclaw/openclaw.json  (or set OPENCLAW_CONFIG_PATH to it).
+//
+// You only fill TWO things manually:
+//   1) allowFrom  → your WhatsApp number(s)
+//   2) the LLM provider key + the ERM_BOT_TOKEN env var (see openclaw/SETUP.md)
+// Everything else is pre-wired to your live backend + read-only bot.
+// ─────────────────────────────────────────────────────────────────────────
+{
+  "channels": {
+    "whatsapp": {
+      "dmPolicy": "pairing",
+      // Only these numbers may talk to the bot (allowlist). Replace with yours:
+      "allowFrom": ["+216XXXXXXXXX"]
+    }
+  },
+
+  "agents": {
+    "defaults": {
+      "model": {
+        // Use ANY provider — swap freely:
+        "primary": "anthropic/claude-sonnet-4-6",
+        "fallbacks": ["groq/llama-3.3-70b"]
+      },
+      // Periodic check-in lets the agent push proactive alerts (see the skill).
+      "heartbeat": { "every": "30m", "target": "last" }
+    }
+  },
+
+  "models": {
+    "providers": {
+      // Provide whichever you use; key comes from an env var (not stored here).
+      "anthropic": { "apiKey": { "source": "env", "id": "ANTHROPIC_API_KEY" } },
+      "groq": { "apiKey": { "source": "env", "id": "GROQ_API_KEY" } }
+    }
+  },
+
+  "skills": {
+    "entries": {
+      "erm-assistant": {
+        "enabled": true,
+        "env": {
+          "ERM_API_BASE": "https://tactic-backend-d1452d.azurewebsites.net",
+          // The read-only bot bearer token (contents of C:\Users\user\openclaw-bot-token.txt).
+          // Set ERM_BOT_TOKEN in the environment; do NOT paste the token into this file.
+          "ERM_BOT_TOKEN": "${ERM_BOT_TOKEN}"
+        }
+      }
+    }
+  },
+
+  "cron": { "enabled": true, "maxConcurrentRuns": 4, "sessionRetention": "24h" }
+}
