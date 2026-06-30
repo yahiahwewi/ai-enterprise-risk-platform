@@ -20,9 +20,14 @@ Almost everything is pre-built; your manual steps are the inherently-interactive
    ```bash
    export ANTHROPIC_API_KEY=sk-ant-...      # or GROQ_API_KEY=... (reuse your existing one)
    ```
-4. **Provide the ERM bot token** as an env var (paste the file contents):
+4. **Keep the ERM bot token in a file** and point the skill at its path. OpenClaw
+   **blocks secret-named env vars** (anything containing `TOKEN`/`KEY`/`SECRET`) from
+   reaching skill processes, so do _not_ pass the token via env — `erm.js` reads it from
+   the file given in `ERM_BOT_FILE` (already set in `openclaw.json`):
    ```bash
-   export ERM_BOT_TOKEN="$(cat /path/to/openclaw-bot-token.txt)"
+   # the file already exists from the bot-provisioning step:
+   #   C:\Users\user\openclaw-bot-token.txt   (Linux/mac: /path/to/openclaw-bot-token.txt)
+   # just make sure ERM_BOT_FILE in openclaw.json points at it.
    ```
 5. **Install the config + skill:**
    ```bash
@@ -45,5 +50,10 @@ Almost everything is pre-built; your manual steps are the inherently-interactive
 
 - Proactive alerts run automatically via the `heartbeat`/`cron` in `openclaw.json` (every 30 min
   the skill runs `node erm.js alerts` and pings you only if `CRITICAL`).
-- Keep the token + LLM key in env vars, never in the committed config.
+- Keep the bot token in its **file** (referenced by `ERM_BOT_FILE`) and the LLM key in
+  env — never in the committed config, and never paste the token into a chat message.
+- OpenClaw strips secret-named env vars (`*TOKEN*`/`*KEY*`/`*SECRET*`) from skill
+  processes; that is why the token is delivered by file path, not by `ERM_BOT_TOKEN`.
+- Send the bot **one message at a time** — a new message that arrives while the previous
+  one is still being answered fails with `reply session initialization conflicted`.
 - The bot can only **read** (analyst role); it cannot approve, transfer, or modify anything.

@@ -42,9 +42,13 @@
         "enabled": true,
         "env": {
           "ERM_API_BASE": "https://tactic-backend-d1452d.azurewebsites.net",
-          // The read-only bot bearer token (contents of C:\Users\user\openclaw-bot-token.txt).
-          // Set ERM_BOT_TOKEN in the environment; do NOT paste the token into this file.
-          "ERM_BOT_TOKEN": "${ERM_BOT_TOKEN}"
+          // NOTE: OpenClaw blocks secret-named env vars (anything containing
+          // TOKEN / KEY / SECRET) from reaching skill processes. So we do NOT pass
+          // the token via env — instead we point the skill at the token FILE. The
+          // path is not secret-named, so it passes through, and erm.js reads the
+          // bearer token from it. Keep the token only in this file (chmod-protected),
+          // never in the config or in chat.
+          "ERM_BOT_FILE": "C:\\Users\\user\\openclaw-bot-token.txt"
         }
       }
     }

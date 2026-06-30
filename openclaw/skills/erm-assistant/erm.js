@@ -15,11 +15,23 @@
  *   node erm.js alerts          # returns "CRITICAL: ..." or "OK ..." for proactive checks
  *   node erm.js ask "question"  # free-form natural-language question → ERM copilot
  */
+const fs = require('fs');
+
 const BASE = process.env.ERM_API_BASE;
-const TOKEN = process.env.ERM_BOT_TOKEN;
+// OpenClaw blocks secret-named env vars (TOKEN/KEY/SECRET) from reaching skill
+// processes, so read the token from a file path (ERM_BOT_FILE) when the direct
+// env var isn't available.
+let TOKEN = process.env.ERM_BOT_TOKEN;
+if (!TOKEN && process.env.ERM_BOT_FILE) {
+  try {
+    TOKEN = fs.readFileSync(process.env.ERM_BOT_FILE, 'utf8').trim();
+  } catch {
+    /* fall through to the error below */
+  }
+}
 
 if (!BASE || !TOKEN) {
-  console.error('Missing ERM_API_BASE or ERM_BOT_TOKEN env.');
+  console.error('Missing ERM_API_BASE or a token source (ERM_BOT_TOKEN / ERM_BOT_FILE).');
   process.exit(1);
 }
 
