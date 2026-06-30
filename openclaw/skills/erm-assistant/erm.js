@@ -10,7 +10,8 @@
  *
  * Usage:
  *   node erm.js risk            # global risk score + level + top recommendations
- *   node erm.js health          # platform health (db / AI module / uptime)
+ *   node erm.js health          # FINANCIAL health index (score + grade + 4 dimensions)
+ *   node erm.js status          # platform/system health (db / AI module / uptime)
  *   node erm.js decision        # AI final decision + executive summary
  *   node erm.js alerts          # returns "CRITICAL: ..." or "OK ..." for proactive checks
  *   node erm.js ask "question"  # free-form natural-language question → ERM copilot
@@ -59,8 +60,18 @@ const [, , cmd, ...rest] = process.argv;
       break;
     }
     case 'health': {
+      const h = await get('/api/ai/health-index');
+      const d = h.dimensions || {};
+      console.log(
+        `Santé financière : ${h.score}/100 (note ${h.grade}).\n` +
+          `• Liquidité ${d.liquidity?.score ?? '?'}/100   • Stabilité ${d.stability?.score ?? '?'}/100\n` +
+          `• Croissance ${d.growth?.score ?? '?'}/100   • Efficacité ${d.efficiency?.score ?? '?'}/100`
+      );
+      break;
+    }
+    case 'status': {
       const h = await get('/api/health');
-      console.log(`Statut : ${h.status} · base : ${h.mongo} · module IA : ${h.aiModule} · uptime : ${h.uptime}s`);
+      console.log(`Statut plateforme : ${h.status} · base : ${h.mongo} · module IA : ${h.aiModule} · uptime : ${h.uptime}s`);
       break;
     }
     case 'decision': {
@@ -85,7 +96,7 @@ const [, , cmd, ...rest] = process.argv;
       break;
     }
     default:
-      console.error('Unknown command. Use: risk | health | decision | alerts | ask "<question>"');
+      console.error('Unknown command. Use: risk | health | status | decision | alerts | ask "<question>"');
       process.exit(1);
   }
 })().catch((e) => {

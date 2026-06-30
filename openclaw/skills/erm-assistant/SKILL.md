@@ -18,10 +18,14 @@ Run the helper with Node from this skill's directory:
 | Intent                 | Command                        | Returns                                         |
 | ---------------------- | ------------------------------ | ----------------------------------------------- |
 | Risk score / overview  | `node erm.js risk`             | global risk score + level + top recommendations |
-| Platform/system status | `node erm.js health`           | DB, AI module, uptime                           |
+| Financial health index | `node erm.js health`           | financial health score + grade + 4 dimensions   |
+| Platform/system status | `node erm.js status`           | DB, AI module, uptime (DevOps health)           |
 | AI decision / summary  | `node erm.js decision`         | decision tier + executive summary               |
 | Proactive alert check  | `node erm.js alerts`           | `CRITICAL: …` or `OK …`                         |
 | Free-form question     | `node erm.js ask "<question>"` | answer from the ERM copilot                     |
+
+When the user asks about **financial health / "santé financière" / "how healthy are we"**, use `health`
+(the financial index). Use `status` only for **technical/system** health (is the platform up?).
 
 **How to answer a user message:** pick the closest command, run it, then relay the
 output verbatim (translate/condense for chat if helpful). For anything financial or
