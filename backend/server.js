@@ -10,6 +10,7 @@ const logger = require('./utils/logger');
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
 const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { metricsMiddleware, metricsHandler } = require('./middleware/metrics');
 const { startScheduler } = require('./services/report/scheduler');
 const { seedDefaults: seedPermissions } = require('./services/permissionService');
 const { seedDefaults: seedEmailEvents } = require('./services/emailEvents');
@@ -39,9 +40,13 @@ app.use(express.json());
 app.use(
   morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev', {
     stream: logger.stream,
-    skip: (req) => req.url === '/api/health',
+    skip: (req) => req.url === '/api/health' || req.url === '/metrics',
   })
 );
+
+// Prometheus metrics — times every request; scraped at GET /metrics (no auth/limit)
+app.use(metricsMiddleware);
+app.get('/metrics', metricsHandler);
 
 // Health check (no auth, no rate limit)
 const startTime = Date.now();
