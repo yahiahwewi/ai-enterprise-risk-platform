@@ -42,6 +42,10 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev || npm install --omit=dev
 COPY . .
 
+# Pre-create runtime dirs so mounted named volumes inherit non-root ownership
+# (these paths are gitignored, so they don't exist from COPY).
+RUN mkdir -p /app/uploads /app/reports /app/certs
+
 # Non-root user for security
 RUN groupadd -r erm && useradd -r -g erm -s /bin/false erm \
     && chown -R erm:erm /app
