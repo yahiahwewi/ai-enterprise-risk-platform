@@ -30,8 +30,8 @@ const PAGES = [
     fr: 'Décision IA',
     en: 'AI Decision',
     icon: 'auto_awesome',
-    path: '/final-decision',
-    keywords: 'recommendation',
+    path: '/dashboard',
+    keywords: 'recommendation decision',
   },
   {
     fr: 'Simulation',

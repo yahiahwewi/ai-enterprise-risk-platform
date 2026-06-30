@@ -9,7 +9,6 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import RiskReport from './pages/RiskReport';
-import FinalDecision from './pages/FinalDecision';
 import Team from './pages/Team';
 import Transactions from './pages/Transactions';
 import Invoices from './pages/Invoices';
@@ -75,14 +74,8 @@ export default function App() {
               </ProtectedPage>
             }
           />
-          <Route
-            path="/final-decision"
-            element={
-              <ProtectedPage roles={['owner', 'analyst']}>
-                <FinalDecision />
-              </ProtectedPage>
-            }
-          />
+          {/* /final-decision is now merged into the dashboard — redirect old links */}
+          <Route path="/final-decision" element={<Navigate to="/dashboard" replace />} />
           <Route
             path="/team"
             element={

@@ -1,141 +1,274 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LanguageContext';
 
 // ─── helpers ────────────────────────────────────────────────
-const fmtTND = n =>
-  (n < 0 ? '−' : n > 0 ? '+' : '') +
-  Math.abs(Math.round(n)).toLocaleString('fr-FR') + ' TND';
+const fmtTND = (n) =>
+  (n < 0 ? '−' : n > 0 ? '+' : '') + Math.abs(Math.round(n)).toLocaleString('fr-FR') + ' TND';
 
-const fmtAbs = n => Math.round(n).toLocaleString('fr-FR') + ' TND';
+const fmtAbs = (n) => Math.round(n).toLocaleString('fr-FR') + ' TND';
 
 // ─── Impact config ──────────────────────────────────────────
 const IMPACT_CFG = {
-  very_positive: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', text: 'text-emerald-700 dark:text-emerald-300', icon: 'trending_up',      labelFr: 'Très positif',   labelEn: 'Very Positive'  },
-  positive:      { bg: 'bg-green-100  dark:bg-green-900/30',    text: 'text-green-700  dark:text-green-300',   icon: 'arrow_upward',      labelFr: 'Positif',        labelEn: 'Positive'       },
-  neutral:       { bg: 'bg-slate-100  dark:bg-slate-700/40',    text: 'text-slate-600  dark:text-slate-300',   icon: 'remove',            labelFr: 'Neutre',         labelEn: 'Neutral'        },
-  medium:        { bg: 'bg-amber-100  dark:bg-amber-900/30',    text: 'text-amber-700  dark:text-amber-300',   icon: 'warning',           labelFr: 'Modéré',         labelEn: 'Moderate'       },
-  high:          { bg: 'bg-orange-100 dark:bg-orange-900/30',   text: 'text-orange-700 dark:text-orange-300',  icon: 'priority_high',     labelFr: 'Élevé',          labelEn: 'High'           },
-  critical:      { bg: 'bg-red-100    dark:bg-red-900/30',      text: 'text-red-700    dark:text-red-300',     icon: 'emergency',         labelFr: 'Critique',       labelEn: 'Critical'       },
+  very_positive: {
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    icon: 'trending_up',
+    labelFr: 'Très positif',
+    labelEn: 'Very Positive',
+  },
+  positive: {
+    bg: 'bg-green-100  dark:bg-green-900/30',
+    text: 'text-green-700  dark:text-green-300',
+    icon: 'arrow_upward',
+    labelFr: 'Positif',
+    labelEn: 'Positive',
+  },
+  neutral: {
+    bg: 'bg-slate-100  dark:bg-slate-700/40',
+    text: 'text-slate-600  dark:text-slate-300',
+    icon: 'remove',
+    labelFr: 'Neutre',
+    labelEn: 'Neutral',
+  },
+  medium: {
+    bg: 'bg-amber-100  dark:bg-amber-900/30',
+    text: 'text-amber-700  dark:text-amber-300',
+    icon: 'warning',
+    labelFr: 'Modéré',
+    labelEn: 'Moderate',
+  },
+  high: {
+    bg: 'bg-orange-100 dark:bg-orange-900/30',
+    text: 'text-orange-700 dark:text-orange-300',
+    icon: 'priority_high',
+    labelFr: 'Élevé',
+    labelEn: 'High',
+  },
+  critical: {
+    bg: 'bg-red-100    dark:bg-red-900/30',
+    text: 'text-red-700    dark:text-red-300',
+    icon: 'emergency',
+    labelFr: 'Critique',
+    labelEn: 'Critical',
+  },
 };
 
 // ─── Preset scenarios ────────────────────────────────────────
 const PRESETS = [
   {
     id: 'recession',
-    iconFr: 'Récession économique', iconEn: 'Economic Recession',
-    icon: 'trending_down', color: 'text-red-600', chipCls: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    descFr: 'Simule un choc économique sévère : les revenus s\'effondrent, les charges augmentent, les clients paient en retard et les taux d\'intérêt montent.',
-    descEn: 'Simulates a severe economic shock: revenue collapses, costs rise, clients pay late and interest rates climb.',
+    iconFr: 'Récession économique',
+    iconEn: 'Economic Recession',
+    icon: 'trending_down',
+    color: 'text-red-600',
+    chipCls: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    descFr:
+      "Simule un choc économique sévère : les revenus s'effondrent, les charges augmentent, les clients paient en retard et les taux d'intérêt montent.",
+    descEn:
+      'Simulates a severe economic shock: revenue collapses, costs rise, clients pay late and interest rates climb.',
     chips: [
       { icon: 'arrow_downward', labelFr: 'Revenus −30%', labelEn: 'Revenue −30%' },
-      { icon: 'arrow_upward',   labelFr: 'Charges +10%', labelEn: 'Costs +10%' },
-      { icon: 'schedule',       labelFr: '+5 retards',   labelEn: '+5 late' },
-      { icon: 'percent',        labelFr: 'Taux +3%',     labelEn: 'Rate +3%' },
+      { icon: 'arrow_upward', labelFr: 'Charges +10%', labelEn: 'Costs +10%' },
+      { icon: 'schedule', labelFr: '+5 retards', labelEn: '+5 late' },
+      { icon: 'percent', labelFr: 'Taux +3%', labelEn: 'Rate +3%' },
     ],
-    params: { incomeChange: -30, expenseChange: 10, lateInvoiceCount: 5, collectionImprovement: -20, rateIncrease: 3, newLoanAmount: 0, assetChange: -15 },
+    params: {
+      incomeChange: -30,
+      expenseChange: 10,
+      lateInvoiceCount: 5,
+      collectionImprovement: -20,
+      rateIncrease: 3,
+      newLoanAmount: 0,
+      assetChange: -15,
+    },
   },
   {
     id: 'growth',
-    iconFr: 'Croissance rapide', iconEn: 'Strong Growth',
-    icon: 'rocket_launch', color: 'text-emerald-600', chipCls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
-    descFr: 'Scénario d\'expansion optimiste : revenus en forte hausse, recouvrement amélioré, valorisation des actifs.',
-    descEn: 'Optimistic expansion: strong revenue surge, improved collections, rising asset values.',
+    iconFr: 'Croissance rapide',
+    iconEn: 'Strong Growth',
+    icon: 'rocket_launch',
+    color: 'text-emerald-600',
+    chipCls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    descFr:
+      "Scénario d'expansion optimiste : revenus en forte hausse, recouvrement amélioré, valorisation des actifs.",
+    descEn:
+      'Optimistic expansion: strong revenue surge, improved collections, rising asset values.',
     chips: [
-      { icon: 'arrow_upward',   labelFr: 'Revenus +40%',      labelEn: 'Revenue +40%' },
-      { icon: 'arrow_upward',   labelFr: 'Actifs +30%',       labelEn: 'Assets +30%' },
-      { icon: 'check_circle',   labelFr: 'Recouvrement +20%', labelEn: 'Collection +20%' },
+      { icon: 'arrow_upward', labelFr: 'Revenus +40%', labelEn: 'Revenue +40%' },
+      { icon: 'arrow_upward', labelFr: 'Actifs +30%', labelEn: 'Assets +30%' },
+      { icon: 'check_circle', labelFr: 'Recouvrement +20%', labelEn: 'Collection +20%' },
     ],
-    params: { incomeChange: 40, expenseChange: 15, lateInvoiceCount: 0, collectionImprovement: 20, rateIncrease: 0, newLoanAmount: 0, assetChange: 30 },
+    params: {
+      incomeChange: 40,
+      expenseChange: 15,
+      lateInvoiceCount: 0,
+      collectionImprovement: 20,
+      rateIncrease: 0,
+      newLoanAmount: 0,
+      assetChange: 30,
+    },
   },
   {
     id: 'debt_crisis',
-    iconFr: "Crise d'endettement", iconEn: 'Debt Crisis',
-    icon: 'account_balance', color: 'text-orange-600', chipCls: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
-    descFr: 'Accumulation de dettes, hausse des taux et pression sur la trésorerie — situation financière critique.',
-    descEn: 'Mounting debt, rising interest rates and cash-flow pressure — a critical financial situation.',
+    iconFr: "Crise d'endettement",
+    iconEn: 'Debt Crisis',
+    icon: 'account_balance',
+    color: 'text-orange-600',
+    chipCls: 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+    descFr:
+      'Accumulation de dettes, hausse des taux et pression sur la trésorerie — situation financière critique.',
+    descEn:
+      'Mounting debt, rising interest rates and cash-flow pressure — a critical financial situation.',
     chips: [
       { icon: 'account_balance', labelFr: '+150 000 TND', labelEn: '+150,000 TND' },
-      { icon: 'percent',         labelFr: 'Taux +5%',     labelEn: 'Rate +5%' },
-      { icon: 'arrow_upward',    labelFr: 'Charges +20%', labelEn: 'Costs +20%' },
+      { icon: 'percent', labelFr: 'Taux +5%', labelEn: 'Rate +5%' },
+      { icon: 'arrow_upward', labelFr: 'Charges +20%', labelEn: 'Costs +20%' },
     ],
-    params: { incomeChange: -10, expenseChange: 20, lateInvoiceCount: 3, collectionImprovement: -10, rateIncrease: 5, newLoanAmount: 150000, assetChange: 0 },
+    params: {
+      incomeChange: -10,
+      expenseChange: 20,
+      lateInvoiceCount: 3,
+      collectionImprovement: -10,
+      rateIncrease: 5,
+      newLoanAmount: 150000,
+      assetChange: 0,
+    },
   },
   {
     id: 'collection',
-    iconFr: 'Effort de recouvrement', iconEn: 'Collection Drive',
-    icon: 'payments', color: 'text-blue-600', chipCls: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
-    descFr: 'Effort ciblé sur l\'encaissement des créances clients : amélioration du taux de recouvrement et réduction légère des charges.',
-    descEn: 'Focused effort on collecting receivables: collection rate improved significantly, slight cost reduction.',
+    iconFr: 'Effort de recouvrement',
+    iconEn: 'Collection Drive',
+    icon: 'payments',
+    color: 'text-blue-600',
+    chipCls: 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    descFr:
+      "Effort ciblé sur l'encaissement des créances clients : amélioration du taux de recouvrement et réduction légère des charges.",
+    descEn:
+      'Focused effort on collecting receivables: collection rate improved significantly, slight cost reduction.',
     chips: [
-      { icon: 'payments',     labelFr: 'Recouvrement +40%', labelEn: 'Collection +40%' },
-      { icon: 'arrow_downward', labelFr: 'Charges −5%',     labelEn: 'Costs −5%' },
-      { icon: 'check_circle', labelFr: '0 retard ajouté',   labelEn: '0 added late' },
+      { icon: 'payments', labelFr: 'Recouvrement +40%', labelEn: 'Collection +40%' },
+      { icon: 'arrow_downward', labelFr: 'Charges −5%', labelEn: 'Costs −5%' },
+      { icon: 'check_circle', labelFr: '0 retard ajouté', labelEn: '0 added late' },
     ],
-    params: { incomeChange: 0, expenseChange: -5, lateInvoiceCount: 0, collectionImprovement: 40, rateIncrease: 0, newLoanAmount: 0, assetChange: 0 },
+    params: {
+      incomeChange: 0,
+      expenseChange: -5,
+      lateInvoiceCount: 0,
+      collectionImprovement: 40,
+      rateIncrease: 0,
+      newLoanAmount: 0,
+      assetChange: 0,
+    },
   },
   {
     id: 'austerity',
-    iconFr: "Plan d'austérité", iconEn: 'Austerity Plan',
-    icon: 'savings', color: 'text-purple-600', chipCls: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
-    descFr: 'Réduction drastique des coûts pour préserver la trésorerie : gel des investissements et optimisation des dépenses.',
+    iconFr: "Plan d'austérité",
+    iconEn: 'Austerity Plan',
+    icon: 'savings',
+    color: 'text-purple-600',
+    chipCls: 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+    descFr:
+      'Réduction drastique des coûts pour préserver la trésorerie : gel des investissements et optimisation des dépenses.',
     descEn: 'Drastic cost-cutting to preserve cash: investment freeze and spending optimisation.',
     chips: [
       { icon: 'arrow_downward', labelFr: 'Charges −30%', labelEn: 'Costs −30%' },
-      { icon: 'arrow_downward', labelFr: 'Actifs −10%',  labelEn: 'Assets −10%' },
-      { icon: 'savings',        labelFr: 'Sans emprunt', labelEn: 'No new debt' },
+      { icon: 'arrow_downward', labelFr: 'Actifs −10%', labelEn: 'Assets −10%' },
+      { icon: 'savings', labelFr: 'Sans emprunt', labelEn: 'No new debt' },
     ],
-    params: { incomeChange: -5, expenseChange: -30, lateInvoiceCount: 0, collectionImprovement: 10, rateIncrease: 0, newLoanAmount: 0, assetChange: -10 },
+    params: {
+      incomeChange: -5,
+      expenseChange: -30,
+      lateInvoiceCount: 0,
+      collectionImprovement: 10,
+      rateIncrease: 0,
+      newLoanAmount: 0,
+      assetChange: -10,
+    },
   },
   {
     id: 'expansion',
-    iconFr: 'Expansion financée', iconEn: 'Debt-Financed Growth',
-    icon: 'construction', color: 'text-indigo-600', chipCls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
-    descFr: 'Croissance financée par emprunt : revenus et actifs en hausse, mais charges et endettement augmentent aussi.',
+    iconFr: 'Expansion financée',
+    iconEn: 'Debt-Financed Growth',
+    icon: 'construction',
+    color: 'text-indigo-600',
+    chipCls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+    descFr:
+      'Croissance financée par emprunt : revenus et actifs en hausse, mais charges et endettement augmentent aussi.',
     descEn: 'Debt-funded growth: revenue and assets rise, but costs and debt increase too.',
     chips: [
-      { icon: 'arrow_upward',    labelFr: 'Revenus +25%',    labelEn: 'Revenue +25%' },
-      { icon: 'account_balance', labelFr: '+200 000 TND',    labelEn: '+200,000 TND' },
-      { icon: 'arrow_upward',    labelFr: 'Actifs +50%',     labelEn: 'Assets +50%' },
+      { icon: 'arrow_upward', labelFr: 'Revenus +25%', labelEn: 'Revenue +25%' },
+      { icon: 'account_balance', labelFr: '+200 000 TND', labelEn: '+200,000 TND' },
+      { icon: 'arrow_upward', labelFr: 'Actifs +50%', labelEn: 'Assets +50%' },
     ],
-    params: { incomeChange: 25, expenseChange: 30, lateInvoiceCount: 0, collectionImprovement: 0, rateIncrease: 2, newLoanAmount: 200000, assetChange: 50 },
+    params: {
+      incomeChange: 25,
+      expenseChange: 30,
+      lateInvoiceCount: 0,
+      collectionImprovement: 0,
+      rateIncrease: 2,
+      newLoanAmount: 200000,
+      assetChange: 50,
+    },
   },
 ];
 
 // ─── Preset card with expandable description ─────────────────
-function PresetCard({ p, active, onApply, isFr }) {
+function PresetCard({ p, active, onApply, isFr, blocked }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className={`rounded-xl border-2 transition-all duration-200 overflow-hidden
-      ${active
-        ? 'border-primary bg-primary/10 dark:border-blue-400 dark:bg-blue-900/30'
-        : 'border-outline-variant/30 dark:border-slate-700 hover:border-primary/40 hover:bg-surface-container dark:hover:bg-slate-700/50 bg-surface-container-lowest dark:bg-slate-800'
+    <div
+      className={`rounded-xl border-2 transition-all duration-200 overflow-hidden
+      ${
+        blocked
+          ? 'border-outline-variant/20 dark:border-slate-700/50 bg-surface-container-lowest/40 dark:bg-slate-800/40 opacity-60'
+          : active
+            ? 'border-primary bg-primary/10 dark:border-blue-400 dark:bg-blue-900/30'
+            : 'border-outline-variant/30 dark:border-slate-700 hover:border-primary/40 hover:bg-surface-container dark:hover:bg-slate-700/50 bg-surface-container-lowest dark:bg-slate-800'
       }`}
     >
       {/* ── Main row ── */}
       <div className="flex items-center gap-2 px-3 py-2.5">
         {/* Apply button area */}
         <button
-          onClick={() => onApply(p)}
-          className="flex-1 flex flex-col items-center gap-1 text-center min-w-0"
+          onClick={() => !blocked && onApply(p)}
+          disabled={blocked}
+          title={
+            blocked
+              ? isFr
+                ? 'Non applicable à votre situation financière actuelle'
+                : 'Not applicable to your current financial state'
+              : isFr
+                ? 'Appliquer ce scénario'
+                : 'Apply this preset'
+          }
+          className={`flex-1 flex flex-col items-center gap-1 text-center min-w-0 ${blocked ? 'cursor-not-allowed' : ''}`}
         >
-          <span className={`material-symbols-outlined text-[22px] ${p.color}`}>{p.icon}</span>
+          <span
+            className={`material-symbols-outlined text-[22px] ${blocked ? 'text-on-surface-variant/40 dark:text-slate-600' : p.color}`}
+          >
+            {blocked ? 'block' : p.icon}
+          </span>
           <span className="text-[10px] font-bold text-on-surface dark:text-slate-200 leading-tight line-clamp-2">
             {isFr ? p.iconFr : p.iconEn}
           </span>
+          {blocked && (
+            <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+              {isFr ? 'Non applicable' : 'Not applicable'}
+            </span>
+          )}
         </button>
         {/* Info toggle */}
         <button
-          onClick={() => setOpen(o => !o)}
-          title={isFr ? 'Voir l\'explication' : 'Show explanation'}
+          onClick={() => setOpen((o) => !o)}
+          title={isFr ? "Voir l'explication" : 'Show explanation'}
           className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-all duration-200
-            ${open
-              ? 'bg-primary text-white dark:bg-blue-500'
-              : 'text-on-surface-variant dark:text-slate-500 hover:text-primary dark:hover:text-blue-400'
+            ${
+              open
+                ? 'bg-primary text-white dark:bg-blue-500'
+                : 'text-on-surface-variant dark:text-slate-500 hover:text-primary dark:hover:text-blue-400'
             }`}
         >
           <span className="material-symbols-outlined text-[13px]">{open ? 'close' : 'info'}</span>
@@ -154,7 +287,10 @@ function PresetCard({ p, active, onApply, isFr }) {
             </p>
             <div className="flex flex-wrap gap-1">
               {p.chips.map((c, i) => (
-                <span key={i} className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.chipCls}`}>
+                <span
+                  key={i}
+                  className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${p.chipCls}`}
+                >
                   <span className="material-symbols-outlined text-[9px]">{c.icon}</span>
                   {isFr ? c.labelFr : c.labelEn}
                 </span>
@@ -172,12 +308,20 @@ function Slider({ label, hint, min, max, step = 1, value, onChange, format }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <label className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{label}</label>
-        <span className="text-sm font-bold font-headline text-on-surface dark:text-slate-100">{format(value)}</span>
+        <label className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+          {label}
+        </label>
+        <span className="text-sm font-bold font-headline text-on-surface dark:text-slate-100">
+          {format(value)}
+        </span>
       </div>
       <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(Number(e.target.value))}
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
         className="w-full accent-primary h-1.5 cursor-pointer"
       />
       <div className="flex justify-between text-[9px] text-on-surface-variant dark:text-slate-500 mt-0.5">
@@ -195,21 +339,30 @@ function DimRow({ label, base, sim, delta }) {
   const isBetter = delta < 0;
   return (
     <tr className="border-b border-outline-variant/20 dark:border-slate-700 last:border-0">
-      <td className="py-2.5 pr-4 text-sm text-on-surface dark:text-slate-200 font-medium">{label}</td>
+      <td className="py-2.5 pr-4 text-sm text-on-surface dark:text-slate-200 font-medium">
+        {label}
+      </td>
       <td className="py-2.5 px-3 text-center">
         <span className="text-sm font-bold text-blue-600 dark:text-blue-400">{base}</span>
         <span className="text-[10px] text-on-surface-variant dark:text-slate-500">/100</span>
       </td>
       <td className="py-2.5 px-3 text-center">
-        <span className={`text-sm font-bold ${isWorse ? 'text-red-600 dark:text-red-400' : isBetter ? 'text-emerald-600 dark:text-emerald-400' : 'text-on-surface dark:text-slate-200'}`}>{sim}</span>
+        <span
+          className={`text-sm font-bold ${isWorse ? 'text-red-600 dark:text-red-400' : isBetter ? 'text-emerald-600 dark:text-emerald-400' : 'text-on-surface dark:text-slate-200'}`}
+        >
+          {sim}
+        </span>
         <span className="text-[10px] text-on-surface-variant dark:text-slate-500">/100</span>
       </td>
       <td className="py-2.5 pl-3 text-center">
-        <span className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${isWorse ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : isBetter ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}>
+        <span
+          className={`inline-flex items-center gap-0.5 text-xs font-bold px-2 py-0.5 rounded-full ${isWorse ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : isBetter ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}
+        >
           <span className="material-symbols-outlined text-[11px]">
             {isWorse ? 'arrow_upward' : isBetter ? 'arrow_downward' : 'remove'}
           </span>
-          {delta > 0 ? '+' : ''}{delta}
+          {delta > 0 ? '+' : ''}
+          {delta}
         </span>
       </td>
     </tr>
@@ -222,8 +375,10 @@ function ChartTooltip({ active, payload, label }) {
   return (
     <div className="bg-white dark:bg-slate-800 border border-outline-variant/30 dark:border-slate-600 rounded-lg p-3 shadow-lg text-xs">
       <p className="font-bold text-on-surface dark:text-slate-100 mb-1">{label}</p>
-      {payload.map(p => (
-        <p key={p.name} style={{ color: p.color }}>{p.name}: <strong>{p.value}</strong></p>
+      {payload.map((p) => (
+        <p key={p.name} style={{ color: p.color }}>
+          {p.name}: <strong>{p.value}</strong>
+        </p>
       ))}
     </div>
   );
@@ -231,8 +386,13 @@ function ChartTooltip({ active, payload, label }) {
 
 // ─── MAIN PAGE ───────────────────────────────────────────────
 const DEFAULT_PARAMS = {
-  incomeChange: 0, expenseChange: 0, lateInvoiceCount: 0,
-  collectionImprovement: 0, rateIncrease: 0, newLoanAmount: 0, assetChange: 0,
+  incomeChange: 0,
+  expenseChange: 0,
+  lateInvoiceCount: 0,
+  collectionImprovement: 0,
+  rateIncrease: 0,
+  newLoanAmount: 0,
+  assetChange: 0,
 };
 
 export default function Simulate() {
@@ -240,93 +400,119 @@ export default function Simulate() {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activePreset, setActivePreset] = useState(null);
+  const [validScenarios, setValidScenarios] = useState(null);
   const { addToast } = useToast();
   const { lang } = useLang();
 
   const isFr = lang === 'fr';
 
-  const l = isFr ? {
-    title: 'Simulation de Scénarios',
-    subtitle: 'Simulez l\'impact de 7 leviers financiers sur votre profil de risque',
-    section1: 'Revenus & Coûts',
-    section2: 'Factures & Recouvrement',
-    section3: 'Dettes & Actifs',
-    presets: 'Scénarios prédéfinis',
-    reset: 'Réinitialiser',
-    run: 'Lancer la simulation',
-    running: 'Calcul en cours...',
-    baselineTitle: 'Situation actuelle',
-    simTitle: 'Situation simulée',
-    breakdown: 'Décomposition par dimension',
-    dimScore: 'Score global',
-    dimCashFlow: 'Flux de trésorerie',
-    dimInvoices: 'Factures',
-    dimDebt: 'Endettement',
-    dimLoan: 'Charge prêts',
-    colCurrent: 'Actuel',
-    colSimulated: 'Simulé',
-    colDelta: 'Variation',
-    narrative: 'Analyse narrative',
-    deltaTitle: 'Variations clés',
-    scoreLabel: 'Score de risque',
-    cashLabel: 'Flux de trésorerie',
-    paymentsLabel: 'Mensualités',
-    debtLabel: 'Endettement total',
-    assetsLabel: 'Actifs totaux',
-    income: 'Revenus', expenses: 'Dépenses',
-    incomeHint: 'Variation annuelle', expenseHint: 'Variation annuelle',
-    lateHint: 'Factures pending → en retard',
-    collectionHint: '+: recouvrement, −: dégradation',
-    rateHint: 'Impact sur emprunts existants',
-    loanHint: 'Nouveau crédit (durée 5 ans)',
-    assetHint: 'Acquisition/cession d\'actifs',
-    chartTitle: 'Comparaison des dimensions',
-    impactLabel: 'Impact simulé',
-  } : {
-    title: 'Scenario Simulation',
-    subtitle: 'Simulate the impact of 7 financial levers on your risk profile',
-    section1: 'Revenue & Costs',
-    section2: 'Invoices & Collections',
-    section3: 'Debt & Assets',
-    presets: 'Quick Presets',
-    reset: 'Reset',
-    run: 'Run Simulation',
-    running: 'Calculating...',
-    baselineTitle: 'Current Situation',
-    simTitle: 'Simulated Situation',
-    breakdown: 'Dimension Breakdown',
-    dimScore: 'Global Score',
-    dimCashFlow: 'Cash Flow',
-    dimInvoices: 'Invoices',
-    dimDebt: 'Debt',
-    dimLoan: 'Loan Burden',
-    colCurrent: 'Current',
-    colSimulated: 'Simulated',
-    colDelta: 'Change',
-    narrative: 'Narrative Analysis',
-    deltaTitle: 'Key Changes',
-    scoreLabel: 'Risk Score',
-    cashLabel: 'Cash Flow',
-    paymentsLabel: 'Monthly Payments',
-    debtLabel: 'Total Debt',
-    assetsLabel: 'Total Assets',
-    income: 'Revenue', expenses: 'Expenses',
-    incomeHint: 'Annual variation', expenseHint: 'Annual variation',
-    lateHint: 'Pending → turning late',
-    collectionHint: '+: recovery, −: deterioration',
-    rateHint: 'Impact on existing loans',
-    loanHint: 'New credit (5-year term)',
-    assetHint: 'Asset acquisition/sale',
-    chartTitle: 'Dimension Comparison',
-    impactLabel: 'Simulated Impact',
-  };
+  // Fetch current financial state to gate optimistic presets — you can't simulate
+  // aggressive growth/expansion when the company isn't healthy enough for it.
+  useEffect(() => {
+    let alive = true;
+    api
+      .get('/ai/goals/recommended')
+      .then(({ data }) => {
+        if (alive) setValidScenarios(data.validScenarios || null);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // Optimistic presets are blocked when "growth" is not a logical option for the state.
+  const optimisticBlocked = validScenarios !== null && !validScenarios.includes('growth');
+  const isPresetBlocked = (id) => optimisticBlocked && (id === 'growth' || id === 'expansion');
+
+  const l = isFr
+    ? {
+        title: 'Simulation de Scénarios',
+        subtitle: "Simulez l'impact de 7 leviers financiers sur votre profil de risque",
+        section1: 'Revenus & Coûts',
+        section2: 'Factures & Recouvrement',
+        section3: 'Dettes & Actifs',
+        presets: 'Scénarios prédéfinis',
+        reset: 'Réinitialiser',
+        run: 'Lancer la simulation',
+        running: 'Calcul en cours...',
+        baselineTitle: 'Situation actuelle',
+        simTitle: 'Situation simulée',
+        breakdown: 'Décomposition par dimension',
+        dimScore: 'Score global',
+        dimCashFlow: 'Flux de trésorerie',
+        dimInvoices: 'Factures',
+        dimDebt: 'Endettement',
+        dimLoan: 'Charge prêts',
+        colCurrent: 'Actuel',
+        colSimulated: 'Simulé',
+        colDelta: 'Variation',
+        narrative: 'Analyse narrative',
+        deltaTitle: 'Variations clés',
+        scoreLabel: 'Score de risque',
+        cashLabel: 'Flux de trésorerie',
+        paymentsLabel: 'Mensualités',
+        debtLabel: 'Endettement total',
+        assetsLabel: 'Actifs totaux',
+        income: 'Revenus',
+        expenses: 'Dépenses',
+        incomeHint: 'Variation annuelle',
+        expenseHint: 'Variation annuelle',
+        lateHint: 'Factures pending → en retard',
+        collectionHint: '+: recouvrement, −: dégradation',
+        rateHint: 'Impact sur emprunts existants',
+        loanHint: 'Nouveau crédit (durée 5 ans)',
+        assetHint: "Acquisition/cession d'actifs",
+        chartTitle: 'Comparaison des dimensions',
+        impactLabel: 'Impact simulé',
+      }
+    : {
+        title: 'Scenario Simulation',
+        subtitle: 'Simulate the impact of 7 financial levers on your risk profile',
+        section1: 'Revenue & Costs',
+        section2: 'Invoices & Collections',
+        section3: 'Debt & Assets',
+        presets: 'Quick Presets',
+        reset: 'Reset',
+        run: 'Run Simulation',
+        running: 'Calculating...',
+        baselineTitle: 'Current Situation',
+        simTitle: 'Simulated Situation',
+        breakdown: 'Dimension Breakdown',
+        dimScore: 'Global Score',
+        dimCashFlow: 'Cash Flow',
+        dimInvoices: 'Invoices',
+        dimDebt: 'Debt',
+        dimLoan: 'Loan Burden',
+        colCurrent: 'Current',
+        colSimulated: 'Simulated',
+        colDelta: 'Change',
+        narrative: 'Narrative Analysis',
+        deltaTitle: 'Key Changes',
+        scoreLabel: 'Risk Score',
+        cashLabel: 'Cash Flow',
+        paymentsLabel: 'Monthly Payments',
+        debtLabel: 'Total Debt',
+        assetsLabel: 'Total Assets',
+        income: 'Revenue',
+        expenses: 'Expenses',
+        incomeHint: 'Annual variation',
+        expenseHint: 'Annual variation',
+        lateHint: 'Pending → turning late',
+        collectionHint: '+: recovery, −: deterioration',
+        rateHint: 'Impact on existing loans',
+        loanHint: 'New credit (5-year term)',
+        assetHint: 'Asset acquisition/sale',
+        chartTitle: 'Dimension Comparison',
+        impactLabel: 'Simulated Impact',
+      };
 
   const set = useCallback((key, val) => {
-    setParams(prev => ({ ...prev, [key]: val }));
+    setParams((prev) => ({ ...prev, [key]: val }));
     setActivePreset(null);
   }, []);
 
-  const applyPreset = useCallback(preset => {
+  const applyPreset = useCallback((preset) => {
     setParams(preset.params);
     setActivePreset(preset.id);
   }, []);
@@ -343,7 +529,11 @@ export default function Simulate() {
       const { data } = await api.post('/ai/simulate', params);
       setResult(data);
     } catch {
-      addToast('error', isFr ? 'Erreur' : 'Error', isFr ? 'La simulation a échoué' : 'Simulation failed');
+      addToast(
+        'error',
+        isFr ? 'Erreur' : 'Error',
+        isFr ? 'La simulation a échoué' : 'Simulation failed'
+      );
     } finally {
       setLoading(false);
     }
@@ -360,27 +550,44 @@ export default function Simulate() {
     }
   }, [result]);
 
-  const impactCfg = result ? (IMPACT_CFG[result.impact] || IMPACT_CFG.neutral) : null;
+  const impactCfg = result ? IMPACT_CFG[result.impact] || IMPACT_CFG.neutral : null;
 
   // Safely read breakdown — guards against old API response without breakdown field
-  const baseBreak  = result?.baseline?.breakdown  || {};
-  const simBreak   = result?.simulated?.breakdown || {};
-  const deltaBreak = result?.delta?.breakdown     || {};
+  const baseBreak = result?.baseline?.breakdown || {};
+  const simBreak = result?.simulated?.breakdown || {};
+  const deltaBreak = result?.delta?.breakdown || {};
 
   // Chart data — dimension scores
-  const chartData = result ? [
-    { name: l.dimCashFlow, [l.colCurrent]: baseBreak.cashFlow   ?? 0, [l.colSimulated]: simBreak.cashFlow   ?? 0 },
-    { name: l.dimInvoices, [l.colCurrent]: baseBreak.invoices   ?? 0, [l.colSimulated]: simBreak.invoices   ?? 0 },
-    { name: l.dimDebt,     [l.colCurrent]: baseBreak.debt       ?? 0, [l.colSimulated]: simBreak.debt       ?? 0 },
-    { name: l.dimLoan,     [l.colCurrent]: baseBreak.loanBurden ?? 0, [l.colSimulated]: simBreak.loanBurden ?? 0 },
-  ] : [];
+  const chartData = result
+    ? [
+        {
+          name: l.dimCashFlow,
+          [l.colCurrent]: baseBreak.cashFlow ?? 0,
+          [l.colSimulated]: simBreak.cashFlow ?? 0,
+        },
+        {
+          name: l.dimInvoices,
+          [l.colCurrent]: baseBreak.invoices ?? 0,
+          [l.colSimulated]: simBreak.invoices ?? 0,
+        },
+        {
+          name: l.dimDebt,
+          [l.colCurrent]: baseBreak.debt ?? 0,
+          [l.colSimulated]: simBreak.debt ?? 0,
+        },
+        {
+          name: l.dimLoan,
+          [l.colCurrent]: baseBreak.loanBurden ?? 0,
+          [l.colSimulated]: simBreak.loanBurden ?? 0,
+        },
+      ]
+    : [];
 
-  const pct = v => `${v > 0 ? '+' : ''}${v}%`;
-  const pctPos = v => `+${v}%`;
+  const pct = (v) => `${v > 0 ? '+' : ''}${v}%`;
+  const pctPos = (v) => `+${v}%`;
 
   return (
     <div className="space-y-8">
-
       {/* ── Header ─────────────────────────────────────────── */}
       <section>
         <h2 className="text-3xl font-extrabold font-headline tracking-tight text-on-surface dark:text-slate-100">
@@ -394,14 +601,27 @@ export default function Simulate() {
         <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest mb-4">
           {l.presets}
         </h3>
+        {optimisticBlocked && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 px-3 py-2">
+            <span className="material-symbols-outlined text-[16px] text-amber-600 dark:text-amber-400 mt-0.5">
+              info
+            </span>
+            <p className="text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+              {isFr
+                ? "Vu votre situation financière actuelle, les scénarios optimistes (Croissance rapide, Expansion financée) sont désactivés : ils ne sont pas applicables tant que la santé financière n'est pas rétablie."
+                : 'Given your current financial state, the optimistic presets (Strong Growth, Debt-Financed Growth) are disabled — they are not applicable until financial health recovers.'}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 items-start">
-          {PRESETS.map(p => (
+          {PRESETS.map((p) => (
             <PresetCard
               key={p.id}
               p={p}
               active={activePreset === p.id}
               onApply={applyPreset}
               isFr={isFr}
+              blocked={isPresetBlocked(p.id)}
             />
           ))}
         </div>
@@ -409,25 +629,34 @@ export default function Simulate() {
 
       {/* ── Sliders ─────────────────────────────────────────── */}
       <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6 space-y-8">
-
         {/* Section 1: Revenue & Costs */}
         <div>
           <div className="flex items-center gap-2 mb-5">
-            <span className="material-symbols-outlined text-[18px] text-blue-500">attach_money</span>
-            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{l.section1}</h3>
+            <span className="material-symbols-outlined text-[18px] text-blue-500">
+              attach_money
+            </span>
+            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+              {l.section1}
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Slider
-              label={l.income} hint={l.incomeHint}
-              min={-50} max={100} value={params.incomeChange}
-              onChange={v => set('incomeChange', v)}
-              format={v => `${v > 0 ? '+' : ''}${v}%`}
+              label={l.income}
+              hint={l.incomeHint}
+              min={-50}
+              max={100}
+              value={params.incomeChange}
+              onChange={(v) => set('incomeChange', v)}
+              format={(v) => `${v > 0 ? '+' : ''}${v}%`}
             />
             <Slider
-              label={l.expenses} hint={l.expenseHint}
-              min={-50} max={100} value={params.expenseChange}
-              onChange={v => set('expenseChange', v)}
-              format={v => `${v > 0 ? '+' : ''}${v}%`}
+              label={l.expenses}
+              hint={l.expenseHint}
+              min={-50}
+              max={100}
+              value={params.expenseChange}
+              onChange={(v) => set('expenseChange', v)}
+              format={(v) => `${v > 0 ? '+' : ''}${v}%`}
             />
           </div>
         </div>
@@ -437,21 +666,31 @@ export default function Simulate() {
         {/* Section 2: Invoices */}
         <div>
           <div className="flex items-center gap-2 mb-5">
-            <span className="material-symbols-outlined text-[18px] text-amber-500">receipt_long</span>
-            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{l.section2}</h3>
+            <span className="material-symbols-outlined text-[18px] text-amber-500">
+              receipt_long
+            </span>
+            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+              {l.section2}
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Slider
-              label={isFr ? 'Factures en retard supplémentaires' : 'Additional Late Invoices'} hint={l.lateHint}
-              min={0} max={20} value={params.lateInvoiceCount}
-              onChange={v => set('lateInvoiceCount', v)}
-              format={v => `+${v}`}
+              label={isFr ? 'Factures en retard supplémentaires' : 'Additional Late Invoices'}
+              hint={l.lateHint}
+              min={0}
+              max={20}
+              value={params.lateInvoiceCount}
+              onChange={(v) => set('lateInvoiceCount', v)}
+              format={(v) => `+${v}`}
             />
             <Slider
-              label={isFr ? 'Amélioration du recouvrement (%)' : 'Collection Rate Change (%)'} hint={l.collectionHint}
-              min={-50} max={50} value={params.collectionImprovement}
-              onChange={v => set('collectionImprovement', v)}
-              format={v => `${v > 0 ? '+' : ''}${v}%`}
+              label={isFr ? 'Amélioration du recouvrement (%)' : 'Collection Rate Change (%)'}
+              hint={l.collectionHint}
+              min={-50}
+              max={50}
+              value={params.collectionImprovement}
+              onChange={(v) => set('collectionImprovement', v)}
+              format={(v) => `${v > 0 ? '+' : ''}${v}%`}
             />
           </div>
         </div>
@@ -461,27 +700,42 @@ export default function Simulate() {
         {/* Section 3: Debt & Assets */}
         <div>
           <div className="flex items-center gap-2 mb-5">
-            <span className="material-symbols-outlined text-[18px] text-purple-500">account_balance</span>
-            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{l.section3}</h3>
+            <span className="material-symbols-outlined text-[18px] text-purple-500">
+              account_balance
+            </span>
+            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+              {l.section3}
+            </h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Slider
-              label={isFr ? 'Hausse du taux d\'intérêt (%)' : 'Interest Rate Change (%)'} hint={l.rateHint}
-              min={-5} max={15} step={0.5} value={params.rateIncrease}
-              onChange={v => set('rateIncrease', v)}
-              format={v => `${v > 0 ? '+' : ''}${v}%`}
+              label={isFr ? "Hausse du taux d'intérêt (%)" : 'Interest Rate Change (%)'}
+              hint={l.rateHint}
+              min={-5}
+              max={15}
+              step={0.5}
+              value={params.rateIncrease}
+              onChange={(v) => set('rateIncrease', v)}
+              format={(v) => `${v > 0 ? '+' : ''}${v}%`}
             />
             <Slider
-              label={isFr ? 'Nouveau prêt (TND)' : 'New Loan (TND)'} hint={l.loanHint}
-              min={0} max={500000} step={5000} value={params.newLoanAmount}
-              onChange={v => set('newLoanAmount', v)}
-              format={v => v === 0 ? '0' : `+${v.toLocaleString('fr-FR')}`}
+              label={isFr ? 'Nouveau prêt (TND)' : 'New Loan (TND)'}
+              hint={l.loanHint}
+              min={0}
+              max={500000}
+              step={5000}
+              value={params.newLoanAmount}
+              onChange={(v) => set('newLoanAmount', v)}
+              format={(v) => (v === 0 ? '0' : `+${v.toLocaleString('fr-FR')}`)}
             />
             <Slider
-              label={isFr ? 'Variation des actifs (%)' : 'Asset Change (%)'} hint={l.assetHint}
-              min={-100} max={100} value={params.assetChange}
-              onChange={v => set('assetChange', v)}
-              format={v => `${v > 0 ? '+' : ''}${v}%`}
+              label={isFr ? 'Variation des actifs (%)' : 'Asset Change (%)'}
+              hint={l.assetHint}
+              min={-100}
+              max={100}
+              value={params.assetChange}
+              onChange={(v) => set('assetChange', v)}
+              format={(v) => `${v > 0 ? '+' : ''}${v}%`}
             />
           </div>
         </div>
@@ -489,10 +743,13 @@ export default function Simulate() {
         {/* Actions */}
         <div className="flex items-center gap-3 pt-2">
           <button
-            onClick={run} disabled={loading}
+            onClick={run}
+            disabled={loading}
             className="executive-gradient text-white text-sm font-bold px-8 py-3 rounded-xl hover:opacity-90 disabled:opacity-50 flex items-center gap-2 transition-all"
           >
-            <span className="material-symbols-outlined text-[18px]">{loading ? 'hourglass_top' : 'play_arrow'}</span>
+            <span className="material-symbols-outlined text-[18px]">
+              {loading ? 'hourglass_top' : 'play_arrow'}
+            </span>
             {loading ? l.running : l.run}
           </button>
           <button
@@ -508,13 +765,17 @@ export default function Simulate() {
       {/* ── Results ─────────────────────────────────────────── */}
       {result && (
         <div ref={resultRef} className="space-y-6 animate-fade-in scroll-mt-24">
-
           {/* Impact badge */}
           <div className="flex justify-center">
-            <div className={`flex items-center gap-2 px-5 py-2.5 rounded-full ${impactCfg.bg} ${impactCfg.text} font-bold text-sm`}>
+            <div
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full ${impactCfg.bg} ${impactCfg.text} font-bold text-sm`}
+            >
               <span className="material-symbols-outlined text-[18px]">{impactCfg.icon}</span>
               {l.impactLabel}: {isFr ? impactCfg.labelFr : impactCfg.labelEn}
-              <span className="ml-1 opacity-70">({result.delta.scoreChange > 0 ? '+' : ''}{result.delta.scoreChange} pts)</span>
+              <span className="ml-1 opacity-70">
+                ({result.delta.scoreChange > 0 ? '+' : ''}
+                {result.delta.scoreChange} pts)
+              </span>
             </div>
           </div>
 
@@ -523,79 +784,154 @@ export default function Simulate() {
             {/* Baseline */}
             <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6 border border-blue-200/50 dark:border-blue-800/30">
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-[18px] text-blue-600">radio_button_checked</span>
-                <h3 className="text-sm font-bold text-on-surface dark:text-slate-100">{l.baselineTitle}</h3>
+                <span className="material-symbols-outlined text-[18px] text-blue-600">
+                  radio_button_checked
+                </span>
+                <h3 className="text-sm font-bold text-on-surface dark:text-slate-100">
+                  {l.baselineTitle}
+                </h3>
               </div>
               <div className="flex items-end gap-2 mb-4">
-                <span className="text-5xl font-extrabold font-headline text-blue-600 dark:text-blue-400">{result.baseline.score}</span>
-                <span className="text-lg text-on-surface-variant dark:text-slate-400 mb-1">/100</span>
+                <span className="text-5xl font-extrabold font-headline text-blue-600 dark:text-blue-400">
+                  {result.baseline.score}
+                </span>
+                <span className="text-lg text-on-surface-variant dark:text-slate-400 mb-1">
+                  /100
+                </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-4">
-                <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${result.baseline.score}%` }} />
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all"
+                  style={{ width: `${result.baseline.score}%` }}
+                />
               </div>
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant dark:text-slate-400">{l.cashLabel}</span>
-                  <span className={`font-medium ${result.baseline.cashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  <span
+                    className={`font-medium ${result.baseline.cashFlow >= 0 ? 'text-emerald-600' : 'text-red-600'}`}
+                  >
                     {fmtAbs(result.baseline.cashFlow)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-on-surface-variant dark:text-slate-400">{l.paymentsLabel}</span>
-                  <span className="font-medium text-on-surface dark:text-slate-200">{fmtAbs(result.baseline.monthlyPayments)}</span>
+                  <span className="text-on-surface-variant dark:text-slate-400">
+                    {l.paymentsLabel}
+                  </span>
+                  <span className="font-medium text-on-surface dark:text-slate-200">
+                    {fmtAbs(result.baseline.monthlyPayments)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant dark:text-slate-400">{l.debtLabel}</span>
-                  <span className="font-medium text-on-surface dark:text-slate-200">{fmtAbs(result.baseline.totalDebt)}</span>
+                  <span className="font-medium text-on-surface dark:text-slate-200">
+                    {fmtAbs(result.baseline.totalDebt)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-on-surface-variant dark:text-slate-400">{l.assetsLabel}</span>
-                  <span className="font-medium text-on-surface dark:text-slate-200">{fmtAbs(result.baseline.totalAssets)}</span>
+                  <span className="text-on-surface-variant dark:text-slate-400">
+                    {l.assetsLabel}
+                  </span>
+                  <span className="font-medium text-on-surface dark:text-slate-200">
+                    {fmtAbs(result.baseline.totalAssets)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-on-surface-variant dark:text-slate-400">{isFr ? 'Factures en retard' : 'Late Invoices'}</span>
-                  <span className="font-medium text-on-surface dark:text-slate-200">{result.baseline.lateInvoices}</span>
+                  <span className="text-on-surface-variant dark:text-slate-400">
+                    {isFr ? 'Factures en retard' : 'Late Invoices'}
+                  </span>
+                  <span className="font-medium text-on-surface dark:text-slate-200">
+                    {result.baseline.lateInvoices}
+                  </span>
                 </div>
               </div>
             </div>
 
             {/* Simulated */}
-            <div className={`bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6 border ${
-              result.delta.scoreChange > 5 ? 'border-red-200/50 dark:border-red-800/30' :
-              result.delta.scoreChange < -5 ? 'border-emerald-200/50 dark:border-emerald-800/30' :
-              'border-outline-variant/30 dark:border-slate-700'
-            }`}>
+            <div
+              className={`bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6 border ${
+                result.delta.scoreChange > 5
+                  ? 'border-red-200/50 dark:border-red-800/30'
+                  : result.delta.scoreChange < -5
+                    ? 'border-emerald-200/50 dark:border-emerald-800/30'
+                    : 'border-outline-variant/30 dark:border-slate-700'
+              }`}
+            >
               <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-[18px] text-amber-500">science</span>
-                <h3 className="text-sm font-bold text-on-surface dark:text-slate-100">{l.simTitle}</h3>
+                <span className="material-symbols-outlined text-[18px] text-amber-500">
+                  science
+                </span>
+                <h3 className="text-sm font-bold text-on-surface dark:text-slate-100">
+                  {l.simTitle}
+                </h3>
               </div>
               <div className="flex items-end gap-2 mb-4">
-                <span className={`text-5xl font-extrabold font-headline ${
-                  result.simulated.score > result.baseline.score ? 'text-red-600 dark:text-red-400' :
-                  result.simulated.score < result.baseline.score ? 'text-emerald-600 dark:text-emerald-400' :
-                  'text-on-surface dark:text-slate-100'
-                }`}>{result.simulated.score}</span>
-                <span className="text-lg text-on-surface-variant dark:text-slate-400 mb-1">/100</span>
-                <span className={`ml-2 text-sm font-bold mb-1 ${result.delta.scoreChange > 0 ? 'text-red-600' : result.delta.scoreChange < 0 ? 'text-emerald-600' : 'text-slate-500'}`}>
-                  ({result.delta.scoreChange > 0 ? '+' : ''}{result.delta.scoreChange})
+                <span
+                  className={`text-5xl font-extrabold font-headline ${
+                    result.simulated.score > result.baseline.score
+                      ? 'text-red-600 dark:text-red-400'
+                      : result.simulated.score < result.baseline.score
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-on-surface dark:text-slate-100'
+                  }`}
+                >
+                  {result.simulated.score}
+                </span>
+                <span className="text-lg text-on-surface-variant dark:text-slate-400 mb-1">
+                  /100
+                </span>
+                <span
+                  className={`ml-2 text-sm font-bold mb-1 ${result.delta.scoreChange > 0 ? 'text-red-600' : result.delta.scoreChange < 0 ? 'text-emerald-600' : 'text-slate-500'}`}
+                >
+                  ({result.delta.scoreChange > 0 ? '+' : ''}
+                  {result.delta.scoreChange})
                 </span>
               </div>
               <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-4">
                 <div
                   className={`h-2 rounded-full transition-all ${
-                    result.simulated.score >= 70 ? 'bg-red-500' :
-                    result.simulated.score >= 40 ? 'bg-amber-500' : 'bg-emerald-500'
+                    result.simulated.score >= 70
+                      ? 'bg-red-500'
+                      : result.simulated.score >= 40
+                        ? 'bg-amber-500'
+                        : 'bg-emerald-500'
                   }`}
                   style={{ width: `${result.simulated.score}%` }}
                 />
               </div>
               <div className="space-y-1.5 text-sm">
                 {[
-                  { label: l.cashLabel, base: result.baseline.cashFlow, sim: result.simulated.cashFlow, invert: false },
-                  { label: l.paymentsLabel, base: result.baseline.monthlyPayments, sim: result.simulated.monthlyPayments, invert: true },
-                  { label: l.debtLabel, base: result.baseline.totalDebt, sim: result.simulated.totalDebt, invert: true },
-                  { label: l.assetsLabel, base: result.baseline.totalAssets, sim: result.simulated.totalAssets, invert: false },
-                  { label: isFr ? 'Factures en retard' : 'Late Invoices', base: result.baseline.lateInvoices, sim: result.simulated.lateInvoices, invert: true, raw: true },
+                  {
+                    label: l.cashLabel,
+                    base: result.baseline.cashFlow,
+                    sim: result.simulated.cashFlow,
+                    invert: false,
+                  },
+                  {
+                    label: l.paymentsLabel,
+                    base: result.baseline.monthlyPayments,
+                    sim: result.simulated.monthlyPayments,
+                    invert: true,
+                  },
+                  {
+                    label: l.debtLabel,
+                    base: result.baseline.totalDebt,
+                    sim: result.simulated.totalDebt,
+                    invert: true,
+                  },
+                  {
+                    label: l.assetsLabel,
+                    base: result.baseline.totalAssets,
+                    sim: result.simulated.totalAssets,
+                    invert: false,
+                  },
+                  {
+                    label: isFr ? 'Factures en retard' : 'Late Invoices',
+                    base: result.baseline.lateInvoices,
+                    sim: result.simulated.lateInvoices,
+                    invert: true,
+                    raw: true,
+                  },
                 ].map(({ label, base, sim, invert, raw }) => {
                   const delta = sim - base;
                   const worse = invert ? delta > 0 : delta < 0;
@@ -603,11 +939,15 @@ export default function Simulate() {
                   return (
                     <div key={label} className="flex justify-between">
                       <span className="text-on-surface-variant dark:text-slate-400">{label}</span>
-                      <span className={`font-medium ${worse ? 'text-red-600 dark:text-red-400' : better ? 'text-emerald-600 dark:text-emerald-400' : 'text-on-surface dark:text-slate-200'}`}>
+                      <span
+                        className={`font-medium ${worse ? 'text-red-600 dark:text-red-400' : better ? 'text-emerald-600 dark:text-emerald-400' : 'text-on-surface dark:text-slate-200'}`}
+                      >
                         {raw ? sim : fmtAbs(sim)}
                         {delta !== 0 && (
                           <span className="ml-1 text-xs opacity-70">
-                            ({delta > 0 ? '+' : ''}{raw ? delta : Math.round(delta).toLocaleString('fr-FR')}{raw ? '' : ' TND'})
+                            ({delta > 0 ? '+' : ''}
+                            {raw ? delta : Math.round(delta).toLocaleString('fr-FR')}
+                            {raw ? '' : ' TND'})
                           </span>
                         )}
                       </span>
@@ -620,39 +960,77 @@ export default function Simulate() {
 
           {/* Dimension breakdown table + chart */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
             {/* Breakdown table */}
             <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6">
               <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-primary">table_chart</span>
+                <span className="material-symbols-outlined text-[18px] text-primary">
+                  table_chart
+                </span>
                 {l.breakdown}
               </h3>
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-outline-variant/30 dark:border-slate-700">
-                    <th className="pb-2 text-left text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{isFr ? 'Dimension' : 'Dimension'}</th>
-                    <th className="pb-2 text-center text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{l.colCurrent}</th>
-                    <th className="pb-2 text-center text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{l.colSimulated}</th>
-                    <th className="pb-2 text-center text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">{l.colDelta}</th>
+                    <th className="pb-2 text-left text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+                      {isFr ? 'Dimension' : 'Dimension'}
+                    </th>
+                    <th className="pb-2 text-center text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+                      {l.colCurrent}
+                    </th>
+                    <th className="pb-2 text-center text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+                      {l.colSimulated}
+                    </th>
+                    <th className="pb-2 text-center text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest">
+                      {l.colDelta}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <DimRow label={`${l.dimScore} (global)`} base={result.baseline.score} sim={result.simulated.score} delta={result.delta.scoreChange} />
-                  <DimRow label={l.dimCashFlow}  base={baseBreak.cashFlow   ?? '—'} sim={simBreak.cashFlow   ?? '—'} delta={deltaBreak.cashFlow   ?? 0} />
-                  <DimRow label={l.dimInvoices}  base={baseBreak.invoices   ?? '—'} sim={simBreak.invoices   ?? '—'} delta={deltaBreak.invoices   ?? 0} />
-                  <DimRow label={l.dimDebt}      base={baseBreak.debt       ?? '—'} sim={simBreak.debt       ?? '—'} delta={deltaBreak.debt       ?? 0} />
-                  <DimRow label={l.dimLoan}      base={baseBreak.loanBurden ?? '—'} sim={simBreak.loanBurden ?? '—'} delta={deltaBreak.loanBurden ?? 0} />
+                  <DimRow
+                    label={`${l.dimScore} (global)`}
+                    base={result.baseline.score}
+                    sim={result.simulated.score}
+                    delta={result.delta.scoreChange}
+                  />
+                  <DimRow
+                    label={l.dimCashFlow}
+                    base={baseBreak.cashFlow ?? '—'}
+                    sim={simBreak.cashFlow ?? '—'}
+                    delta={deltaBreak.cashFlow ?? 0}
+                  />
+                  <DimRow
+                    label={l.dimInvoices}
+                    base={baseBreak.invoices ?? '—'}
+                    sim={simBreak.invoices ?? '—'}
+                    delta={deltaBreak.invoices ?? 0}
+                  />
+                  <DimRow
+                    label={l.dimDebt}
+                    base={baseBreak.debt ?? '—'}
+                    sim={simBreak.debt ?? '—'}
+                    delta={deltaBreak.debt ?? 0}
+                  />
+                  <DimRow
+                    label={l.dimLoan}
+                    base={baseBreak.loanBurden ?? '—'}
+                    sim={simBreak.loanBurden ?? '—'}
+                    delta={deltaBreak.loanBurden ?? 0}
+                  />
                 </tbody>
               </table>
               <p className="mt-3 text-[10px] text-on-surface-variant dark:text-slate-500 italic">
-                {isFr ? '* Scores par dimension sur 100. Plus élevé = risque plus élevé.' : '* Dimension scores out of 100. Higher = more risk.'}
+                {isFr
+                  ? '* Scores par dimension sur 100. Plus élevé = risque plus élevé.'
+                  : '* Dimension scores out of 100. Higher = more risk.'}
               </p>
             </div>
 
             {/* Bar chart */}
             <div className="bg-surface-container-lowest dark:bg-slate-800 rounded-2xl p-6">
               <h3 className="text-sm font-bold text-on-surface dark:text-slate-100 mb-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-primary">bar_chart</span>
+                <span className="material-symbols-outlined text-[18px] text-primary">
+                  bar_chart
+                </span>
                 {l.chartTitle}
               </h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -661,21 +1039,36 @@ export default function Simulate() {
                   <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#94a3b8' }} />
                   <Tooltip content={<ChartTooltip />} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey={l.colCurrent} fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                  <Bar
+                    dataKey={l.colCurrent}
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={32}
+                  />
                   <Bar dataKey={l.colSimulated} radius={[4, 4, 0, 0]} maxBarSize={32}>
                     {chartData.map((entry, i) => {
                       const sim = entry[l.colSimulated];
                       const base = entry[l.colCurrent];
-                      const color = sim > base + 2 ? '#ef4444' : sim < base - 2 ? '#10b981' : '#f59e0b';
+                      const color =
+                        sim > base + 2 ? '#ef4444' : sim < base - 2 ? '#10b981' : '#f59e0b';
                       return <Cell key={i} fill={color} />;
                     })}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex items-center gap-4 mt-2 justify-center text-[10px] text-on-surface-variant dark:text-slate-400">
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />{l.colCurrent}</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-red-500 inline-block" />{isFr ? 'Simulé (dégradé)' : 'Simulated (worse)'}</span>
-                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />{isFr ? 'Simulé (amélioré)' : 'Simulated (better)'}</span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />
+                  {l.colCurrent}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm bg-red-500 inline-block" />
+                  {isFr ? 'Simulé (dégradé)' : 'Simulated (worse)'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" />
+                  {isFr ? 'Simulé (amélioré)' : 'Simulated (better)'}
+                </span>
               </div>
             </div>
           </div>
@@ -695,28 +1088,60 @@ export default function Simulate() {
 
           {/* Key delta cards */}
           <div>
-            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest mb-4">{l.deltaTitle}</h3>
+            <h3 className="text-xs font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest mb-4">
+              {l.deltaTitle}
+            </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: l.scoreLabel, value: result.delta.scoreChange, suffix: ' pts', invert: true },
-                { label: l.cashLabel, value: result.delta.cashFlowChange, suffix: ' TND', invert: false },
-                { label: l.paymentsLabel, value: result.delta.paymentsChange, suffix: ' TND', invert: true },
-                { label: l.debtLabel, value: result.delta.debtChange, suffix: ' TND', invert: true },
+                {
+                  label: l.scoreLabel,
+                  value: result.delta.scoreChange,
+                  suffix: ' pts',
+                  invert: true,
+                },
+                {
+                  label: l.cashLabel,
+                  value: result.delta.cashFlowChange,
+                  suffix: ' TND',
+                  invert: false,
+                },
+                {
+                  label: l.paymentsLabel,
+                  value: result.delta.paymentsChange,
+                  suffix: ' TND',
+                  invert: true,
+                },
+                {
+                  label: l.debtLabel,
+                  value: result.delta.debtChange,
+                  suffix: ' TND',
+                  invert: true,
+                },
               ].map(({ label, value, suffix, invert }) => {
                 const worse = invert ? value > 0 : value < 0;
                 const better = invert ? value < 0 : value > 0;
                 return (
-                  <div key={label} className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-4 border border-outline-variant/20 dark:border-slate-700">
-                    <p className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-                    <p className={`text-2xl font-extrabold font-headline ${worse ? 'text-red-600 dark:text-red-400' : better ? 'text-emerald-600 dark:text-emerald-400' : 'text-on-surface dark:text-slate-100'}`}>
-                      {value > 0 ? '+' : ''}{typeof value === 'number' ? Math.round(value).toLocaleString('fr-FR') : value}{suffix}
+                  <div
+                    key={label}
+                    className="bg-surface-container-lowest dark:bg-slate-800 rounded-xl p-4 border border-outline-variant/20 dark:border-slate-700"
+                  >
+                    <p className="text-[10px] font-bold text-on-surface-variant dark:text-slate-400 uppercase tracking-widest mb-2">
+                      {label}
+                    </p>
+                    <p
+                      className={`text-2xl font-extrabold font-headline ${worse ? 'text-red-600 dark:text-red-400' : better ? 'text-emerald-600 dark:text-emerald-400' : 'text-on-surface dark:text-slate-100'}`}
+                    >
+                      {value > 0 ? '+' : ''}
+                      {typeof value === 'number'
+                        ? Math.round(value).toLocaleString('fr-FR')
+                        : value}
+                      {suffix}
                     </p>
                   </div>
                 );
               })}
             </div>
           </div>
-
         </div>
       )}
     </div>

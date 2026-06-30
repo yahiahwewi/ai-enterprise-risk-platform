@@ -1,5 +1,14 @@
 const router = require('express').Router();
-const { getRiskReport, getFinalDecision, getHealthIndex, simulate, copilot, suggestCat, getGoalAdvice, getRecommendedScenario } = require('../controllers/aiController');
+const {
+  getRiskReport,
+  getFinalDecision,
+  getHealthIndex,
+  simulate,
+  copilot,
+  suggestCat,
+  getGoalAdvice,
+  getRecommendedScenario,
+} = require('../controllers/aiController');
 const { protect, authorize } = require('../middleware/auth');
 
 router.get('/risk-report', protect, authorize('owner', 'analyst'), getRiskReport);
@@ -8,7 +17,7 @@ router.get('/health-index', protect, authorize('owner', 'analyst', 'auditor'), g
 router.post('/simulate', protect, authorize('owner', 'analyst'), simulate);
 router.post('/copilot', protect, authorize('owner'), copilot);
 router.post('/suggest-category', protect, suggestCat);
-router.get('/goals/recommended', protect, authorize('owner'), getRecommendedScenario);
+router.get('/goals/recommended', protect, authorize('owner', 'analyst'), getRecommendedScenario);
 router.get('/goals/:scenario', protect, authorize('owner'), getGoalAdvice);
 
 // Invoice extraction

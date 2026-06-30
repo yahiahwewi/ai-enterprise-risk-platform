@@ -104,6 +104,9 @@ exports.getGoalAdvice = async (req, res) => {
     const result = await getGoalAdvice(scenario, lang);
     res.json(result);
   } catch (err) {
+    if (err.statusCode === 400) {
+      return res.status(400).json({ message: err.message, code: err.code, ...(err.details || {}) });
+    }
     res.status(500).json({ message: err.message });
   }
 };

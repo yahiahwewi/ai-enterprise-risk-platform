@@ -38,7 +38,6 @@ function useNavItems(t, lang) {
         icon: 'monitoring',
       },
       { to: '/risk-report', label: t('nav.riskAnalysis'), icon: 'assessment' },
-      { to: '/final-decision', label: t('nav.aiDecision'), icon: 'auto_awesome' },
       { to: '/goals', label: lang === 'fr' ? 'Stratégie' : 'Strategy', icon: 'flag' },
       { to: '/simulate', label: lang === 'fr' ? 'Simulation' : 'Simulation', icon: 'science' },
       {
@@ -108,11 +107,6 @@ function useNavItems(t, lang) {
         to: '/risk-report',
         label: lang === 'fr' ? 'Rapport de risque' : 'Risk report',
         icon: 'assessment',
-      },
-      {
-        to: '/final-decision',
-        label: lang === 'fr' ? 'Décision IA' : 'AI decision',
-        icon: 'auto_awesome',
       },
       { to: '/simulate', label: lang === 'fr' ? 'Simulation' : 'Simulation', icon: 'science' },
     ],

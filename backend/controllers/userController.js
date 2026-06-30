@@ -91,6 +91,17 @@ exports.inviteUser = async (req, res) => {
       emailVerified: true,
     });
 
+    // Notify the invited member by email (temp credentials + login link).
+    dispatchEvent(
+      'team.member_invited',
+      {
+        user: { name: user.name, email: user.email, role: user.role },
+        actor: { name: req.user?.name || 'Votre administrateur' },
+        tempPassword: password,
+      },
+      { extraRecipients: [{ _id: user._id, email: user.email, name: user.name }] }
+    ).catch(() => {});
+
     res.locals.createdEntityId = user._id;
     res.status(201).json(user);
   } catch (error) {

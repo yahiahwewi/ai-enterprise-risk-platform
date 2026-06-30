@@ -34,18 +34,18 @@ async function collectMetrics() {
   ]);
 
   // ── Invoices ──────────────────────────────────────────
-  const lateInvoices  = invoices.filter(i => i.status === 'late');
-  const unpaidInvoices = invoices.filter(i => i.status !== 'paid');
+  const lateInvoices = invoices.filter((i) => i.status === 'late');
+  const unpaidInvoices = invoices.filter((i) => i.status !== 'paid');
   const totalInvoices = invoices.length;
 
-  const lateInvoiceCount  = lateInvoices.length;
+  const lateInvoiceCount = lateInvoices.length;
   const lateInvoiceAmount = lateInvoices.reduce((s, i) => s + i.amount, 0);
-  const unpaidAmount      = unpaidInvoices.reduce((s, i) => s + i.amount, 0);
-  const invoiceRevenue    = invoices.reduce((s, i) => s + i.amount, 0);
+  const unpaidAmount = unpaidInvoices.reduce((s, i) => s + i.amount, 0);
+  const invoiceRevenue = invoices.reduce((s, i) => s + i.amount, 0);
 
   // Group invoices by client (for top-client analysis)
   const clientMap = {};
-  invoices.forEach(inv => {
+  invoices.forEach((inv) => {
     if (!clientMap[inv.clientName]) clientMap[inv.clientName] = { total: 0, count: 0, late: 0 };
     clientMap[inv.clientName].total += inv.amount;
     clientMap[inv.clientName].count += 1;
@@ -59,23 +59,29 @@ async function collectMetrics() {
   const lateRate = totalInvoices > 0 ? (lateInvoiceCount / totalInvoices) * 100 : 0;
 
   // ── Transactions ──────────────────────────────────────
-  const income   = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const expenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const income = transactions.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const expenses = transactions
+    .filter((t) => t.type === 'expense')
+    .reduce((s, t) => s + t.amount, 0);
   const cashFlow = income - expenses;
 
   // Monthly averages (last 12 months window)
   const now = new Date();
   const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-  const recentTx = transactions.filter(t => new Date(t.date) >= twelveMonthsAgo);
+  const recentTx = transactions.filter((t) => new Date(t.date) >= twelveMonthsAgo);
   const months = 12;
-  const monthlyIncome   = recentTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0)  / months;
-  const monthlyExpenses = recentTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0) / months;
+  const monthlyIncome =
+    recentTx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0) / months;
+  const monthlyExpenses =
+    recentTx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0) / months;
 
   // Category breakdown (expenses)
   const expCategoryMap = {};
-  transactions.filter(t => t.type === 'expense').forEach(t => {
-    expCategoryMap[t.category] = (expCategoryMap[t.category] || 0) + t.amount;
-  });
+  transactions
+    .filter((t) => t.type === 'expense')
+    .forEach((t) => {
+      expCategoryMap[t.category] = (expCategoryMap[t.category] || 0) + t.amount;
+    });
   const topExpenseCategories = Object.entries(expCategoryMap)
     .map(([cat, total]) => ({ cat, total }))
     .sort((a, b) => b.total - a.total)
@@ -83,55 +89,75 @@ async function collectMetrics() {
 
   // Category breakdown (income)
   const incCategoryMap = {};
-  transactions.filter(t => t.type === 'income').forEach(t => {
-    incCategoryMap[t.category] = (incCategoryMap[t.category] || 0) + t.amount;
-  });
+  transactions
+    .filter((t) => t.type === 'income')
+    .forEach((t) => {
+      incCategoryMap[t.category] = (incCategoryMap[t.category] || 0) + t.amount;
+    });
   const topIncomeCategories = Object.entries(incCategoryMap)
     .map(([cat, total]) => ({ cat, total }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 3);
 
   // Use null sentinel instead of 999 magic number when division is undefined
-  const expenseRatio = income > 0 ? expenses / income : (expenses > 0 ? null : 0);
+  const expenseRatio = income > 0 ? expenses / income : expenses > 0 ? null : 0;
 
   // ── Loans ─────────────────────────────────────────────
-  const totalDebt      = loans.reduce((s, l) => s + l.amount, 0);
+  const totalDebt = loans.reduce((s, l) => s + l.amount, 0);
   const monthlyPayments = loans.reduce((s, l) => s + l.monthlyPayment, 0);
   const sortedLoansByRate = [...loans].sort((a, b) => b.interestRate - a.interestRate);
   const highestRateLoan = sortedLoansByRate[0] || null;
-  const avgInterestRate = loans.length > 0
-    ? loans.reduce((s, l) => s + l.interestRate, 0) / loans.length
-    : 0;
+  const avgInterestRate =
+    loans.length > 0 ? loans.reduce((s, l) => s + l.interestRate, 0) / loans.length : 0;
 
   // ── Assets ────────────────────────────────────────────
   const totalAssets = assets.reduce((s, a) => s + a.value, 0);
   const lowValueAssets = [...assets]
-    .filter(a => a.value > 0)
+    .filter((a) => a.value > 0)
     .sort((a, b) => a.value - b.value)
     .slice(0, 3);
 
   // ── Derived ratios ────────────────────────────────────
   // Use null sentinel instead of 999 magic number when assets = 0
-  const debtToAsset = totalAssets > 0 ? totalDebt / totalAssets : (totalDebt > 0 ? null : 0);
-  const paymentToIncome = monthlyIncome > 0 ? (monthlyPayments / monthlyIncome) * 100 : (monthlyPayments > 0 ? 999 : 0);
+  const debtToAsset = totalAssets > 0 ? totalDebt / totalAssets : totalDebt > 0 ? null : 0;
+  const paymentToIncome =
+    monthlyIncome > 0 ? (monthlyPayments / monthlyIncome) * 100 : monthlyPayments > 0 ? 999 : 0;
 
   return {
     // Raw collections
-    invoices, loans, transactions, assets,
+    invoices,
+    loans,
+    transactions,
+    assets,
     // Invoice KPIs
-    lateInvoiceCount, lateInvoiceAmount, unpaidAmount, totalInvoices,
-    invoiceRevenue, lateRate, topClients,
+    lateInvoiceCount,
+    lateInvoiceAmount,
+    unpaidAmount,
+    totalInvoices,
+    invoiceRevenue,
+    lateRate,
+    topClients,
     // Transaction KPIs
-    income, expenses, cashFlow,
-    monthlyIncome, monthlyExpenses,
-    expenseRatio, topExpenseCategories, topIncomeCategories,
+    income,
+    expenses,
+    cashFlow,
+    monthlyIncome,
+    monthlyExpenses,
+    expenseRatio,
+    topExpenseCategories,
+    topIncomeCategories,
     // Loan KPIs
-    totalDebt, monthlyPayments, sortedLoansByRate,
-    highestRateLoan, avgInterestRate,
+    totalDebt,
+    monthlyPayments,
+    sortedLoansByRate,
+    highestRateLoan,
+    avgInterestRate,
     // Asset KPIs
-    totalAssets, lowValueAssets,
+    totalAssets,
+    lowValueAssets,
     // Derived
-    debtToAsset, paymentToIncome,
+    debtToAsset,
+    paymentToIncome,
   };
 }
 
@@ -142,67 +168,67 @@ async function collectMetrics() {
 const T = {
   fr: {
     // Section titles
-    invoicesTitle:     'Factures & Créances',
-    loansTitle:        'Prêts & Endettement',
+    invoicesTitle: 'Factures & Créances',
+    loansTitle: 'Prêts & Endettement',
     transactionsTitle: 'Flux de Trésorerie',
-    assetsTitle:       'Actifs & Patrimoine',
+    assetsTitle: 'Actifs & Patrimoine',
     // Action labels
-    viewInvoices:  'Voir les factures',
-    viewLoans:     'Gérer les prêts',
-    viewTrx:       'Voir les transactions',
-    viewAssets:    'Voir les actifs',
-    addInvoice:    'Ajouter une facture',
-    addLoan:       'Ajouter un prêt',
-    addAsset:      'Ajouter un actif',
-    addTrx:        'Ajouter une transaction',
+    viewInvoices: 'Voir les factures',
+    viewLoans: 'Gérer les prêts',
+    viewTrx: 'Voir les transactions',
+    viewAssets: 'Voir les actifs',
+    addInvoice: 'Ajouter une facture',
+    addLoan: 'Ajouter un prêt',
+    addAsset: 'Ajouter un actif',
+    addTrx: 'Ajouter une transaction',
     // Metric labels
-    lateInvoices:    'Factures en retard',
-    unpaidAmount:    'Montant impayé',
-    cashFlow:        'Trésorerie nette',
+    lateInvoices: 'Factures en retard',
+    unpaidAmount: 'Montant impayé',
+    cashFlow: 'Trésorerie nette',
     monthlyPayments: 'Mensualités totales',
-    totalDebt:       'Dette totale',
-    totalAssets:     'Actifs totaux',
-    debtRatio:       'Ratio dette/actifs',
-    expenseRatio:    'Ratio dépenses/revenus',
-    lateRate:        'Taux de retard',
+    totalDebt: 'Dette totale',
+    totalAssets: 'Actifs totaux',
+    debtRatio: 'Ratio dette/actifs',
+    expenseRatio: 'Ratio dépenses/revenus',
+    lateRate: 'Taux de retard',
     // Timeframes
-    tf_growth:       '6–12 mois',
-    tf_stability:    '3–6 mois',
-    tf_debt:         '12–24 mois',
-    tf_revenue:      '3–9 mois',
-    tf_recovery:     '1–3 mois',
-    tf_excellence:   '6–12 mois',
-    noData:          'Aucune donnée disponible',
+    tf_growth: '6–12 mois',
+    tf_stability: '3–6 mois',
+    tf_debt: '12–24 mois',
+    tf_revenue: '3–9 mois',
+    tf_recovery: '1–3 mois',
+    tf_excellence: '6–12 mois',
+    noData: 'Aucune donnée disponible',
   },
   en: {
-    invoicesTitle:     'Invoices & Receivables',
-    loansTitle:        'Loans & Debt',
+    invoicesTitle: 'Invoices & Receivables',
+    loansTitle: 'Loans & Debt',
     transactionsTitle: 'Cash Flow',
-    assetsTitle:       'Assets & Wealth',
-    viewInvoices:  'View invoices',
-    viewLoans:     'Manage loans',
-    viewTrx:       'View transactions',
-    viewAssets:    'View assets',
-    addInvoice:    'Add invoice',
-    addLoan:       'Add loan',
-    addAsset:      'Add asset',
-    addTrx:        'Add transaction',
-    lateInvoices:    'Late invoices',
-    unpaidAmount:    'Unpaid amount',
-    cashFlow:        'Net cash flow',
+    assetsTitle: 'Assets & Wealth',
+    viewInvoices: 'View invoices',
+    viewLoans: 'Manage loans',
+    viewTrx: 'View transactions',
+    viewAssets: 'View assets',
+    addInvoice: 'Add invoice',
+    addLoan: 'Add loan',
+    addAsset: 'Add asset',
+    addTrx: 'Add transaction',
+    lateInvoices: 'Late invoices',
+    unpaidAmount: 'Unpaid amount',
+    cashFlow: 'Net cash flow',
     monthlyPayments: 'Total monthly payments',
-    totalDebt:       'Total debt',
-    totalAssets:     'Total assets',
-    debtRatio:       'Debt-to-asset ratio',
-    expenseRatio:    'Expense ratio',
-    lateRate:        'Late rate',
-    tf_growth:       '6–12 months',
-    tf_stability:    '3–6 months',
-    tf_debt:         '12–24 months',
-    tf_revenue:      '3–9 months',
-    tf_recovery:     '1–3 months',
-    tf_excellence:   '6–12 months',
-    noData:          'No data available',
+    totalDebt: 'Total debt',
+    totalAssets: 'Total assets',
+    debtRatio: 'Debt-to-asset ratio',
+    expenseRatio: 'Expense ratio',
+    lateRate: 'Late rate',
+    tf_growth: '6–12 months',
+    tf_stability: '3–6 months',
+    tf_debt: '12–24 months',
+    tf_revenue: '3–9 months',
+    tf_recovery: '1–3 months',
+    tf_excellence: '6–12 months',
+    noData: 'No data available',
   },
 };
 
@@ -234,7 +260,10 @@ function buildGrowth(m, lang) {
         : `Estimated recovery: up to ${fmt(m.lateInvoiceAmount)} in freed cash flow`,
       actionLabel: t.viewInvoices,
       actionLink: '/invoices',
-      metric: { label: t.lateInvoices, value: `${m.lateInvoiceCount} (${fmt(m.lateInvoiceAmount)})` },
+      metric: {
+        label: t.lateInvoices,
+        value: `${m.lateInvoiceCount} (${fmt(m.lateInvoiceAmount)})`,
+      },
     });
   }
   if (m.unpaidAmount > 0 && m.lateRate <= 15) {
@@ -257,7 +286,9 @@ function buildGrowth(m, lang) {
     invSuggestions.push({
       id: 'inv-expand-credit',
       priority: 'medium',
-      title: isFr ? 'Étendre les délais de paiement aux nouveaux clients' : 'Extend payment terms to new clients',
+      title: isFr
+        ? 'Étendre les délais de paiement aux nouveaux clients'
+        : 'Extend payment terms to new clients',
       description: isFr
         ? `Votre taux de recouvrement est excellent (taux de retard : ${r1(m.lateRate)}%). Vous pouvez offrir des délais de 30 à 45 jours à de nouveaux prospects pour stimuler la croissance commerciale.`
         : `Your collection rate is excellent (late rate: ${r1(m.lateRate)}%). You can offer 30–45 day terms to new prospects to boost commercial growth.`,
@@ -277,7 +308,9 @@ function buildGrowth(m, lang) {
       description: isFr
         ? `Aucune facture enregistrée. Commencez à facturer vos clients pour suivre vos créances et financer votre croissance.`
         : `No invoices recorded. Start invoicing clients to track receivables and fund your growth.`,
-      impact: isFr ? 'Indispensable pour monitorer votre cycle de revenus' : 'Essential for monitoring your revenue cycle',
+      impact: isFr
+        ? 'Indispensable pour monitorer votre cycle de revenus'
+        : 'Essential for monitoring your revenue cycle',
       actionLabel: t.addInvoice,
       actionLink: '/invoices',
       metric: null,
@@ -301,7 +334,7 @@ function buildGrowth(m, lang) {
         id: 'loan-deploy-surplus-first',
         priority: 'medium',
         title: isFr
-          ? 'Déployez votre surplus avant de recourir à l\'emprunt'
+          ? "Déployez votre surplus avant de recourir à l'emprunt"
           : 'Deploy your cash surplus before borrowing',
         description: isFr
           ? `Avec ${fmt(m.cashFlow)} de trésorerie disponible et un ratio dette/actifs sain (${fmtDebtRatio(m.debtToAsset, 'fr')}), votre surplus actuel est suffisant pour financer une première phase d'expansion sans nouvel endettement. Réservez votre capacité d'emprunt pour des opportunités d'acquisition stratégiques plus importantes.`
@@ -317,7 +350,9 @@ function buildGrowth(m, lang) {
       loanSuggestions.push({
         id: 'loan-strategic-expansion',
         priority: 'medium',
-        title: isFr ? 'Contracter un prêt stratégique de croissance' : 'Take a strategic growth loan',
+        title: isFr
+          ? 'Contracter un prêt stratégique de croissance'
+          : 'Take a strategic growth loan',
         description: isFr
           ? `Votre ratio dette/actifs est de ${fmtDebtRatio(m.debtToAsset, lang)} — un niveau sain. Avec une trésorerie positive (${fmt(m.cashFlow)}), vous avez la capacité d'emprunter pour financer une expansion commerciale.`
           : `Your debt-to-asset ratio is ${fmtDebtRatio(m.debtToAsset, lang)} — a healthy level. With positive cash flow (${fmt(m.cashFlow)}), you have borrowing capacity to finance a commercial expansion.`,
@@ -352,7 +387,9 @@ function buildGrowth(m, lang) {
       description: isFr
         ? `Aucun prêt actif. Un financement externe peut accélérer votre croissance si votre plan d'affaires est solide.`
         : `No active loans. External financing can accelerate your growth if your business plan is solid.`,
-      impact: isFr ? 'Levier financier pour accélérer le développement' : 'Financial leverage to accelerate development',
+      impact: isFr
+        ? 'Levier financier pour accélérer le développement'
+        : 'Financial leverage to accelerate development',
       actionLabel: t.addLoan,
       actionLink: '/loans',
       metric: null,
@@ -416,7 +453,9 @@ function buildGrowth(m, lang) {
       description: isFr
         ? `Aucune transaction de revenus enregistrée. Documentez vos sources de revenus pour piloter votre stratégie de croissance.`
         : `No income transactions recorded. Document your income sources to guide your growth strategy.`,
-      impact: isFr ? 'Permet d\'identifier les segments les plus rentables' : 'Enables identification of the most profitable segments',
+      impact: isFr
+        ? "Permet d'identifier les segments les plus rentables"
+        : 'Enables identification of the most profitable segments',
       actionLabel: t.addTrx,
       actionLink: '/transactions',
       metric: null,
@@ -437,7 +476,9 @@ function buildGrowth(m, lang) {
     assetSuggestions.push({
       id: 'asset-acquire-productive',
       priority: 'high',
-      title: isFr ? 'Acquérir des actifs générateurs de revenus' : 'Acquire revenue-generating assets',
+      title: isFr
+        ? 'Acquérir des actifs générateurs de revenus'
+        : 'Acquire revenue-generating assets',
       description: isFr
         ? `Vos actifs (${fmt(m.totalAssets)}) sont inférieurs à votre dette (${fmt(m.totalDebt)}). L'acquisition d'actifs productifs améliorera votre bilan et votre capacité de remboursement.`
         : `Your assets (${fmt(m.totalAssets)}) are below your debt (${fmt(m.totalDebt)}). Acquiring productive assets will improve your balance sheet and repayment capacity.`,
@@ -468,11 +509,13 @@ function buildGrowth(m, lang) {
     assetSuggestions[0] = {
       id: 'asset-first',
       priority: 'medium',
-      title: isFr ? 'Constituer un patrimoine d\'actifs' : 'Build an asset base',
+      title: isFr ? "Constituer un patrimoine d'actifs" : 'Build an asset base',
       description: isFr
         ? `Aucun actif enregistré. L'acquisition d'actifs productifs (équipements, immobilier, brevets) est un levier clé de croissance durable.`
         : `No assets recorded. Acquiring productive assets (equipment, real estate, patents) is a key lever for sustainable growth.`,
-      impact: isFr ? 'Renforce le bilan et la capacité d\'emprunt future' : 'Strengthens the balance sheet and future borrowing capacity',
+      impact: isFr
+        ? "Renforce le bilan et la capacité d'emprunt future"
+        : 'Strengthens the balance sheet and future borrowing capacity',
       actionLabel: t.addAsset,
       actionLink: '/assets',
       metric: null,
@@ -487,9 +530,12 @@ function buildGrowth(m, lang) {
     suggestions: assetSuggestions,
   });
 
-  const healthyForGrowth = m.cashFlow >= 0 && (m.debtToAsset === null || m.debtToAsset < 0.5) && (m.expenseRatio === null || m.expenseRatio < 0.7);
+  const healthyForGrowth =
+    m.cashFlow >= 0 &&
+    (m.debtToAsset === null || m.debtToAsset < 0.5) &&
+    (m.expenseRatio === null || m.expenseRatio < 0.7);
   const headline = isFr
-    ? `Votre position financière actuelle (trésorerie : ${fmt(m.cashFlow)}, ratio dette/actifs : ${fmtDebtRatio(m.debtToAsset, 'fr')}) ${healthyForGrowth ? "offre une base solide pour la croissance" : "nécessite un assainissement avant d'accélérer"}. Concentrez-vous sur la récupération des ${fmt(m.lateInvoiceAmount)} de créances en retard pour libérer des liquidités. Un plan d'expansion structuré sur 6 à 12 mois peut significativement augmenter vos revenus.`
+    ? `Votre position financière actuelle (trésorerie : ${fmt(m.cashFlow)}, ratio dette/actifs : ${fmtDebtRatio(m.debtToAsset, 'fr')}) ${healthyForGrowth ? 'offre une base solide pour la croissance' : "nécessite un assainissement avant d'accélérer"}. Concentrez-vous sur la récupération des ${fmt(m.lateInvoiceAmount)} de créances en retard pour libérer des liquidités. Un plan d'expansion structuré sur 6 à 12 mois peut significativement augmenter vos revenus.`
     : `Your current financial position (cash flow: ${fmt(m.cashFlow)}, debt-to-asset: ${fmtDebtRatio(m.debtToAsset, 'en')}) ${healthyForGrowth ? 'provides a solid foundation for growth' : 'requires stabilisation before accelerating'}. Focus on recovering ${fmt(m.lateInvoiceAmount)} in overdue receivables to free up liquidity. A structured 6–12 month expansion plan can significantly increase your revenues.`;
 
   const currentHealth = computeHealthScore(m);
@@ -540,7 +586,13 @@ function buildStability(m, lang) {
     metric: { label: t.lateInvoices, value: `${m.lateInvoiceCount}` },
   });
 
-  sections.push({ category: 'invoices', icon: 'receipt_long', color: 'blue', title: t.invoicesTitle, suggestions: invSuggestions.slice(0, 3) });
+  sections.push({
+    category: 'invoices',
+    icon: 'receipt_long',
+    color: 'blue',
+    title: t.invoicesTitle,
+    suggestions: invSuggestions.slice(0, 3),
+  });
 
   // 2. Loans
   const loanSuggestions = [];
@@ -575,7 +627,13 @@ function buildStability(m, lang) {
     });
   }
 
-  sections.push({ category: 'loans', icon: 'account_balance', color: 'purple', title: t.loansTitle, suggestions: loanSuggestions });
+  sections.push({
+    category: 'loans',
+    icon: 'account_balance',
+    color: 'purple',
+    title: t.loansTitle,
+    suggestions: loanSuggestions,
+  });
 
   // 3. Transactions
   const trxSuggestions = [];
@@ -627,10 +685,19 @@ function buildStability(m, lang) {
       : `A cash reserve reduces default risk during slow periods`,
     actionLabel: t.addTrx,
     actionLink: '/transactions',
-    metric: m.monthlyExpenses > 0 ? { label: isFr ? 'Réserve cible' : 'Target reserve', value: fmt(m.monthlyExpenses * 3) } : null,
+    metric:
+      m.monthlyExpenses > 0
+        ? { label: isFr ? 'Réserve cible' : 'Target reserve', value: fmt(m.monthlyExpenses * 3) }
+        : null,
   });
 
-  sections.push({ category: 'transactions', icon: 'swap_horiz', color: 'green', title: t.transactionsTitle, suggestions: trxSuggestions });
+  sections.push({
+    category: 'transactions',
+    icon: 'swap_horiz',
+    color: 'green',
+    title: t.transactionsTitle,
+    suggestions: trxSuggestions,
+  });
 
   // 4. Assets
   sections.push({
@@ -638,20 +705,24 @@ function buildStability(m, lang) {
     icon: 'apartment',
     color: 'orange',
     title: t.assetsTitle,
-    suggestions: [{
-      id: 'stab-asset-maintain',
-      priority: 'low',
-      title: isFr ? 'Maintenir et entretenir les actifs existants' : 'Maintain and service existing assets',
-      description: isFr
-        ? `${m.assets.length > 0 ? `Vos ${m.assets.length} actifs valent ${fmt(m.totalAssets)}. Planifiez la maintenance préventive pour éviter les dépenses d'urgence qui perturbent la stabilité.` : `Aucun actif enregistré. Documentez vos actifs pour un suivi précis du bilan.`}`
-        : `${m.assets.length > 0 ? `Your ${m.assets.length} assets are worth ${fmt(m.totalAssets)}. Plan preventive maintenance to avoid emergency costs that disrupt stability.` : `No assets recorded. Document your assets for accurate balance sheet tracking.`}`,
-      impact: isFr
-        ? `La maintenance préventive coûte en moyenne 3 fois moins que les réparations d'urgence`
-        : `Preventive maintenance costs on average 3x less than emergency repairs`,
-      actionLabel: t.viewAssets,
-      actionLink: '/assets',
-      metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
-    }],
+    suggestions: [
+      {
+        id: 'stab-asset-maintain',
+        priority: 'low',
+        title: isFr
+          ? 'Maintenir et entretenir les actifs existants'
+          : 'Maintain and service existing assets',
+        description: isFr
+          ? `${m.assets.length > 0 ? `Vos ${m.assets.length} actifs valent ${fmt(m.totalAssets)}. Planifiez la maintenance préventive pour éviter les dépenses d'urgence qui perturbent la stabilité.` : `Aucun actif enregistré. Documentez vos actifs pour un suivi précis du bilan.`}`
+          : `${m.assets.length > 0 ? `Your ${m.assets.length} assets are worth ${fmt(m.totalAssets)}. Plan preventive maintenance to avoid emergency costs that disrupt stability.` : `No assets recorded. Document your assets for accurate balance sheet tracking.`}`,
+        impact: isFr
+          ? `La maintenance préventive coûte en moyenne 3 fois moins que les réparations d'urgence`
+          : `Preventive maintenance costs on average 3x less than emergency repairs`,
+        actionLabel: t.viewAssets,
+        actionLink: '/assets',
+        metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
+      },
+    ],
   });
 
   const headline = isFr
@@ -661,7 +732,12 @@ function buildStability(m, lang) {
   const currentHealth = computeHealthScore(m);
   // Stability: solid health improvement by controlling expense and late rates
   const targetScore = Math.min(90, Math.max(currentHealth + 10, Math.round(currentHealth * 1.12)));
-  return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_stability : T.en.tf_stability };
+  return {
+    sections,
+    headline,
+    targetScore,
+    timeframe: isFr ? T.fr.tf_stability : T.en.tf_stability,
+  };
 }
 
 // ── DEBT REDUCTION ───────────────────────────────────────
@@ -680,7 +756,9 @@ function buildDebtReduction(m, lang) {
       description: isFr
         ? `Vous n'avez aucun prêt enregistré. Votre situation financière est déjà libre de toute dette formelle.`
         : `You have no loans recorded. Your financial situation is already free of formal debt.`,
-      impact: isFr ? 'Maintenez cette position pour une flexibilité financière maximale' : 'Maintain this position for maximum financial flexibility',
+      impact: isFr
+        ? 'Maintenez cette position pour une flexibilité financière maximale'
+        : 'Maintain this position for maximum financial flexibility',
       actionLabel: t.viewLoans,
       actionLink: '/loans',
       metric: null,
@@ -695,14 +773,17 @@ function buildDebtReduction(m, lang) {
         ? `Méthode avalanche : prioriser le prêt à ${r1(topRate.interestRate)}% d'intérêt`
         : `Avalanche method: prioritise the ${r1(topRate.interestRate)}% interest loan`,
       description: isFr
-        ? `Le prêt le plus coûteux a un taux de ${r1(topRate.interestRate)}% pour un capital de ${fmt(topRate.amount)}. Chaque mois de remboursement accéléré économise ${fmt((topRate.amount * topRate.interestRate / 100) / 12)} d'intérêts. Versez le maximum possible sur ce prêt en priorité.`
-        : `The most expensive loan has a ${r1(topRate.interestRate)}% rate on a capital of ${fmt(topRate.amount)}. Each month of accelerated repayment saves ${fmt((topRate.amount * topRate.interestRate / 100) / 12)} in interest. Pay the maximum possible on this loan first.`,
+        ? `Le prêt le plus coûteux a un taux de ${r1(topRate.interestRate)}% pour un capital de ${fmt(topRate.amount)}. Chaque mois de remboursement accéléré économise ${fmt((topRate.amount * topRate.interestRate) / 100 / 12)} d'intérêts. Versez le maximum possible sur ce prêt en priorité.`
+        : `The most expensive loan has a ${r1(topRate.interestRate)}% rate on a capital of ${fmt(topRate.amount)}. Each month of accelerated repayment saves ${fmt((topRate.amount * topRate.interestRate) / 100 / 12)} in interest. Pay the maximum possible on this loan first.`,
       impact: isFr
-        ? `Économie d'intérêts estimée : ${fmt((topRate.amount * topRate.interestRate / 100))} si remboursé avec 6 mois d'avance`
-        : `Estimated interest saving: ${fmt((topRate.amount * topRate.interestRate / 100))} if repaid 6 months early`,
+        ? `Économie d'intérêts estimée : ${fmt((topRate.amount * topRate.interestRate) / 100)} si remboursé avec 6 mois d'avance`
+        : `Estimated interest saving: ${fmt((topRate.amount * topRate.interestRate) / 100)} if repaid 6 months early`,
       actionLabel: t.viewLoans,
       actionLink: '/loans',
-      metric: { label: isFr ? 'Taux le plus élevé' : 'Highest rate', value: `${r1(topRate.interestRate)}% — ${fmt(topRate.amount)}` },
+      metric: {
+        label: isFr ? 'Taux le plus élevé' : 'Highest rate',
+        value: `${r1(topRate.interestRate)}% — ${fmt(topRate.amount)}`,
+      },
     });
     if (m.loans.length > 1) {
       loanSuggestions.push({
@@ -724,7 +805,13 @@ function buildDebtReduction(m, lang) {
     }
   }
 
-  sections.push({ category: 'loans', icon: 'account_balance', color: 'red', title: t.loansTitle, suggestions: loanSuggestions });
+  sections.push({
+    category: 'loans',
+    icon: 'account_balance',
+    color: 'red',
+    title: t.loansTitle,
+    suggestions: loanSuggestions,
+  });
 
   // 2. Invoices (collect to fund repayment)
   const invSuggestions = [];
@@ -743,13 +830,18 @@ function buildDebtReduction(m, lang) {
         : `Recovering these funds would allow repaying ${fmt(Math.min(m.lateInvoiceAmount, m.totalDebt))} of debt`,
       actionLabel: t.viewInvoices,
       actionLink: '/invoices',
-      metric: { label: t.lateInvoices, value: `${m.lateInvoiceCount} (${fmt(m.lateInvoiceAmount)})` },
+      metric: {
+        label: t.lateInvoices,
+        value: `${m.lateInvoiceCount} (${fmt(m.lateInvoiceAmount)})`,
+      },
     });
   }
   invSuggestions.push({
     id: 'debt-inv-no-new-late',
     priority: 'medium',
-    title: isFr ? 'Zéro tolérance pour les nouvelles factures en retard' : 'Zero tolerance for new late invoices',
+    title: isFr
+      ? 'Zéro tolérance pour les nouvelles factures en retard'
+      : 'Zero tolerance for new late invoices',
     description: isFr
       ? `Chaque nouvelle facture impayée réduit les liquidités disponibles pour le remboursement. Exigez des acomptes de 30% à la commande pour les nouveaux clients.`
       : `Every new unpaid invoice reduces funds available for repayment. Require 30% upfront deposits for new clients.`,
@@ -761,7 +853,13 @@ function buildDebtReduction(m, lang) {
     metric: null,
   });
 
-  sections.push({ category: 'invoices', icon: 'receipt_long', color: 'blue', title: t.invoicesTitle, suggestions: invSuggestions });
+  sections.push({
+    category: 'invoices',
+    icon: 'receipt_long',
+    color: 'blue',
+    title: t.invoicesTitle,
+    suggestions: invSuggestions,
+  });
 
   // 3. Transactions (cut expenses, redirect to debt)
   const trxSuggestions = [];
@@ -789,7 +887,9 @@ function buildDebtReduction(m, lang) {
     id: 'debt-trx-redirect-surplus',
     priority: 'high',
     entityFilter: { type: 'income' },
-    title: isFr ? 'Allouer 30% du surplus mensuel à la dette' : 'Allocate 30% of monthly surplus to debt',
+    title: isFr
+      ? 'Allouer 30% du surplus mensuel à la dette'
+      : 'Allocate 30% of monthly surplus to debt',
     description: isFr
       ? `${m.cashFlow > 0 ? `Votre trésorerie nette est de ${fmt(m.cashFlow)}. Diriger ${fmt(m.cashFlow * 0.3)} par mois supplémentaire vers la dette réduirait significativement les intérêts totaux.` : `Votre trésorerie est négative (${fmt(m.cashFlow)}). La réduction des dépenses est prioritaire avant tout remboursement accéléré.`}`
       : `${m.cashFlow > 0 ? `Your net cash flow is ${fmt(m.cashFlow)}. Directing ${fmt(m.cashFlow * 0.3)} extra per month towards debt would significantly reduce total interest.` : `Your cash flow is negative (${fmt(m.cashFlow)}). Reducing expenses takes priority before any accelerated repayment.`}`,
@@ -801,7 +901,13 @@ function buildDebtReduction(m, lang) {
     metric: { label: t.cashFlow, value: fmt(m.cashFlow) },
   });
 
-  sections.push({ category: 'transactions', icon: 'swap_horiz', color: 'green', title: t.transactionsTitle, suggestions: trxSuggestions });
+  sections.push({
+    category: 'transactions',
+    icon: 'swap_horiz',
+    color: 'green',
+    title: t.transactionsTitle,
+    suggestions: trxSuggestions,
+  });
 
   // 4. Assets (consider liquidating low-value ones)
   const assetSuggestions = [];
@@ -840,7 +946,13 @@ function buildDebtReduction(m, lang) {
     });
   }
 
-  sections.push({ category: 'assets', icon: 'apartment', color: 'orange', title: t.assetsTitle, suggestions: assetSuggestions });
+  sections.push({
+    category: 'assets',
+    icon: 'apartment',
+    color: 'orange',
+    title: t.assetsTitle,
+    suggestions: assetSuggestions,
+  });
 
   const headline = isFr
     ? `Pour réduire votre dette de ${fmt(m.totalDebt)}, appliquez la méthode avalanche en priorisant le prêt à ${m.highestRateLoan ? r1(m.highestRateLoan.interestRate) + '%' : 'taux le plus élevé'}. Récupérez en urgence ${fmt(m.lateInvoiceAmount)} de créances impayées pour alimenter les remboursements. En maintenant cette discipline, un désendettement significatif est atteignable en 12 à 24 mois.`
@@ -914,7 +1026,13 @@ function buildRevenueOptimization(m, lang) {
     });
   }
 
-  sections.push({ category: 'invoices', icon: 'receipt_long', color: 'blue', title: t.invoicesTitle, suggestions: invSuggestions.slice(0, 3) });
+  sections.push({
+    category: 'invoices',
+    icon: 'receipt_long',
+    color: 'blue',
+    title: t.invoicesTitle,
+    suggestions: invSuggestions.slice(0, 3),
+  });
 
   // 2. Transactions: top income categories
   const trxSuggestions = [];
@@ -952,7 +1070,10 @@ function buildRevenueOptimization(m, lang) {
         : `Each margin point gained on ${fmt(m.income)} in revenue represents ${fmt(m.income * 0.01)}`,
       actionLabel: t.viewTrx,
       actionLink: '/transactions',
-      metric: { label: isFr ? 'Marge nette' : 'Net margin', value: `${m.expenseRatio !== null ? r1((1 - m.expenseRatio) * 100) + '%' : 'N/A'}` },
+      metric: {
+        label: isFr ? 'Marge nette' : 'Net margin',
+        value: `${m.expenseRatio !== null ? r1((1 - m.expenseRatio) * 100) + '%' : 'N/A'}`,
+      },
     });
   }
   if (trxSuggestions.length === 0) {
@@ -964,14 +1085,22 @@ function buildRevenueOptimization(m, lang) {
       description: isFr
         ? `Enregistrez chaque transaction de revenu par catégorie pour identifier vos segments les plus rentables.`
         : `Record every income transaction by category to identify your most profitable segments.`,
-      impact: isFr ? 'L\'analyse par catégorie permet de concentrer les efforts sur les sources à plus forte valeur' : 'Category analysis enables focus on highest-value sources',
+      impact: isFr
+        ? "L'analyse par catégorie permet de concentrer les efforts sur les sources à plus forte valeur"
+        : 'Category analysis enables focus on highest-value sources',
       actionLabel: t.addTrx,
       actionLink: '/transactions',
       metric: null,
     });
   }
 
-  sections.push({ category: 'transactions', icon: 'swap_horiz', color: 'green', title: t.transactionsTitle, suggestions: trxSuggestions.slice(0, 3) });
+  sections.push({
+    category: 'transactions',
+    icon: 'swap_horiz',
+    color: 'green',
+    title: t.transactionsTitle,
+    suggestions: trxSuggestions.slice(0, 3),
+  });
 
   // 3. Loans: refinance if high rate
   const loanSuggestions = [];
@@ -983,14 +1112,17 @@ function buildRevenueOptimization(m, lang) {
         ? `Refinancer les prêts à taux élevé (taux moyen : ${r1(m.avgInterestRate)}%)`
         : `Refinance high-rate loans (average rate: ${r1(m.avgInterestRate)}%)`,
       description: isFr
-        ? `Votre taux moyen de ${r1(m.avgInterestRate)}% est élevé. Négocier un refinancement à 8% sur ${fmt(m.totalDebt)} économiserait ${fmt(m.totalDebt * (m.avgInterestRate - 8) / 100)} d'intérêts par an, directement convertibles en revenus.`
-        : `Your average rate of ${r1(m.avgInterestRate)}% is high. Negotiating a refinancing at 8% on ${fmt(m.totalDebt)} would save ${fmt(m.totalDebt * (m.avgInterestRate - 8) / 100)} in annual interest, directly convertible to revenue.`,
+        ? `Votre taux moyen de ${r1(m.avgInterestRate)}% est élevé. Négocier un refinancement à 8% sur ${fmt(m.totalDebt)} économiserait ${fmt((m.totalDebt * (m.avgInterestRate - 8)) / 100)} d'intérêts par an, directement convertibles en revenus.`
+        : `Your average rate of ${r1(m.avgInterestRate)}% is high. Negotiating a refinancing at 8% on ${fmt(m.totalDebt)} would save ${fmt((m.totalDebt * (m.avgInterestRate - 8)) / 100)} in annual interest, directly convertible to revenue.`,
       impact: isFr
-        ? `Économie annuelle estimée : ${fmt(m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100)}`
-        : `Estimated annual saving: ${fmt(m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100)}`,
+        ? `Économie annuelle estimée : ${fmt((m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100)}`
+        : `Estimated annual saving: ${fmt((m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100)}`,
       actionLabel: t.viewLoans,
       actionLink: '/loans',
-      metric: { label: isFr ? 'Taux moyen actuel' : 'Current average rate', value: `${r1(m.avgInterestRate)}%` },
+      metric: {
+        label: isFr ? 'Taux moyen actuel' : 'Current average rate',
+        value: `${r1(m.avgInterestRate)}%`,
+      },
     });
   } else if (m.loans.length > 0) {
     loanSuggestions.push({
@@ -1000,7 +1132,9 @@ function buildRevenueOptimization(m, lang) {
       description: isFr
         ? `Votre taux moyen de ${r1(m.avgInterestRate)}% est raisonnable. Réévaluez lors du prochain renouvellement si les taux du marché baissent.`
         : `Your average rate of ${r1(m.avgInterestRate)}% is reasonable. Re-evaluate at the next renewal if market rates drop.`,
-      impact: isFr ? 'Surveiller les opportunités de marché pour optimiser le coût du capital' : 'Monitor market opportunities to optimise the cost of capital',
+      impact: isFr
+        ? 'Surveiller les opportunités de marché pour optimiser le coût du capital'
+        : 'Monitor market opportunities to optimise the cost of capital',
       actionLabel: t.viewLoans,
       actionLink: '/loans',
       metric: { label: t.monthlyPayments, value: fmt(m.monthlyPayments) },
@@ -1013,14 +1147,22 @@ function buildRevenueOptimization(m, lang) {
       description: isFr
         ? `Sans dette, votre coût du capital est entièrement supporté par les fonds propres. Un financement partiel par prêt peut optimiser le retour sur capitaux propres.`
         : `Without debt, your cost of capital is entirely equity-funded. Partial loan financing can optimise return on equity.`,
-      impact: isFr ? 'L\'effet de levier peut améliorer le ROE si le taux d\'emprunt est inférieur au ROCE' : 'Leverage can improve ROE if the borrowing rate is below ROCE',
+      impact: isFr
+        ? "L'effet de levier peut améliorer le ROE si le taux d'emprunt est inférieur au ROCE"
+        : 'Leverage can improve ROE if the borrowing rate is below ROCE',
       actionLabel: t.addLoan,
       actionLink: '/loans',
       metric: null,
     });
   }
 
-  sections.push({ category: 'loans', icon: 'account_balance', color: 'purple', title: t.loansTitle, suggestions: loanSuggestions });
+  sections.push({
+    category: 'loans',
+    icon: 'account_balance',
+    color: 'purple',
+    title: t.loansTitle,
+    suggestions: loanSuggestions,
+  });
 
   // 4. Assets: leverage for revenue
   sections.push({
@@ -1028,29 +1170,31 @@ function buildRevenueOptimization(m, lang) {
     icon: 'apartment',
     color: 'orange',
     title: t.assetsTitle,
-    suggestions: [{
-      id: 'rev-asset-leverage',
-      priority: 'medium',
-      title: isFr ? 'Monétiser les actifs existants' : 'Monetise existing assets',
-      description: isFr
-        ? `${m.totalAssets > 0 ? `Vos ${m.assets.length} actifs valent ${fmt(m.totalAssets)}. Évaluez s'ils peuvent générer des revenus directs (location, sous-traitance, licence).` : `Enregistrez vos actifs pour identifier des opportunités de monétisation.`}`
-        : `${m.totalAssets > 0 ? `Your ${m.assets.length} assets are worth ${fmt(m.totalAssets)}. Evaluate whether they can generate direct revenue (rental, subcontracting, licensing).` : `Record your assets to identify monetisation opportunities.`}`,
-      impact: isFr
-        ? `Des actifs monétisés peuvent générer un rendement passif de 3 à 10% de leur valeur par an`
-        : `Monetised assets can generate a passive return of 3–10% of their value per year`,
-      actionLabel: t.viewAssets,
-      actionLink: '/assets',
-      metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
-    }],
+    suggestions: [
+      {
+        id: 'rev-asset-leverage',
+        priority: 'medium',
+        title: isFr ? 'Monétiser les actifs existants' : 'Monetise existing assets',
+        description: isFr
+          ? `${m.totalAssets > 0 ? `Vos ${m.assets.length} actifs valent ${fmt(m.totalAssets)}. Évaluez s'ils peuvent générer des revenus directs (location, sous-traitance, licence).` : `Enregistrez vos actifs pour identifier des opportunités de monétisation.`}`
+          : `${m.totalAssets > 0 ? `Your ${m.assets.length} assets are worth ${fmt(m.totalAssets)}. Evaluate whether they can generate direct revenue (rental, subcontracting, licensing).` : `Record your assets to identify monetisation opportunities.`}`,
+        impact: isFr
+          ? `Des actifs monétisés peuvent générer un rendement passif de 3 à 10% de leur valeur par an`
+          : `Monetised assets can generate a passive return of 3–10% of their value per year`,
+        actionLabel: t.viewAssets,
+        actionLink: '/assets',
+        metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
+      },
+    ],
   });
 
   const headline = isFr
-    ? `Votre potentiel d'optimisation des revenus est concret : ${m.topIncomeCategories.length > 0 ? `"${m.topIncomeCategories[0].cat}" génère déjà ${fmt(m.topIncomeCategories[0].total)}` : 'identifiez vos meilleures sources de revenus'}. Récupérez ${fmt(m.unpaidAmount)} de créances en attente pour améliorer la trésorerie disponible. Un focus sur vos meilleurs clients et le refinancement potentiel de votre dette peut libérer ${fmt(m.monthlyPayments > 0 ? m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100 : 0)} par an.`
-    : `Your revenue optimisation potential is concrete: ${m.topIncomeCategories.length > 0 ? `"${m.topIncomeCategories[0].cat}" already generates ${fmt(m.topIncomeCategories[0].total)}` : 'identify your best income sources'}. Recover ${fmt(m.unpaidAmount)} in outstanding receivables to improve available cash flow. Focusing on your best clients and potential debt refinancing can free ${fmt(m.monthlyPayments > 0 ? m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100 : 0)} per year.`;
+    ? `Votre potentiel d'optimisation des revenus est concret : ${m.topIncomeCategories.length > 0 ? `"${m.topIncomeCategories[0].cat}" génère déjà ${fmt(m.topIncomeCategories[0].total)}` : 'identifiez vos meilleures sources de revenus'}. Récupérez ${fmt(m.unpaidAmount)} de créances en attente pour améliorer la trésorerie disponible. Un focus sur vos meilleurs clients et le refinancement potentiel de votre dette peut libérer ${fmt(m.monthlyPayments > 0 ? (m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100 : 0)} par an.`
+    : `Your revenue optimisation potential is concrete: ${m.topIncomeCategories.length > 0 ? `"${m.topIncomeCategories[0].cat}" already generates ${fmt(m.topIncomeCategories[0].total)}` : 'identify your best income sources'}. Recover ${fmt(m.unpaidAmount)} in outstanding receivables to improve available cash flow. Focusing on your best clients and potential debt refinancing can free ${fmt(m.monthlyPayments > 0 ? (m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100 : 0)} per year.`;
 
   const currentHealth = computeHealthScore(m);
   // Revenue optimization: moderate gain from improved margins and collections
-  const targetScore = Math.min(88, Math.max(currentHealth + 10, Math.round(currentHealth * 1.10)));
+  const targetScore = Math.min(88, Math.max(currentHealth + 10, Math.round(currentHealth * 1.1)));
   return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_revenue : T.en.tf_revenue };
 }
 
@@ -1077,13 +1221,18 @@ function buildRecovery(m, lang) {
         : `Estimated urgent recovery: ${fmt(m.lateInvoiceAmount * 0.9)} (after potential 10% discount)`,
       actionLabel: t.viewInvoices,
       actionLink: '/invoices',
-      metric: { label: t.lateInvoices, value: `${m.lateInvoiceCount} (${fmt(m.lateInvoiceAmount)})` },
+      metric: {
+        label: t.lateInvoices,
+        value: `${m.lateInvoiceCount} (${fmt(m.lateInvoiceAmount)})`,
+      },
     });
   }
   invSuggestions.push({
     id: 'rec-inv-freeze-credit',
     priority: 'critical',
-    title: isFr ? 'Suspendre les délais de paiement pour les nouveaux clients' : 'Suspend payment terms for new clients',
+    title: isFr
+      ? 'Suspendre les délais de paiement pour les nouveaux clients'
+      : 'Suspend payment terms for new clients',
     description: isFr
       ? `En phase de redressement, n'accordez plus de délais de paiement. Exigez le paiement comptant ou 50% d'acompte sur toutes les nouvelles commandes.`
       : `In a recovery phase, no longer grant payment terms. Require cash payment or 50% deposit on all new orders.`,
@@ -1095,7 +1244,13 @@ function buildRecovery(m, lang) {
     metric: null,
   });
 
-  sections.push({ category: 'invoices', icon: 'receipt_long', color: 'red', title: t.invoicesTitle, suggestions: invSuggestions });
+  sections.push({
+    category: 'invoices',
+    icon: 'receipt_long',
+    color: 'red',
+    title: t.invoicesTitle,
+    suggestions: invSuggestions,
+  });
 
   // 2. Loans — renegotiate if payments > 40% income
   const loanSuggestions = [];
@@ -1114,7 +1269,10 @@ function buildRecovery(m, lang) {
         : `A 6-month moratorium would free ${fmt(m.monthlyPayments * 6)} in immediate cash`,
       actionLabel: t.viewLoans,
       actionLink: '/loans',
-      metric: { label: t.monthlyPayments, value: `${fmt(m.monthlyPayments)} (${r1(m.paymentToIncome)}% revenus)` },
+      metric: {
+        label: t.monthlyPayments,
+        value: `${fmt(m.monthlyPayments)} (${r1(m.paymentToIncome)}% revenus)`,
+      },
     });
   } else if (m.loans.length > 0) {
     loanSuggestions.push({
@@ -1135,18 +1293,28 @@ function buildRecovery(m, lang) {
     loanSuggestions.push({
       id: 'rec-loan-avoid',
       priority: 'high',
-      title: isFr ? 'Éviter tout nouvel emprunt en phase de redressement' : 'Avoid any new borrowing in recovery phase',
+      title: isFr
+        ? 'Éviter tout nouvel emprunt en phase de redressement'
+        : 'Avoid any new borrowing in recovery phase',
       description: isFr
         ? `Aucun prêt actif. En phase de redressement, ne contractez aucune nouvelle dette sans un plan de remboursement solide.`
         : `No active loans. In a recovery phase, do not take on any new debt without a solid repayment plan.`,
-      impact: isFr ? 'Prévient l\'aggravation de la situation financière' : 'Prevents worsening of the financial situation',
+      impact: isFr
+        ? "Prévient l'aggravation de la situation financière"
+        : 'Prevents worsening of the financial situation',
       actionLabel: t.viewLoans,
       actionLink: '/loans',
       metric: null,
     });
   }
 
-  sections.push({ category: 'loans', icon: 'account_balance', color: 'red', title: t.loansTitle, suggestions: loanSuggestions });
+  sections.push({
+    category: 'loans',
+    icon: 'account_balance',
+    color: 'red',
+    title: t.loansTitle,
+    suggestions: loanSuggestions,
+  });
 
   // 3. Transactions — emergency cuts if cashFlow < 0
   const trxSuggestions = [];
@@ -1175,9 +1343,7 @@ function buildRecovery(m, lang) {
       id: 'rec-trx-cut-biggest',
       priority: 'critical',
       entityFilter: { type: 'expense', category: worst.cat },
-      title: isFr
-        ? `Réduire "${worst.cat}" de 30% minimum`
-        : `Cut "${worst.cat}" by at least 30%`,
+      title: isFr ? `Réduire "${worst.cat}" de 30% minimum` : `Cut "${worst.cat}" by at least 30%`,
       description: isFr
         ? `"${worst.cat}" est votre plus grosse dépense avec ${fmt(worst.total)}. Une réduction de 30% économiserait ${fmt(worst.total * 0.3)} — à rediriger en priorité vers les remboursements urgents.`
         : `"${worst.cat}" is your largest expense at ${fmt(worst.total)}. A 30% reduction would save ${fmt(worst.total * 0.3)} — to be redirected towards urgent payments.`,
@@ -1198,14 +1364,22 @@ function buildRecovery(m, lang) {
       description: isFr
         ? `Aucune transaction enregistrée. Documentez immédiatement toutes vos dépenses pour identifier les leviers de réduction.`
         : `No transactions recorded. Immediately document all expenses to identify reduction levers.`,
-      impact: isFr ? 'Sans visibilité, aucune décision de redressement ne peut être prise' : 'Without visibility, no recovery decisions can be made',
+      impact: isFr
+        ? 'Sans visibilité, aucune décision de redressement ne peut être prise'
+        : 'Without visibility, no recovery decisions can be made',
       actionLabel: t.addTrx,
       actionLink: '/transactions',
       metric: null,
     });
   }
 
-  sections.push({ category: 'transactions', icon: 'swap_horiz', color: 'red', title: t.transactionsTitle, suggestions: trxSuggestions.slice(0, 3) });
+  sections.push({
+    category: 'transactions',
+    icon: 'swap_horiz',
+    color: 'red',
+    title: t.transactionsTitle,
+    suggestions: trxSuggestions.slice(0, 3),
+  });
 
   // 4. Assets — emergency liquidity
   sections.push({
@@ -1213,20 +1387,24 @@ function buildRecovery(m, lang) {
     icon: 'apartment',
     color: 'red',
     title: t.assetsTitle,
-    suggestions: [{
-      id: 'rec-asset-liquidity',
-      priority: 'critical',
-      title: isFr ? 'Évaluer les options de liquidité d\'urgence sur les actifs' : 'Evaluate emergency liquidity options on assets',
-      description: isFr
-        ? `${m.totalAssets > 0 ? `Vos actifs représentent ${fmt(m.totalAssets)}. En situation de redressement, envisagez le nantissement ou la cession d'actifs non essentiels pour générer des liquidités immédiates.` : `Aucun actif disponible pour une liquidité d\'urgence. Concentrez-vous sur la réduction des dépenses et le recouvrement des créances.`}`
-        : `${m.totalAssets > 0 ? `Your assets represent ${fmt(m.totalAssets)}. In a recovery situation, consider pledging or selling non-essential assets to generate immediate liquidity.` : `No assets available for emergency liquidity. Focus on expense reduction and receivables collection.`}`,
-      impact: isFr
-        ? `Des actifs liquidables peuvent fournir des fonds d'urgence sans passer par un emprunt`
-        : `Liquidatable assets can provide emergency funds without resorting to borrowing`,
-      actionLabel: t.viewAssets,
-      actionLink: '/assets',
-      metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
-    }],
+    suggestions: [
+      {
+        id: 'rec-asset-liquidity',
+        priority: 'critical',
+        title: isFr
+          ? "Évaluer les options de liquidité d'urgence sur les actifs"
+          : 'Evaluate emergency liquidity options on assets',
+        description: isFr
+          ? `${m.totalAssets > 0 ? `Vos actifs représentent ${fmt(m.totalAssets)}. En situation de redressement, envisagez le nantissement ou la cession d'actifs non essentiels pour générer des liquidités immédiates.` : `Aucun actif disponible pour une liquidité d\'urgence. Concentrez-vous sur la réduction des dépenses et le recouvrement des créances.`}`
+          : `${m.totalAssets > 0 ? `Your assets represent ${fmt(m.totalAssets)}. In a recovery situation, consider pledging or selling non-essential assets to generate immediate liquidity.` : `No assets available for emergency liquidity. Focus on expense reduction and receivables collection.`}`,
+        impact: isFr
+          ? `Des actifs liquidables peuvent fournir des fonds d'urgence sans passer par un emprunt`
+          : `Liquidatable assets can provide emergency funds without resorting to borrowing`,
+        actionLabel: t.viewAssets,
+        actionLink: '/assets',
+        metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
+      },
+    ],
   });
 
   const headline = isFr
@@ -1258,8 +1436,8 @@ function buildExcellence(m, lang) {
         ? `Les entreprises d'excellence maintiennent un taux de retard inférieur à 5%. Avec ${m.lateInvoiceCount} factures en retard (${fmt(m.lateInvoiceAmount)}), il reste ${r1(m.lateRate - 5)}% à optimiser.`
         : `Excellent companies maintain a late rate below 5%. With ${m.lateInvoiceCount} overdue invoices (${fmt(m.lateInvoiceAmount)}), there is ${r1(m.lateRate - 5)}% left to optimise.`,
       impact: isFr
-        ? `Atteindre 5% de retard libérerait environ ${fmt(m.lateInvoiceAmount * (m.lateRate - 5) / m.lateRate)} de trésorerie`
-        : `Reaching 5% late rate would free approximately ${fmt(m.lateInvoiceAmount * (m.lateRate - 5) / m.lateRate)} in cash`,
+        ? `Atteindre 5% de retard libérerait environ ${fmt((m.lateInvoiceAmount * (m.lateRate - 5)) / m.lateRate)} de trésorerie`
+        : `Reaching 5% late rate would free approximately ${fmt((m.lateInvoiceAmount * (m.lateRate - 5)) / m.lateRate)} in cash`,
       actionLabel: t.viewInvoices,
       actionLink: '/invoices',
       metric: { label: t.lateRate, value: `${r1(m.lateRate)}%` },
@@ -1268,7 +1446,9 @@ function buildExcellence(m, lang) {
   invSuggestions.push({
     id: 'exc-inv-kpi',
     priority: 'low',
-    title: isFr ? 'Mettre en place des KPIs de facturation mensuels' : 'Implement monthly invoicing KPIs',
+    title: isFr
+      ? 'Mettre en place des KPIs de facturation mensuels'
+      : 'Implement monthly invoicing KPIs',
     description: isFr
       ? `Suivez mensuellement : DSO (Days Sales Outstanding), taux de recouvrement à 30/60/90 jours, et valeur moyenne des factures. ${m.totalInvoices > 0 ? `Sur ${m.totalInvoices} factures, votre montant moyen est de ${fmt(m.invoiceRevenue / m.totalInvoices)}.` : ''}`
       : `Track monthly: DSO (Days Sales Outstanding), collection rate at 30/60/90 days, and average invoice value. ${m.totalInvoices > 0 ? `Across ${m.totalInvoices} invoices, your average amount is ${fmt(m.invoiceRevenue / m.totalInvoices)}.` : ''}`,
@@ -1277,10 +1457,22 @@ function buildExcellence(m, lang) {
       : `KPIs allow detecting drifts from the first month and adjusting quickly`,
     actionLabel: t.viewInvoices,
     actionLink: '/invoices',
-    metric: m.totalInvoices > 0 ? { label: isFr ? 'Montant moyen facture' : 'Avg invoice amount', value: fmt(m.invoiceRevenue / m.totalInvoices) } : null,
+    metric:
+      m.totalInvoices > 0
+        ? {
+            label: isFr ? 'Montant moyen facture' : 'Avg invoice amount',
+            value: fmt(m.invoiceRevenue / m.totalInvoices),
+          }
+        : null,
   });
 
-  sections.push({ category: 'invoices', icon: 'receipt_long', color: 'blue', title: t.invoicesTitle, suggestions: invSuggestions });
+  sections.push({
+    category: 'invoices',
+    icon: 'receipt_long',
+    color: 'blue',
+    title: t.invoicesTitle,
+    suggestions: invSuggestions,
+  });
 
   // 2. Loans — balanced view
   const loanSuggestions = [];
@@ -1292,11 +1484,11 @@ function buildExcellence(m, lang) {
         ? `Optimiser le coût du capital (taux moyen ${r1(m.avgInterestRate)}%)`
         : `Optimise cost of capital (average rate ${r1(m.avgInterestRate)}%)`,
       description: isFr
-        ? `Les entreprises d'excellence maintiennent leur coût de la dette sous 8%. Négociez un refinancement de ${fmt(m.totalDebt)} pour réduire les intérêts annuels de ${fmt(m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100)}.`
-        : `Excellent companies keep their cost of debt below 8%. Negotiate a refinancing of ${fmt(m.totalDebt)} to reduce annual interest by ${fmt(m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100)}.`,
+        ? `Les entreprises d'excellence maintiennent leur coût de la dette sous 8%. Négociez un refinancement de ${fmt(m.totalDebt)} pour réduire les intérêts annuels de ${fmt((m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100)}.`
+        : `Excellent companies keep their cost of debt below 8%. Negotiate a refinancing of ${fmt(m.totalDebt)} to reduce annual interest by ${fmt((m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100)}.`,
       impact: isFr
-        ? `Économie annuelle de ${fmt(m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100)} si le taux est réduit à 8%`
-        : `Annual saving of ${fmt(m.totalDebt * Math.max(0, m.avgInterestRate - 8) / 100)} if rate is reduced to 8%`,
+        ? `Économie annuelle de ${fmt((m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100)} si le taux est réduit à 8%`
+        : `Annual saving of ${fmt((m.totalDebt * Math.max(0, m.avgInterestRate - 8)) / 100)} if rate is reduced to 8%`,
       actionLabel: t.viewLoans,
       actionLink: '/loans',
       metric: { label: isFr ? 'Taux moyen' : 'Average rate', value: `${r1(m.avgInterestRate)}%` },
@@ -1314,10 +1506,19 @@ function buildExcellence(m, lang) {
       : `An optimised capital structure reduces the weighted average cost of capital (WACC)`,
     actionLabel: t.viewLoans,
     actionLink: '/loans',
-    metric: m.totalDebt > 0 ? { label: t.debtRatio, value: `${fmtDebtRatio(m.debtToAsset, lang)}` } : null,
+    metric:
+      m.totalDebt > 0
+        ? { label: t.debtRatio, value: `${fmtDebtRatio(m.debtToAsset, lang)}` }
+        : null,
   });
 
-  sections.push({ category: 'loans', icon: 'account_balance', color: 'purple', title: t.loansTitle, suggestions: loanSuggestions });
+  sections.push({
+    category: 'loans',
+    icon: 'account_balance',
+    color: 'purple',
+    title: t.loansTitle,
+    suggestions: loanSuggestions,
+  });
 
   // 3. Transactions — balanced
   const trxSuggestions = [];
@@ -1344,7 +1545,9 @@ function buildExcellence(m, lang) {
     id: 'exc-trx-benchmark',
     priority: 'low',
     entityFilter: {},
-    title: isFr ? 'Comparer les ratios aux standards sectoriels' : 'Benchmark ratios against industry standards',
+    title: isFr
+      ? 'Comparer les ratios aux standards sectoriels'
+      : 'Benchmark ratios against industry standards',
     description: isFr
       ? `${m.income > 0 ? `Votre ratio actuel de ${fmtExpRatio(m.expenseRatio, lang)} et une trésorerie de ${fmt(m.cashFlow)} doivent être comparés aux benchmarks de votre secteur pour évaluer la performance réelle.` : 'Enregistrez des transactions pour établir vos ratios de référence.'}`
       : `${m.income > 0 ? `Your current ratio of ${fmtExpRatio(m.expenseRatio, lang)} and cash flow of ${fmt(m.cashFlow)} should be benchmarked against your industry standards to evaluate actual performance.` : 'Record transactions to establish your benchmark ratios.'}`,
@@ -1356,7 +1559,13 @@ function buildExcellence(m, lang) {
     metric: m.income > 0 ? { label: t.cashFlow, value: fmt(m.cashFlow) } : null,
   });
 
-  sections.push({ category: 'transactions', icon: 'swap_horiz', color: 'green', title: t.transactionsTitle, suggestions: trxSuggestions });
+  sections.push({
+    category: 'transactions',
+    icon: 'swap_horiz',
+    color: 'green',
+    title: t.transactionsTitle,
+    suggestions: trxSuggestions,
+  });
 
   // 4. Assets — depreciation & optimisation
   sections.push({
@@ -1364,20 +1573,24 @@ function buildExcellence(m, lang) {
     icon: 'apartment',
     color: 'orange',
     title: t.assetsTitle,
-    suggestions: [{
-      id: 'exc-asset-depreciation',
-      priority: 'low',
-      title: isFr ? 'Optimiser la gestion des actifs et amortissements' : 'Optimise asset management and depreciation',
-      description: isFr
-        ? `${m.assets.length > 0 ? `Vos ${m.assets.length} actifs (${fmt(m.totalAssets)}) doivent être revus annuellement pour optimiser les taux d'amortissement et évaluer les opportunités de remplacement ou de cession.` : 'Enregistrez vos actifs pour bénéficier d\'une gestion d\'amortissement optimisée.'}`
-        : `${m.assets.length > 0 ? `Your ${m.assets.length} assets (${fmt(m.totalAssets)}) should be reviewed annually to optimise depreciation rates and evaluate replacement or disposal opportunities.` : 'Record your assets to benefit from optimised depreciation management.'}`,
-      impact: isFr
-        ? `Une gestion d'amortissement optimisée peut réduire la charge fiscale et améliorer le bilan`
-        : `Optimised depreciation management can reduce the tax burden and improve the balance sheet`,
-      actionLabel: t.viewAssets,
-      actionLink: '/assets',
-      metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
-    }],
+    suggestions: [
+      {
+        id: 'exc-asset-depreciation',
+        priority: 'low',
+        title: isFr
+          ? 'Optimiser la gestion des actifs et amortissements'
+          : 'Optimise asset management and depreciation',
+        description: isFr
+          ? `${m.assets.length > 0 ? `Vos ${m.assets.length} actifs (${fmt(m.totalAssets)}) doivent être revus annuellement pour optimiser les taux d'amortissement et évaluer les opportunités de remplacement ou de cession.` : "Enregistrez vos actifs pour bénéficier d'une gestion d'amortissement optimisée."}`
+          : `${m.assets.length > 0 ? `Your ${m.assets.length} assets (${fmt(m.totalAssets)}) should be reviewed annually to optimise depreciation rates and evaluate replacement or disposal opportunities.` : 'Record your assets to benefit from optimised depreciation management.'}`,
+        impact: isFr
+          ? `Une gestion d'amortissement optimisée peut réduire la charge fiscale et améliorer le bilan`
+          : `Optimised depreciation management can reduce the tax burden and improve the balance sheet`,
+        actionLabel: t.viewAssets,
+        actionLink: '/assets',
+        metric: m.totalAssets > 0 ? { label: t.totalAssets, value: fmt(m.totalAssets) } : null,
+      },
+    ],
   });
 
   const headline = isFr
@@ -1387,7 +1600,12 @@ function buildExcellence(m, lang) {
   const currentHealth = computeHealthScore(m);
   // Excellence: highest achievable health — continuous improvement to near-perfection
   const targetScore = Math.min(97, Math.max(currentHealth + 12, 82));
-  return { sections, headline, targetScore, timeframe: isFr ? T.fr.tf_excellence : T.en.tf_excellence };
+  return {
+    sections,
+    headline,
+    targetScore,
+    timeframe: isFr ? T.fr.tf_excellence : T.en.tf_excellence,
+  };
 }
 
 // ─────────────────────────────────────────────────────────
@@ -1399,25 +1617,30 @@ function computeApproxScore(m) {
   const hasTx = m.transactions && m.transactions.length > 0;
   let cashFlow;
   if (!hasTx && m.income === 0) cashFlow = 20;
-  else if (m.income === 0)      cashFlow = 80;
+  else if (m.income === 0) cashFlow = 80;
   else {
     const r = m.expenseRatio ?? 0;
     cashFlow = r > 1.5 ? 100 : r > 1.2 ? 95 : r > 1.0 ? 75 : r > 0.8 ? 40 : r > 0.6 ? 20 : 10;
   }
   const totalInv = m.invoiceRevenue || 0;
-  const invoices = totalInv === 0 ? 10 : Math.min(100,
-    Math.round((m.unpaidAmount / totalInv) * 60 + (m.lateInvoiceAmount / totalInv) * 40)
-  );
+  const invoices =
+    totalInv === 0
+      ? 10
+      : Math.min(
+          100,
+          Math.round((m.unpaidAmount / totalInv) * 60 + (m.lateInvoiceAmount / totalInv) * 40)
+        );
   let debtRisk;
-  if (m.totalDebt === 0)       debtRisk = 5;
+  if (m.totalDebt === 0) debtRisk = 5;
   else if (m.debtToAsset === null) debtRisk = 90;
   else {
     const r = m.debtToAsset;
-    debtRisk = r > 3 ? 100 : r > 2 ? 95 : r > 1.5 ? 80 : r > 1 ? 70 : r > 0.5 ? 40 : r > 0.3 ? 20 : 10;
+    debtRisk =
+      r > 3 ? 100 : r > 2 ? 95 : r > 1.5 ? 80 : r > 1 ? 70 : r > 0.5 ? 40 : r > 0.3 ? 20 : 10;
   }
   let loanBurden = 0;
   const monthlyIncome = m.income / 12;
-  if (!hasTx && m.monthlyPayments > 0)             loanBurden = 30;
+  if (!hasTx && m.monthlyPayments > 0) loanBurden = 30;
   else if (monthlyIncome === 0 && m.monthlyPayments > 0) loanBurden = 95;
   else if (monthlyIncome > 0) {
     const r = m.monthlyPayments / monthlyIncome;
@@ -1433,11 +1656,11 @@ function computeApproxScore(m) {
  * Invalid scenarios are shown as disabled/greyed out in the UI.
  */
 function computeValidScenarios(m) {
-  const isCritical  = m.cashFlow < 0 && (m.expenseRatio === null || m.expenseRatio > 1.5);
-  const isStressed  = m.cashFlow < 0 || (m.expenseRatio !== null && m.expenseRatio > 1);
-  const highDebt    = m.debtToAsset === null || m.debtToAsset > 0.65;
-  const highLate    = m.lateRate > 25;
-  const lowHealth   = computeApproxScore(m) > 60; // risk > 60 → health < 40
+  const isCritical = m.cashFlow < 0 && (m.expenseRatio === null || m.expenseRatio > 1.5);
+  const isStressed = m.cashFlow < 0 || (m.expenseRatio !== null && m.expenseRatio > 1);
+  const highDebt = m.debtToAsset === null || m.debtToAsset > 0.65;
+  const highLate = m.lateRate > 25;
+  const lowHealth = computeApproxScore(m) > 60; // risk > 60 → health < 40
 
   // Critical: only emergency recovery makes sense
   if (isCritical) return ['recovery'];
@@ -1455,10 +1678,18 @@ function computeValidScenarios(m) {
   if (lowHealth) return ['stability', 'debt_reduction', 'recovery', 'revenue_optimization'];
 
   // High late rate: revenue optimization takes priority over growth
-  if (highLate) return ['stability', 'revenue_optimization', 'debt_reduction', 'excellence', 'recovery'];
+  if (highLate)
+    return ['stability', 'revenue_optimization', 'debt_reduction', 'excellence', 'recovery'];
 
   // Healthy: all scenarios available
-  return ['growth', 'stability', 'debt_reduction', 'revenue_optimization', 'recovery', 'excellence'];
+  return [
+    'growth',
+    'stability',
+    'debt_reduction',
+    'revenue_optimization',
+    'recovery',
+    'excellence',
+  ];
 }
 
 // ── Best scenario recommendation ─────────────────────────────
@@ -1469,18 +1700,18 @@ function computeValidScenarios(m) {
 function computeRecommendedScenario(m) {
   const isCritical = m.cashFlow < 0 && (m.expenseRatio === null || m.expenseRatio > 1.5);
   const isStressed = m.cashFlow < 0 || (m.expenseRatio !== null && m.expenseRatio > 1);
-  const highDebt   = m.debtToAsset === null || m.debtToAsset > 0.65;
-  const highLate   = m.lateRate > 25;
+  const highDebt = m.debtToAsset === null || m.debtToAsset > 0.65;
+  const highLate = m.lateRate > 25;
 
-  if (isCritical)                    return 'recovery';
-  if (isStressed && highDebt)        return 'debt_reduction';
-  if (isStressed)                    return 'stability';
-  if (highDebt)                      return 'debt_reduction';
-  if (highLate)                      return 'revenue_optimization';
+  if (isCritical) return 'recovery';
+  if (isStressed && highDebt) return 'debt_reduction';
+  if (isStressed) return 'stability';
+  if (highDebt) return 'debt_reduction';
+  if (highLate) return 'revenue_optimization';
 
   const score = computeApproxScore(m);
-  if (score < 35)                    return 'stability';
-  if (score < 50)                    return 'excellence';
+  if (score < 35) return 'stability';
+  if (score < 50) return 'excellence';
   return 'growth';
 }
 
@@ -1496,20 +1727,27 @@ function computeScenarioWarning(scenario, m, lang) {
   const isStressed = m.cashFlow < 0 || (m.expenseRatio !== null && m.expenseRatio > 1);
 
   // Map: which scenarios are inappropriate for which financial states
-  if ((scenario === 'growth' || scenario === 'revenue_optimization' || scenario === 'excellence') && isCritical) {
+  if (
+    (scenario === 'growth' || scenario === 'revenue_optimization' || scenario === 'excellence') &&
+    isCritical
+  ) {
     return {
       show: true,
       suggestedScenario: 'recovery',
-      messageFr: 'Votre situation financière actuelle (trésorerie négative, ratio de dépenses critique) suggère que le scénario "Redressement" serait plus adapté. Les recommandations ci-dessous restent utiles mais doivent être précédées d\'une stabilisation.',
-      messageEn: 'Your current financial situation (negative cash flow, critical expense ratio) suggests the "Emergency Recovery" scenario would be more appropriate. The recommendations below remain useful but must be preceded by stabilisation.',
+      messageFr:
+        'Votre situation financière actuelle (trésorerie négative, ratio de dépenses critique) suggère que le scénario "Redressement" serait plus adapté. Les recommandations ci-dessous restent utiles mais doivent être précédées d\'une stabilisation.',
+      messageEn:
+        'Your current financial situation (negative cash flow, critical expense ratio) suggests the "Emergency Recovery" scenario would be more appropriate. The recommendations below remain useful but must be preceded by stabilisation.',
     };
   }
   if ((scenario === 'growth' || scenario === 'excellence') && isStressed && !isCritical) {
     return {
       show: true,
       suggestedScenario: 'stability',
-      messageFr: 'Avec une trésorerie tendue, envisagez d\'abord le scénario "Stabilisation" pour sécuriser votre base avant d\'accélérer la croissance.',
-      messageEn: 'With a tight cash flow, consider the "Stabilization" scenario first to secure your base before accelerating growth.',
+      messageFr:
+        'Avec une trésorerie tendue, envisagez d\'abord le scénario "Stabilisation" pour sécuriser votre base avant d\'accélérer la croissance.',
+      messageEn:
+        'With a tight cash flow, consider the "Stabilization" scenario first to secure your base before accelerating growth.',
     };
   }
   return { show: false };
@@ -1522,36 +1760,70 @@ async function getGoalAdvice(scenario, language = 'fr') {
 
   // Compute approximate current risk score using the same weighted formula as scenarioEngine
   const approxRiskScore = computeApproxScore(m);
-  const approxScore     = 100 - approxRiskScore; // health score: higher = better
+  const approxScore = 100 - approxRiskScore; // health score: higher = better
 
   const currentMetrics = {
-    score:            approxScore,
-    income:           m.income,
-    expenses:         m.expenses,
-    cashFlow:         m.cashFlow,
-    totalDebt:        m.totalDebt,
-    totalAssets:      m.totalAssets,
+    score: approxScore,
+    income: m.income,
+    expenses: m.expenses,
+    cashFlow: m.cashFlow,
+    totalDebt: m.totalDebt,
+    totalAssets: m.totalAssets,
     lateInvoiceCount: m.lateInvoiceCount,
-    lateInvoiceAmount:m.lateInvoiceAmount,
-    unpaidAmount:     m.unpaidAmount,
-    totalInvoices:    m.totalInvoices,
-    monthlyPayments:  m.monthlyPayments,
+    lateInvoiceAmount: m.lateInvoiceAmount,
+    unpaidAmount: m.unpaidAmount,
+    totalInvoices: m.totalInvoices,
+    monthlyPayments: m.monthlyPayments,
     // null means "N/A" (no assets / no income) — frontend handles display
-    debtToAsset:      m.debtToAsset,
-    expenseRatio:     m.expenseRatio,
-    lateRate:         m.lateRate,
+    debtToAsset: m.debtToAsset,
+    expenseRatio: m.expenseRatio,
+    lateRate: m.lateRate,
   };
 
+  const validScenarios = computeValidScenarios(m);
   const scenarioWarning = computeScenarioWarning(scenario, m, lang);
+
+  // Gate illogical scenarios: a plan that does not fit the company's current
+  // financial state cannot be applied (the UI greys it out; this enforces it
+  // server-side so it is truly impossible, e.g. "growth"/"excellence" while in
+  // critical distress, or "recovery" when already healthy).
+  if (!validScenarios.includes(scenario)) {
+    const err = new Error(
+      lang === 'en'
+        ? `The "${scenario}" plan is not applicable to your current financial state.`
+        : `Le plan « ${scenario} » n'est pas applicable à votre situation financière actuelle.`
+    );
+    err.statusCode = 400;
+    err.code = 'SCENARIO_NOT_APPLICABLE';
+    err.details = {
+      requested: scenario,
+      recommendedScenario: computeRecommendedScenario(m),
+      validScenarios,
+      scenarioWarning,
+    };
+    throw err;
+  }
 
   let built;
   switch (scenario) {
-    case 'growth':               built = buildGrowth(m, lang);              break;
-    case 'stability':            built = buildStability(m, lang);           break;
-    case 'debt_reduction':       built = buildDebtReduction(m, lang);       break;
-    case 'revenue_optimization': built = buildRevenueOptimization(m, lang); break;
-    case 'recovery':             built = buildRecovery(m, lang);            break;
-    case 'excellence':           built = buildExcellence(m, lang);          break;
+    case 'growth':
+      built = buildGrowth(m, lang);
+      break;
+    case 'stability':
+      built = buildStability(m, lang);
+      break;
+    case 'debt_reduction':
+      built = buildDebtReduction(m, lang);
+      break;
+    case 'revenue_optimization':
+      built = buildRevenueOptimization(m, lang);
+      break;
+    case 'recovery':
+      built = buildRecovery(m, lang);
+      break;
+    case 'excellence':
+      built = buildExcellence(m, lang);
+      break;
     default:
       throw new Error(`Unknown scenario: ${scenario}`);
   }
@@ -1559,13 +1831,13 @@ async function getGoalAdvice(scenario, language = 'fr') {
   return {
     scenario,
     recommendedScenario: computeRecommendedScenario(m),
-    validScenarios:      computeValidScenarios(m),
+    validScenarios,
     currentMetrics,
     scenarioWarning,
-    sections:     built.sections,
-    headline:     built.headline,
-    targetScore:  built.targetScore,
-    timeframe:    built.timeframe,
+    sections: built.sections,
+    headline: built.headline,
+    targetScore: built.targetScore,
+    timeframe: built.timeframe,
   };
 }
 
@@ -1577,7 +1849,7 @@ async function getRecommendedScenario() {
   const m = await collectMetrics();
   return {
     recommendedScenario: computeRecommendedScenario(m),
-    validScenarios:      computeValidScenarios(m),
+    validScenarios: computeValidScenarios(m),
     score: computeApproxScore(m),
   };
 }

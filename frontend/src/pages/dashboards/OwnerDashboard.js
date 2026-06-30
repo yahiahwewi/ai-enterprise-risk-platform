@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { SkeletonKPIGrid } from '../../components/Skeleton';
 import FinancialInsights from '../../components/FinancialInsights';
+import FinalDecision from '../FinalDecision';
 import { useToast } from '../../context/ToastContext';
 import { useLang } from '../../context/LanguageContext';
 
@@ -351,7 +352,7 @@ export default function OwnerDashboard() {
                   body: text.trim(),
                   cta: lang === 'fr' ? 'Approfondir' : 'Deep-dive',
                   icon: ['group', 'block', 'person_off'][i] || 'task_alt',
-                  link: '/final-decision',
+                  link: '/risk-report',
                 }
               : defaults[i];
 
@@ -380,6 +381,11 @@ export default function OwnerDashboard() {
             );
           })}
         </div>
+      </section>
+
+      {/* ─── MERGED: full AI decision report (formerly the standalone /final-decision page) ─── */}
+      <section className="pt-2">
+        <FinalDecision embedded />
       </section>
 
       {/* ─── BOTTOM CTA ─── */}

@@ -102,6 +102,28 @@ const CATALOG = [
     descFr: "Notifie les administrateurs d'une inscription vérifiée.",
     descEn: 'Notifies admins of a verified pending signup.',
   },
+  {
+    key: 'team.member_invited',
+    category: 'auth',
+    priority: 'high',
+    theme: 'auth',
+    icon: 'how_to_reg',
+    defaultRoles: [],
+    titleFr: "Vous avez été invité dans l'équipe Tac-Tic ERM",
+    titleEn: "You've been invited to the Tac-Tic ERM team",
+    heroFr: "Invitation d'équipe",
+    heroEn: 'Team invitation',
+    bodyFr:
+      "Bonjour {{user.name}},\n\n{{actor.name}} vous a ajouté à l'équipe Tac-Tic ERM avec le rôle « {{user.role}} ». Votre compte est déjà actif.\n\nIdentifiants de connexion :\n• Email : {{user.email}}\n• Mot de passe temporaire : {{tempPassword}}\n\nConnectez-vous puis modifiez votre mot de passe dès que possible.",
+    bodyEn:
+      'Hello {{user.name}},\n\n{{actor.name}} added you to the Tac-Tic ERM team with the "{{user.role}}" role. Your account is already active.\n\nSign-in credentials:\n• Email: {{user.email}}\n• Temporary password: {{tempPassword}}\n\nPlease sign in and change your password as soon as possible.',
+    keyFacts: ['user.email', 'user.role', 'actor.name'],
+    ctaFr: 'Se connecter',
+    ctaEn: 'Sign in',
+    ctaPath: '/login',
+    descFr: "Envoyé au membre invité depuis l'écran Équipe (owner/admin).",
+    descEn: 'Sent to a member invited from the Team screen (owner/admin).',
+  },
 
   // ────────────────────────────────────────────────────────────────────
   // FINANCE / WORKFLOW
