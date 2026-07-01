@@ -11,6 +11,7 @@ const { simulateScenario } = require('../services/scenarioEngine');
 const { answerQuestion } = require('../services/copilotService');
 const { suggestCategory } = require('../services/categoryService');
 const { business } = require('../middleware/metrics');
+const { sendCustomEmail } = require('../services/mailer');
 
 exports.getRiskReport = async (req, res) => {
   try {
@@ -43,6 +44,33 @@ exports.getHealthIndex = async (req, res) => {
   try {
     const index = await calculateHealthIndex();
     res.json(index);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Send a free-form email via the app's SMTP (used by the WhatsApp assistant bot).
+exports.sendEmail = async (req, res) => {
+  try {
+    const { to, subject, body } = req.body || {};
+    if (!to || !body) {
+      return res.status(400).json({ message: 'Champs requis : "to" et "body".' });
+    }
+    const recipients = String(to)
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    if (!recipients.length || !recipients.every((e) => emailRe.test(e))) {
+      return res.status(400).json({ message: 'Adresse email invalide.' });
+    }
+    const info = await sendCustomEmail({ to: recipients.join(','), subject, body });
+    res.json({
+      sent: true,
+      to: recipients,
+      subject: subject || null,
+      messageId: info?.messageId || null,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

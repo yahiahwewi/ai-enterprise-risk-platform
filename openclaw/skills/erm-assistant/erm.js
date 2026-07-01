@@ -15,6 +15,7 @@
  *   node erm.js decision        # AI final decision + executive summary
  *   node erm.js alerts          # returns "CRITICAL: ..." or "OK ..." for proactive checks
  *   node erm.js ask "question"  # free-form natural-language question → ERM copilot
+ *   node erm.js email "<to>" "<subject>" "<body>"   # send an email via the ERM backend SMTP
  */
 const fs = require('fs');
 
@@ -95,8 +96,25 @@ const [, , cmd, ...rest] = process.argv;
       console.log(a.answer || a.reply || JSON.stringify(a));
       break;
     }
+    case 'email': {
+      const [to, subject, ...bodyParts] = rest;
+      const body = bodyParts.join(' ');
+      if (!to || !body) {
+        console.error('Usage: email "<to>" "<subject>" "<body>"');
+        process.exit(1);
+      }
+      const r = await post('/api/ai/send-email', { to, subject, body });
+      console.log(
+        r.sent
+          ? `Email envoyé à ${(r.to || [to]).join(', ')} (objet : ${r.subject || '—'}).`
+          : `Échec de l'envoi : ${JSON.stringify(r)}`
+      );
+      break;
+    }
     default:
-      console.error('Unknown command. Use: risk | health | status | decision | alerts | ask "<question>"');
+      console.error(
+        'Unknown command. Use: risk | health | status | decision | alerts | ask "<question>" | email "<to>" "<subject>" "<body>"'
+      );
       process.exit(1);
   }
 })().catch((e) => {

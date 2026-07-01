@@ -27,6 +27,11 @@ Run the helper with Node from this skill's directory:
 When the user asks about **financial health / "santé financière" / "how healthy are we"**, use `health`
 (the financial index). Use `status` only for **technical/system** health (is the platform up?).
 
+**Sending email:** use `node erm.js email "<to>" "<subject>" "<body>"` to send a branded email via
+the backend SMTP. Quote each argument. Compose a clear subject and body yourself; only send to
+addresses the user explicitly provides, and confirm to the user what you sent afterward.
+Example: `node erm.js email "cfo@corp.com" "Résumé du risque" "Score actuel : 14/100 (bas). RAS."`
+
 **How to answer a user message:** pick the closest command, run it, then relay the
 output verbatim (translate/condense for chat if helpful). For anything financial or
 open-ended, prefer `ask "<their question>"`.

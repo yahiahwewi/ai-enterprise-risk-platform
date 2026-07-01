@@ -112,4 +112,51 @@ async function sendApprovalEmail({ to, name, approved, reason }) {
   return t.sendMail({ from: MAIL_FROM, to, subject, text: body });
 }
 
-module.exports = { sendOtpEmail, sendApprovalEmail };
+function genericEmailHtml({ subject, body }) {
+  const esc = (s) =>
+    String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  const htmlBody = esc(body).replace(/\n/g, '<br>');
+  return `
+  <!doctype html>
+  <html>
+    <body style="margin:0;padding:0;background:#f6f2ea;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f2ea;padding:32px 0;">
+        <tr><td align="center">
+          <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e8e0d0;border-radius:6px;overflow:hidden;">
+            <tr><td style="background:#002b4c;color:#ffffff;padding:24px 32px;">
+              <div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;letter-spacing:.5px;">${APP_NAME}</div>
+              <div style="font-size:11px;color:#b8860b;letter-spacing:2px;text-transform:uppercase;margin-top:6px;">Enterprise Risk Management</div>
+            </td></tr>
+            <tr><td style="padding:32px;">
+              ${subject ? `<p style="font-size:16px;font-weight:bold;margin:0 0 14px;color:#002b4c;">${esc(subject)}</p>` : ''}
+              <div style="font-size:14px;line-height:1.6;color:#333;">${htmlBody}</div>
+            </td></tr>
+            <tr><td style="background:#f6f2ea;border-top:1px solid #e8e0d0;padding:14px 32px;font-size:11px;color:#888;text-align:center;">
+              © ${new Date().getFullYear()} ${APP_NAME} — Enterprise Risk Management
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>
+  </html>`;
+}
+
+/**
+ * Send a free-form email (used by the assistant/bot via /api/ai/send-email).
+ * Wraps the plain-text body in the branded Tac-Tic template.
+ */
+async function sendCustomEmail({ to, subject, body }) {
+  const t = getTransport();
+  return t.sendMail({
+    from: MAIL_FROM,
+    to,
+    subject: subject || APP_NAME,
+    text: body,
+    html: genericEmailHtml({ subject, body }),
+  });
+}
+
+module.exports = { sendOtpEmail, sendApprovalEmail, sendCustomEmail };

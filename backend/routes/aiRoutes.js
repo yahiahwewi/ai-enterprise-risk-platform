@@ -8,6 +8,7 @@ const {
   suggestCat,
   getGoalAdvice,
   getRecommendedScenario,
+  sendEmail,
 } = require('../controllers/aiController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -16,6 +17,7 @@ router.get('/final-decision', protect, authorize('owner', 'analyst'), getFinalDe
 router.get('/health-index', protect, authorize('owner', 'analyst', 'auditor'), getHealthIndex);
 router.post('/simulate', protect, authorize('owner', 'analyst'), simulate);
 router.post('/copilot', protect, authorize('owner', 'analyst'), copilot);
+router.post('/send-email', protect, authorize('owner', 'analyst'), sendEmail);
 router.post('/suggest-category', protect, suggestCat);
 router.get('/goals/recommended', protect, authorize('owner', 'analyst'), getRecommendedScenario);
 router.get('/goals/:scenario', protect, authorize('owner'), getGoalAdvice);
