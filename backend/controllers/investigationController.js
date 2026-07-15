@@ -4,21 +4,21 @@
  * The final "close & export" flow generates a signed PDF (RSA-SHA256 + TSA)
  * that reuses the regular Report pipeline so it appears on /verify pages too.
  */
-const crypto    = require('crypto');
-const fs        = require('fs');
-const path      = require('path');
-const puppeteer = require('puppeteer');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const { launchBrowser } = require('../utils/browser');
 
 const Investigation = require('../models/Investigation');
-const Report        = require('../models/Report');
-const Invoice       = require('../models/Invoice');
-const Transaction   = require('../models/Transaction');
-const Loan          = require('../models/Loan');
-const User          = require('../models/User');
+const Report = require('../models/Report');
+const Invoice = require('../models/Invoice');
+const Transaction = require('../models/Transaction');
+const Loan = require('../models/Loan');
+const User = require('../models/User');
 
-const { signPDF }                = require('../services/report/signAndHash');
+const { signPDF } = require('../services/report/signAndHash');
 const { appendVerificationPage } = require('../services/report/qrPage');
-const { stampWithTSA }           = require('../services/report/tsaStamp');
+const { stampWithTSA } = require('../services/report/tsaStamp');
 
 const REPORTS_DIR = path.resolve(__dirname, '../reports');
 if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
@@ -56,18 +56,21 @@ exports.getOne = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { title, subject } = req.body;
-    if (!title || !title.trim()) return res.status(400).json({ message: 'Le titre est obligatoire' });
+    if (!title || !title.trim())
+      return res.status(400).json({ message: 'Le titre est obligatoire' });
     const inv = await Investigation.create({
-      title:       title.trim(),
-      subject:     subject || '',
-      auditorId:   req.user._id,
+      title: title.trim(),
+      subject: subject || '',
+      auditorId: req.user._id,
       auditorName: req.user.name,
-      timeline:    [{
-        text: 'Investigation ouverte.',
-        severity: 'info',
-        authorId: req.user._id,
-        authorName: req.user.name,
-      }],
+      timeline: [
+        {
+          text: 'Investigation ouverte.',
+          severity: 'info',
+          authorId: req.user._id,
+          authorName: req.user.name,
+        },
+      ],
     });
     res.status(201).json(inv);
   } catch (err) {
@@ -100,7 +103,8 @@ exports.remove = async (req, res) => {
     const inv = await Investigation.findById(req.params.id);
     if (!inv) return res.status(404).json({ message: 'Not found' });
     const isAuthor = String(inv.auditorId) === String(req.user._id);
-    if (!isAuthor && req.user.role !== 'admin') return res.status(403).json({ message: 'Forbidden' });
+    if (!isAuthor && req.user.role !== 'admin')
+      return res.status(403).json({ message: 'Forbidden' });
     await inv.deleteOne();
     res.json({ message: 'Supprimé' });
   } catch (err) {
@@ -112,19 +116,23 @@ exports.remove = async (req, res) => {
 async function buildEntityLabel(kind, entityId) {
   try {
     if (kind === 'invoice') {
-      const i = await Invoice.findById(entityId).select('clientName amount status reference').lean();
+      const i = await Invoice.findById(entityId)
+        .select('clientName amount status reference')
+        .lean();
       if (!i) return { label: `Facture ${entityId}`, amount: null };
       const ref = i.reference ? ` (${i.reference})` : '';
       return {
-        label:  `Facture · ${i.clientName}${ref} · ${i.amount?.toLocaleString('fr-FR')} TND · ${i.status}`,
+        label: `Facture · ${i.clientName}${ref} · ${i.amount?.toLocaleString('fr-FR')} TND · ${i.status}`,
         amount: i.amount,
       };
     }
     if (kind === 'transaction') {
-      const t = await Transaction.findById(entityId).select('type amount category description').lean();
+      const t = await Transaction.findById(entityId)
+        .select('type amount category description')
+        .lean();
       if (!t) return { label: `Transaction ${entityId}`, amount: null };
       return {
-        label:  `Transaction · ${t.type} · ${t.amount?.toLocaleString('fr-FR')} TND · ${t.category}`,
+        label: `Transaction · ${t.type} · ${t.amount?.toLocaleString('fr-FR')} TND · ${t.category}`,
         amount: t.amount,
       };
     }
@@ -132,7 +140,7 @@ async function buildEntityLabel(kind, entityId) {
       const l = await Loan.findById(entityId).select('amount interestRate duration').lean();
       if (!l) return { label: `Prêt ${entityId}`, amount: null };
       return {
-        label:  `Prêt · ${l.amount?.toLocaleString('fr-FR')} TND · ${l.interestRate}% · ${l.duration} mois`,
+        label: `Prêt · ${l.amount?.toLocaleString('fr-FR')} TND · ${l.interestRate}% · ${l.duration} mois`,
         amount: l.amount,
       };
     }
@@ -142,11 +150,18 @@ async function buildEntityLabel(kind, entityId) {
       return { label: `Utilisateur · ${u.name} (${u.email}) · ${u.role}`, amount: null };
     }
     if (kind === 'report') {
-      const r = await Report.findById(entityId).select('title period version generatedByName').lean();
+      const r = await Report.findById(entityId)
+        .select('title period version generatedByName')
+        .lean();
       if (!r) return { label: `Rapport ${entityId}`, amount: null };
-      return { label: `Rapport · ${r.title} · v${r.version}${r.generatedByName ? ' · '+r.generatedByName : ''}`, amount: null };
+      return {
+        label: `Rapport · ${r.title} · v${r.version}${r.generatedByName ? ' · ' + r.generatedByName : ''}`,
+        amount: null,
+      };
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return { label: `${kind} ${entityId}`, amount: null };
 }
 
@@ -165,20 +180,25 @@ exports.linkEntity = async (req, res) => {
     }
 
     // Prevent duplicates
-    if (inv.linkedEntities.some((e) => e.kind === kind && String(e.entityId) === String(entityId))) {
+    if (
+      inv.linkedEntities.some((e) => e.kind === kind && String(e.entityId) === String(entityId))
+    ) {
       return res.status(400).json({ message: 'Déjà liée' });
     }
 
     const { label, amount } = await buildEntityLabel(kind, entityId);
     inv.linkedEntities.push({
-      kind, entityId, label, amount,
-      reason:  reason || '',
+      kind,
+      entityId,
+      label,
+      amount,
+      reason: reason || '',
       addedBy: req.user.name,
     });
     inv.timeline.push({
-      text:       `Entité liée : ${label}${reason ? ' — ' + reason : ''}`,
-      severity:   'finding',
-      authorId:   req.user._id,
+      text: `Entité liée : ${label}${reason ? ' — ' + reason : ''}`,
+      severity: 'finding',
+      authorId: req.user._id,
       authorName: req.user.name,
     });
     await inv.save();
@@ -201,9 +221,9 @@ exports.unlinkEntity = async (req, res) => {
     const removedLabel = link.label;
     link.deleteOne();
     inv.timeline.push({
-      text:       `Entité retirée : ${removedLabel}`,
-      severity:   'info',
-      authorId:   req.user._id,
+      text: `Entité retirée : ${removedLabel}`,
+      severity: 'info',
+      authorId: req.user._id,
       authorName: req.user.name,
     });
     await inv.save();
@@ -225,9 +245,9 @@ exports.addNote = async (req, res) => {
     if (!text || !text.trim()) return res.status(400).json({ message: 'Texte requis' });
 
     inv.timeline.push({
-      text:       text.trim(),
-      severity:   severity || 'info',
-      authorId:   req.user._id,
+      text: text.trim(),
+      severity: severity || 'info',
+      authorId: req.user._id,
       authorName: req.user.name,
     });
     await inv.save();
@@ -251,10 +271,14 @@ exports.closeAndExport = async (req, res) => {
     // Build HTML
     const html = buildInvestigationHTML(inv);
 
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const rawPdfBytes = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const rawPdfBytes = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
     await browser.close();
     let pdfBuffer = Buffer.from(rawPdfBytes);
 
@@ -263,59 +287,66 @@ exports.closeAndExport = async (req, res) => {
 
     // Create Report doc first so we have an _id for the QR page
     const report = await Report.create({
-      type:            'decision',
-      title:           `Investigation — ${inv.title}`,
-      period:          new Date().toISOString().slice(0, 7),
-      language:        'fr',
-      version:         1,
+      type: 'decision',
+      title: `Investigation — ${inv.title}`,
+      period: new Date().toISOString().slice(0, 7),
+      language: 'fr',
+      version: 1,
       filename,
       filePath,
-      generatedBy:     'api',
+      generatedBy: 'api',
       generatedByUser: req.user._id,
       generatedByName: inv.auditorName,
-      status:          'generating',
+      status: 'generating',
     });
 
     const prehash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
     const { tsaToken, tsaStatus, tsaTimestamp, tsaIssuer } = await stampWithTSA(prehash);
 
     pdfBuffer = await appendVerificationPage(pdfBuffer, {
-      reportId:    report._id,
-      hash:        prehash,
-      certCN:      inv.auditorName,
-      signedAt:    new Date(),
-      tsaStatus, tsaIssuer, tsaTimestamp,
+      reportId: report._id,
+      hash: prehash,
+      certCN: inv.auditorName,
+      signedAt: new Date(),
+      tsaStatus,
+      tsaIssuer,
+      tsaTimestamp,
     });
 
     const { hash, signature, certCN, certPem, signedAt } = signPDF(pdfBuffer);
     fs.writeFileSync(filePath, pdfBuffer);
     const stats = fs.statSync(filePath);
 
-    report.status    = 'ready';
-    report.fileSize  = stats.size;
-    report.hash      = hash;
+    report.status = 'ready';
+    report.fileSize = stats.size;
+    report.hash = hash;
     report.signature = signature;
-    report.certCN    = certCN;
-    report.certPem   = certPem;
-    report.signedAt  = signedAt;
-    if (tsaToken)    report.tsaToken     = tsaToken;
-    report.tsaStatus    = tsaStatus;
+    report.certCN = certCN;
+    report.certPem = certPem;
+    report.signedAt = signedAt;
+    if (tsaToken) report.tsaToken = tsaToken;
+    report.tsaStatus = tsaStatus;
     report.tsaTimestamp = tsaTimestamp;
-    report.tsaIssuer    = tsaIssuer;
+    report.tsaIssuer = tsaIssuer;
     await report.save();
 
-    inv.status         = 'closed';
-    inv.closedAt       = new Date();
+    inv.status = 'closed';
+    inv.closedAt = new Date();
     inv.exportReportId = report._id;
     inv.timeline.push({
-      text:       `Investigation clôturée. Dossier exporté et signé (RSA-SHA256 + TSA).`,
-      severity:   'finding',
-      authorId:   req.user._id,
+      text: `Investigation clôturée. Dossier exporté et signé (RSA-SHA256 + TSA).`,
+      severity: 'finding',
+      authorId: req.user._id,
       authorName: req.user.name,
     });
     await inv.save();
 
-    res.json({ investigation: inv, reportId: report._id, downloadUrl: `/api/export/pdf/${report._id}`, verifyUrl: `/verify/${report._id}` });
+    res.json({
+      investigation: inv,
+      reportId: report._id,
+      downloadUrl: `/api/export/pdf/${report._id}`,
+      verifyUrl: `/verify/${report._id}`,
+    });
   } catch (err) {
     console.error('[INVESTIGATION EXPORT]', err);
     res.status(500).json({ message: err.message });
@@ -323,16 +354,21 @@ exports.closeAndExport = async (req, res) => {
 };
 
 function esc(s = '') {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function buildInvestigationHTML(inv) {
   const now = new Date();
   const SEV_COLOR = { info: '#64748b', finding: '#b45309', non_compliance: '#b91c1c' };
-  const SEV_LABEL = { info: 'Information', finding: 'Constatation', non_compliance: 'Non-conformité' };
+  const SEV_LABEL = {
+    info: 'Information',
+    finding: 'Constatation',
+    non_compliance: 'Non-conformité',
+  };
 
-  const timelineHtml = inv.timeline.map((n) => `
+  const timelineHtml = inv.timeline
+    .map(
+      (n) => `
     <div class="note">
       <div class="note-meta">
         <span class="sev" style="background:${SEV_COLOR[n.severity] || '#64748b'}">${SEV_LABEL[n.severity] || n.severity}</span>
@@ -341,11 +377,16 @@ function buildInvestigationHTML(inv) {
       </div>
       <div class="note-text">${esc(n.text)}</div>
     </div>
-  `).join('');
+  `
+    )
+    .join('');
 
-  const entitiesHtml = inv.linkedEntities.length === 0
-    ? '<tr><td colspan="3" class="muted">Aucune entité liée.</td></tr>'
-    : inv.linkedEntities.map((e, i) => `
+  const entitiesHtml =
+    inv.linkedEntities.length === 0
+      ? '<tr><td colspan="3" class="muted">Aucune entité liée.</td></tr>'
+      : inv.linkedEntities
+          .map(
+            (e, i) => `
       <tr>
         <td>${i + 1}</td>
         <td><span class="kind-${e.kind}">${e.kind.toUpperCase()}</span></td>
@@ -354,7 +395,9 @@ function buildInvestigationHTML(inv) {
           ${e.reason ? `<div class="entity-reason">${esc(e.reason)}</div>` : ''}
         </td>
       </tr>
-    `).join('');
+    `
+          )
+          .join('');
 
   return `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"/><style>

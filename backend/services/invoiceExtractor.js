@@ -8,7 +8,7 @@
  */
 
 const Tesseract = require('tesseract.js');
-const puppeteer = require('puppeteer');
+const { launchBrowser } = require('../utils/browser');
 const Groq = require('groq-sdk');
 const fs = require('fs');
 const path = require('path');
@@ -68,12 +68,8 @@ const patterns = {
     /(?:net\s*[àa]\s*payer|amount\s*due|total\s*amount)\s*[:#]?\s*([\d\s.,]+)/i,
     /(?:total\s*(?:toutes\s*taxes|t\.t\.c))\s*[:#]?\s*([\d\s.,]+)/i,
   ],
-  amount: [
-    /(?:montant|amount|total)\s*[:#]?\s*([\d\s.,]+)\s*(?:tnd|dt|dinars?)?/i,
-  ],
-  tvaRate: [
-    /(?:tva|vat|taxe)\s*[:#]?\s*0?(\d{1,2})\s*%/i,
-  ],
+  amount: [/(?:montant|amount|total)\s*[:#]?\s*([\d\s.,]+)\s*(?:tnd|dt|dinars?)?/i],
+  tvaRate: [/(?:tva|vat|taxe)\s*[:#]?\s*0?(\d{1,2})\s*%/i],
 };
 
 function parseNumber(str) {
@@ -107,7 +103,9 @@ function extractField(text, fieldPatterns) {
     try {
       const match = text.match(regex);
       if (match && match[1]) return match[1].trim();
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return null;
 }
@@ -140,13 +138,13 @@ async function pdfToImages(pdfBuffer) {
     })();
   </script></body></html>`;
 
-  const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const browser = await launchBrowser();
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
   // Wait for pdf.js to finish rendering
   await page.waitForFunction('window.__pdfRendered === true', { timeout: 20000 });
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 1000));
 
   const screenshot = await page.screenshot({ type: 'png', fullPage: true });
   await browser.close();
@@ -157,11 +155,12 @@ async function pdfToImages(pdfBuffer) {
 // ── OCR with Tesseract.js ─────────────────────────────────
 async function ocrImages(imageBuffers) {
   const worker = await Tesseract.createWorker('fra+eng', 1, {
-    logger: () => {},  // silent
+    logger: () => {}, // silent
   });
 
   let fullText = '';
-  for (let i = 0; i < Math.min(imageBuffers.length, 3); i++) {  // Max 3 pages
+  for (let i = 0; i < Math.min(imageBuffers.length, 3); i++) {
+    // Max 3 pages
     const { data } = await worker.recognize(Buffer.from(imageBuffers[i]));
     fullText += data.text + '\n\n';
   }
@@ -194,9 +193,24 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
 
   if (!rawText || rawText.trim().length < 20) {
     return {
-      data: { invoiceNumber: null, clientName: null, issueDate: new Date().toISOString().split('T')[0], dueDate: null, totalHT: null, tvaRate: 19, tva: null, totalTTC: null, amount: null, lineItems: [], detectedLanguage: 'unknown', description: null },
+      data: {
+        invoiceNumber: null,
+        clientName: null,
+        issueDate: new Date().toISOString().split('T')[0],
+        dueDate: null,
+        totalHT: null,
+        tvaRate: 19,
+        tva: null,
+        totalTTC: null,
+        amount: null,
+        lineItems: [],
+        detectedLanguage: 'unknown',
+        description: null,
+      },
       confidence: { overall: 0 },
-      warnings: [{ field: 'document', message: 'OCR could not extract readable text from this PDF.' }],
+      warnings: [
+        { field: 'document', message: 'OCR could not extract readable text from this PDF.' },
+      ],
       garbled: true,
       engine: 'tesseract-ocr',
       rawText: '',
@@ -204,7 +218,10 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     };
   }
 
-  const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+  const lines = rawText
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
 
   // Step 3: Extract fields from OCR text
   try {
@@ -217,7 +234,9 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     const totalTTCRaw = extractField(rawText, patterns.totalTTC);
     const amountRaw = extractField(rawText, patterns.amount);
     let tvaRateMatch = null;
-    try { tvaRateMatch = rawText.match(patterns.tvaRate[0]); } catch {}
+    try {
+      tvaRateMatch = rawText.match(patterns.tvaRate[0]);
+    } catch {}
     const tvaRate = tvaRateMatch ? parseInt(tvaRateMatch[1]) : 19;
 
     let totalHT = parseNumber(totalHTRaw);
@@ -226,9 +245,15 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     const fallbackAmount = parseNumber(amountRaw);
 
     if (!totalTTC && !totalHT && fallbackAmount) totalTTC = fallbackAmount;
-    if (totalHT && !tva && !totalTTC) { tva = Math.round(totalHT * tvaRate / 100 * 1000) / 1000; totalTTC = Math.round((totalHT + tva) * 1000) / 1000; }
-    else if (totalTTC && !totalHT) { totalHT = Math.round(totalTTC / (1 + tvaRate / 100) * 1000) / 1000; tva = Math.round((totalTTC - totalHT) * 1000) / 1000; }
-    else if (totalHT && totalTTC && !tva) { tva = Math.round((totalTTC - totalHT) * 1000) / 1000; }
+    if (totalHT && !tva && !totalTTC) {
+      tva = Math.round(((totalHT * tvaRate) / 100) * 1000) / 1000;
+      totalTTC = Math.round((totalHT + tva) * 1000) / 1000;
+    } else if (totalTTC && !totalHT) {
+      totalHT = Math.round((totalTTC / (1 + tvaRate / 100)) * 1000) / 1000;
+      tva = Math.round((totalTTC - totalHT) * 1000) / 1000;
+    } else if (totalHT && totalTTC && !tva) {
+      tva = Math.round((totalTTC - totalHT) * 1000) / 1000;
+    }
 
     let clientName = clientNameRaw;
     if (clientName) {
@@ -247,20 +272,31 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     const issueDate = parseDate(rawDate);
     const dueDate = parseDate(rawDueDate);
 
-    let frWords = 0, enWords = 0;
-    try { frWords = (rawText.match(/facture|montant|total|client|date|tva/gi) || []).length; } catch {}
-    try { enWords = (rawText.match(/invoice|amount|total|due|bill|subtotal/gi) || []).length; } catch {}
+    let frWords = 0,
+      enWords = 0;
+    try {
+      frWords = (rawText.match(/facture|montant|total|client|date|tva/gi) || []).length;
+    } catch {}
+    try {
+      enWords = (rawText.match(/invoice|amount|total|due|bill|subtotal/gi) || []).length;
+    } catch {}
     const detectedLanguage = frWords >= enWords ? 'fr' : 'en';
 
     const lineItems = extractLineItems(lines);
 
     const data = {
-      invoiceNumber, clientName,
+      invoiceNumber,
+      clientName,
       issueDate: issueDate || new Date().toISOString().split('T')[0],
-      dueDate, totalHT, tvaRate, tva, totalTTC,
+      dueDate,
+      totalHT,
+      tvaRate,
+      tva,
+      totalTTC,
       amount: totalTTC || totalHT || fallbackAmount || null,
-      lineItems, detectedLanguage,
-      description: lineItems.length > 0 ? lineItems.map(li => li.description).join(', ') : null,
+      lineItems,
+      detectedLanguage,
+      description: lineItems.length > 0 ? lineItems.map((li) => li.description).join(', ') : null,
     };
 
     const confidence = {
@@ -268,13 +304,16 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
       invoiceNumber: invoiceNumber ? 0.85 : 0,
       issueDate: rawDate ? 0.85 : 0.3,
       dueDate: rawDueDate ? 0.85 : 0,
-      totalHT: totalHTRaw ? 0.88 : (totalTTC ? 0.65 : 0),
-      tva: tvaRaw ? 0.85 : (totalHT && totalTTC ? 0.7 : 0.35),
-      totalTTC: totalTTCRaw ? 0.9 : (totalHT ? 0.75 : fallbackAmount ? 0.55 : 0),
+      totalHT: totalHTRaw ? 0.88 : totalTTC ? 0.65 : 0,
+      tva: tvaRaw ? 0.85 : totalHT && totalTTC ? 0.7 : 0.35,
+      totalTTC: totalTTCRaw ? 0.9 : totalHT ? 0.75 : fallbackAmount ? 0.55 : 0,
       overall: 0,
     };
-    const scores = Object.values(confidence).filter(v => typeof v === 'number' && v > 0);
-    confidence.overall = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 100) / 100 : 0;
+    const scores = Object.values(confidence).filter((v) => typeof v === 'number' && v > 0);
+    confidence.overall =
+      scores.length > 0
+        ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100
+        : 0;
 
     const warnings = [];
     if (!clientName) warnings.push({ field: 'clientName', message: 'Client name not detected' });
@@ -282,7 +321,11 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
     if (!dueDate) warnings.push({ field: 'dueDate', message: 'Due date not detected' });
     if (totalHT && totalTTC && tva) {
       const expected = Math.round((totalHT + tva) * 1000) / 1000;
-      if (Math.abs(expected - totalTTC) > 1) warnings.push({ field: 'totalTTC', message: `Total mismatch: HT(${totalHT}) + TVA(${tva}) = ${expected} ≠ TTC(${totalTTC})` });
+      if (Math.abs(expected - totalTTC) > 1)
+        warnings.push({
+          field: 'totalTTC',
+          message: `Total mismatch: HT(${totalHT}) + TVA(${tva}) = ${expected} ≠ TTC(${totalTTC})`,
+        });
     }
 
     // Step 4: AI Verification via Groq LLM
@@ -294,24 +337,40 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
         // Apply AI corrections if confident
         if (aiVerification.corrections) {
           const c = aiVerification.corrections;
-          if (c.clientName && (!data.clientName || aiVerification.fieldConfidence?.clientName > confidence.clientName)) {
+          if (
+            c.clientName &&
+            (!data.clientName || aiVerification.fieldConfidence?.clientName > confidence.clientName)
+          ) {
             data.clientName = c.clientName;
             confidence.clientName = 0.95;
           }
-          if (c.invoiceNumber && (!data.invoiceNumber || aiVerification.fieldConfidence?.invoiceNumber > confidence.invoiceNumber)) {
+          if (
+            c.invoiceNumber &&
+            (!data.invoiceNumber ||
+              aiVerification.fieldConfidence?.invoiceNumber > confidence.invoiceNumber)
+          ) {
             data.invoiceNumber = c.invoiceNumber;
             confidence.invoiceNumber = 0.95;
           }
-          if (c.totalTTC && (!data.totalTTC || aiVerification.fieldConfidence?.totalTTC > confidence.totalTTC)) {
+          if (
+            c.totalTTC &&
+            (!data.totalTTC || aiVerification.fieldConfidence?.totalTTC > confidence.totalTTC)
+          ) {
             data.totalTTC = c.totalTTC;
             data.amount = c.totalTTC;
             confidence.totalTTC = 0.95;
           }
-          if (c.totalHT && (!data.totalHT || aiVerification.fieldConfidence?.totalHT > confidence.totalHT)) {
+          if (
+            c.totalHT &&
+            (!data.totalHT || aiVerification.fieldConfidence?.totalHT > confidence.totalHT)
+          ) {
             data.totalHT = c.totalHT;
             confidence.totalHT = 0.95;
           }
-          if (c.tva != null && (!data.tva || aiVerification.fieldConfidence?.tva > confidence.tva)) {
+          if (
+            c.tva != null &&
+            (!data.tva || aiVerification.fieldConfidence?.tva > confidence.tva)
+          ) {
             data.tva = c.tva;
             confidence.tva = 0.95;
           }
@@ -331,12 +390,15 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
         }
 
         // Recalculate overall confidence
-        const scores = Object.values(confidence).filter(v => typeof v === 'number' && v > 0);
-        confidence.overall = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 100) / 100 : 0;
+        const scores = Object.values(confidence).filter((v) => typeof v === 'number' && v > 0);
+        confidence.overall =
+          scores.length > 0
+            ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100
+            : 0;
 
         // Add AI validation notes to warnings
         if (aiVerification.issues?.length > 0) {
-          aiVerification.issues.forEach(issue => {
+          aiVerification.issues.forEach((issue) => {
             warnings.push({ field: 'ai_check', message: `🤖 ${issue}` });
           });
         }
@@ -345,10 +407,31 @@ async function extractInvoiceFromPDF(pdfBuffer, filename) {
       }
     }
 
-    return { data, confidence, warnings, engine: groq ? 'tesseract-ocr + groq-ai' : 'tesseract-ocr', aiVerification: aiVerification ? { verified: true, model: aiVerification.model } : null, rawText: rawText.substring(0, 2000), pageCount: imageBuffers.length };
+    return {
+      data,
+      confidence,
+      warnings,
+      engine: groq ? 'tesseract-ocr + groq-ai' : 'tesseract-ocr',
+      aiVerification: aiVerification ? { verified: true, model: aiVerification.model } : null,
+      rawText: rawText.substring(0, 2000),
+      pageCount: imageBuffers.length,
+    };
   } catch (extractionError) {
     return {
-      data: { invoiceNumber: null, clientName: null, issueDate: new Date().toISOString().split('T')[0], dueDate: null, totalHT: null, tvaRate: 19, tva: null, totalTTC: null, amount: null, lineItems: [], detectedLanguage: 'unknown', description: null },
+      data: {
+        invoiceNumber: null,
+        clientName: null,
+        issueDate: new Date().toISOString().split('T')[0],
+        dueDate: null,
+        totalHT: null,
+        tvaRate: 19,
+        tva: null,
+        totalTTC: null,
+        amount: null,
+        lineItems: [],
+        detectedLanguage: 'unknown',
+        description: null,
+      },
       confidence: { overall: 0 },
       warnings: [{ field: 'document', message: `Extraction error: ${extractionError.message}` }],
       garbled: false,
@@ -442,10 +525,18 @@ Respond ONLY in valid JSON (no markdown, no explanation):
       console.log(`[EXTRACTOR] Success with model: ${model}`);
       break;
     } catch (modelErr) {
-      const is429 = modelErr?.status === 429 || modelErr?.message?.includes('429') || modelErr?.message?.includes('rate_limit');
-      const isModelErr = modelErr?.status === 404 || modelErr?.message?.includes('not found') || modelErr?.message?.includes('does not exist');
+      const is429 =
+        modelErr?.status === 429 ||
+        modelErr?.message?.includes('429') ||
+        modelErr?.message?.includes('rate_limit');
+      const isModelErr =
+        modelErr?.status === 404 ||
+        modelErr?.message?.includes('not found') ||
+        modelErr?.message?.includes('does not exist');
       if (is429 || isModelErr) {
-        console.warn(`[EXTRACTOR] Model ${model} ${is429 ? 'rate limited' : 'not available'}, trying next...`);
+        console.warn(
+          `[EXTRACTOR] Model ${model} ${is429 ? 'rate limited' : 'not available'}, trying next...`
+        );
         continue;
       }
       // Non-rate-limit, non-model error — log and skip LLM entirely
@@ -484,15 +575,23 @@ function extractLineItems(lines) {
     try {
       const match = line.match(itemPattern);
       if (match) {
-        items.push({ description: match[1].trim(), quantity: parseInt(match[2]), unitPrice: parseNumber(match[3]), total: parseNumber(match[4]) });
+        items.push({
+          description: match[1].trim(),
+          quantity: parseInt(match[2]),
+          unitPrice: parseNumber(match[3]),
+          total: parseNumber(match[4]),
+        });
         continue;
       }
       const simple = line.match(simplePattern);
       if (simple && !/(total|tva|sous|montant|date|facture|client)/i.test(line)) {
         const amt = parseNumber(simple[2]);
-        if (amt && amt > 0 && amt < 10000000) items.push({ description: simple[1].trim(), quantity: 1, unitPrice: amt, total: amt });
+        if (amt && amt > 0 && amt < 10000000)
+          items.push({ description: simple[1].trim(), quantity: 1, unitPrice: amt, total: amt });
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return items.slice(0, 20);
 }
@@ -508,7 +607,14 @@ async function detectDuplicate(extractedData) {
   const existing = await Invoice.find(filter).sort({ createdAt: -1 }).limit(3);
   if (existing.length === 0) return null;
   return {
-    possibleDuplicates: existing.map(inv => ({ id: inv._id, clientName: inv.clientName, amount: inv.amount, dueDate: inv.dueDate, status: inv.status, createdAt: inv.createdAt })),
+    possibleDuplicates: existing.map((inv) => ({
+      id: inv._id,
+      clientName: inv.clientName,
+      amount: inv.amount,
+      dueDate: inv.dueDate,
+      status: inv.status,
+      createdAt: inv.createdAt,
+    })),
     warning: `Found ${existing.length} existing invoice(s) with similar client/amount`,
   };
 }
@@ -518,14 +624,18 @@ async function matchClient(clientName) {
   const presets = await Preset.find({ type: 'client', active: true });
   const matches = [];
   for (const p of presets) {
-    if (p.label_fr.toLowerCase().includes(clientName.toLowerCase()) || clientName.toLowerCase().includes(p.label_fr.toLowerCase())) {
+    if (
+      p.label_fr.toLowerCase().includes(clientName.toLowerCase()) ||
+      clientName.toLowerCase().includes(p.label_fr.toLowerCase())
+    ) {
       matches.push({ value: p.value, label_fr: p.label_fr, label_en: p.label_en, match: 'preset' });
     }
   }
   const existing = await Invoice.distinct('clientName');
   for (const name of existing) {
     if (name.toLowerCase().includes(clientName.toLowerCase().substring(0, 10))) {
-      if (!matches.find(m => m.label_fr === name)) matches.push({ value: name, label_fr: name, label_en: name, match: 'existing' });
+      if (!matches.find((m) => m.label_fr === name))
+        matches.push({ value: name, label_fr: name, label_en: name, match: 'existing' });
     }
   }
   return matches.slice(0, 5);

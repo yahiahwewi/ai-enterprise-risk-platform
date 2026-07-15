@@ -11,8 +11,11 @@ exports.generateReport = async (req, res) => {
     res.status(201).json({
       message: 'Report generated successfully',
       report: {
-        id: report._id, title: report.title, filename: report.filename,
-        status: report.status, downloadUrl: `/api/export/pdf/${report._id}`,
+        id: report._id,
+        title: report.title,
+        filename: report.filename,
+        status: report.status,
+        downloadUrl: `/api/export/pdf/${report._id}`,
       },
     });
   } catch (error) {
@@ -39,9 +42,11 @@ exports.downloadReport = async (req, res) => {
   try {
     const report = await Report.findById(req.params.reportId);
     if (!report) return res.status(404).json({ message: 'Report not found' });
-    if (report.status !== 'ready') return res.status(202).json({ message: 'Report is still generating' });
+    if (report.status !== 'ready')
+      return res.status(202).json({ message: 'Report is still generating' });
     const filePath = path.resolve(report.filePath);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'File not found on disk' });
+    if (!fs.existsSync(filePath))
+      return res.status(404).json({ message: 'File not found on disk' });
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${report.filename}"`);
     res.sendFile(filePath);
@@ -60,21 +65,28 @@ exports.getReportHistory = async (req, res) => {
       Report.countDocuments(filter),
     ]);
     res.json({
-      reports: reports.map(r => ({
-        id: r._id, title: r.title, type: r.type, period: r.period,
-        language: r.language, version: r.version, status: r.status,
-        fileSize: r.fileSize, data: r.data, generatedBy: r.generatedBy,
+      reports: reports.map((r) => ({
+        id: r._id,
+        title: r.title,
+        type: r.type,
+        period: r.period,
+        language: r.language,
+        version: r.version,
+        status: r.status,
+        fileSize: r.fileSize,
+        data: r.data,
+        generatedBy: r.generatedBy,
         generatedByName: r.generatedByName || null,
         createdAt: r.createdAt,
         downloadUrl: r.status === 'ready' ? `/api/export/pdf/${r._id}` : null,
         // Signature / integrity fields
-        hash:         r.hash     ? r.hash.slice(0, 12) + '…' : null,
-        signedAt:     r.signedAt  || null,
-        certCN:       r.certCN    || null,
-        tsaStatus:    r.tsaStatus  || null,
-        tsaIssuer:    r.tsaIssuer  || null,
+        hash: r.hash ? r.hash.slice(0, 12) + '…' : null,
+        signedAt: r.signedAt || null,
+        certCN: r.certCN || null,
+        tsaStatus: r.tsaStatus || null,
+        tsaIssuer: r.tsaIssuer || null,
         tsaTimestamp: r.tsaTimestamp || null,
-        verifyUrl:    `/verify/${r._id}`,
+        verifyUrl: `/verify/${r._id}`,
       })),
       total,
     });
@@ -87,7 +99,7 @@ exports.getReportHistory = async (req, res) => {
 exports.downloadInvoicePDF = async (req, res) => {
   try {
     const Invoice = require('../models/Invoice');
-    const puppeteer = require('puppeteer');
+    const { launchBrowser } = require('../utils/browser');
     const { generateInvoiceHTML } = require('../templates/invoiceTemplate');
 
     const invoice = await Invoice.findById(req.params.invoiceId);
@@ -96,10 +108,14 @@ exports.downloadInvoicePDF = async (req, res) => {
     const lang = req.query.language || 'fr';
     const html = generateInvoiceHTML(invoice.toObject(), lang);
 
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfUint8 = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const pdfUint8 = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
     await browser.close();
 
     // Convert Uint8Array to Node Buffer so Express sends raw bytes (not JSON)
@@ -119,7 +135,7 @@ exports.downloadInvoicePDF = async (req, res) => {
 exports.downloadTransactionPDF = async (req, res) => {
   try {
     const Transaction = require('../models/Transaction');
-    const puppeteer = require('puppeteer');
+    const { launchBrowser } = require('../utils/browser');
     const { generateTransactionHTML } = require('../templates/transactionTemplate');
 
     const tx = await Transaction.findById(req.params.transactionId);
@@ -128,10 +144,14 @@ exports.downloadTransactionPDF = async (req, res) => {
     const lang = req.query.language || 'fr';
     const html = generateTransactionHTML(tx.toObject(), lang);
 
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfUint8 = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const pdfUint8 = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
     await browser.close();
 
     const pdfBuffer = Buffer.from(pdfUint8);

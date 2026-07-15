@@ -6,24 +6,33 @@
  *                                      a Report doc so the normal /verify works.
  *   GET  /api/dev/pdf-test/:id       — download the raw signed PDF.
  */
-const crypto    = require('crypto');
-const fs        = require('fs');
-const path      = require('path');
-const puppeteer = require('puppeteer');
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const { launchBrowser } = require('../utils/browser');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
-const Report    = require('../models/Report');
-const { signPDF }                = require('../services/report/signAndHash');
+const Report = require('../models/Report');
+const { signPDF } = require('../services/report/signAndHash');
 const { appendVerificationPage } = require('../services/report/qrPage');
-const { stampWithTSA }           = require('../services/report/tsaStamp');
+const { stampWithTSA } = require('../services/report/tsaStamp');
 
 const REPORTS_DIR = path.resolve(__dirname, '../reports');
 if (!fs.existsSync(REPORTS_DIR)) fs.mkdirSync(REPORTS_DIR, { recursive: true });
 
 // Pool of fake signer names used to demonstrate variable signer identity
 const FAKE_NAMES = [
-  'Yasmine Jebali', 'Anis Hamdi', 'Nour Ben Salah', 'Rami Chaabane',
-  'Ines Trabelsi', 'Hedi Mrad', 'Sonia Ferchichi', 'Adel Khaldi',
-  'Dorra Gharbi', 'Sami Zouari', 'Leila Souissi', 'Karim Attia',
+  'Yasmine Jebali',
+  'Anis Hamdi',
+  'Nour Ben Salah',
+  'Rami Chaabane',
+  'Ines Trabelsi',
+  'Hedi Mrad',
+  'Sonia Ferchichi',
+  'Adel Khaldi',
+  'Dorra Gharbi',
+  'Sami Zouari',
+  'Leila Souissi',
+  'Karim Attia',
 ];
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
@@ -71,17 +80,21 @@ function buildHTML({ signerName, title, docId, issuedAt }) {
 exports.generate = async (req, res) => {
   try {
     const signerName = pick(FAKE_NAMES);
-    const docId      = 'TST-' + crypto.randomBytes(4).toString('hex').toUpperCase();
-    const issuedAt   = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
-    const title      = `Attestation de test — ${docId}`;
+    const docId = 'TST-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+    const issuedAt = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+    const title = `Attestation de test — ${docId}`;
 
     const html = buildHTML({ signerName, title, docId, issuedAt });
 
     // 1. Puppeteer → raw PDF
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const rawPdfBytes = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const rawPdfBytes = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+    });
     await browser.close();
     let pdfBuffer = Buffer.from(rawPdfBytes);
 
@@ -90,17 +103,17 @@ exports.generate = async (req, res) => {
     const filePath = path.join(REPORTS_DIR, filename);
 
     const report = await Report.create({
-      type:            'decision', // reuse existing enum value for tests
+      type: 'decision', // reuse existing enum value for tests
       title,
-      period:          new Date().toISOString().slice(0, 7),
-      language:        'fr',
-      version:         1,
+      period: new Date().toISOString().slice(0, 7),
+      language: 'fr',
+      version: 1,
       filename,
       filePath,
-      generatedBy:     'api',
+      generatedBy: 'api',
       generatedByUser: req.user?._id,
       generatedByName: signerName, // ← the random name is the signer shown in UI
-      status:          'generating',
+      status: 'generating',
     });
 
     // 3. Pre-hash + TSA
@@ -109,11 +122,13 @@ exports.generate = async (req, res) => {
 
     // 4. Append QR verification page (before signing → file-on-disk matches signed hash)
     pdfBuffer = await appendVerificationPage(pdfBuffer, {
-      reportId:    report._id,
-      hash:        prehash,
-      certCN:      signerName,
-      signedAt:    new Date(),
-      tsaStatus, tsaIssuer, tsaTimestamp,
+      reportId: report._id,
+      hash: prehash,
+      certCN: signerName,
+      signedAt: new Date(),
+      tsaStatus,
+      tsaIssuer,
+      tsaTimestamp,
     });
 
     // 5. Sign the final buffer
@@ -124,21 +139,21 @@ exports.generate = async (req, res) => {
 
     // 7. Finalise Report doc
     const stats = fs.statSync(filePath);
-    report.status    = 'ready';
-    report.fileSize  = stats.size;
-    report.hash      = hash;
+    report.status = 'ready';
+    report.fileSize = stats.size;
+    report.hash = hash;
     report.signature = signature;
-    report.certCN    = certCN;
-    report.certPem   = certPem;
-    report.signedAt  = signedAt;
-    if (tsaToken)    report.tsaToken     = tsaToken;
-    report.tsaStatus    = tsaStatus;
+    report.certCN = certCN;
+    report.certPem = certPem;
+    report.signedAt = signedAt;
+    if (tsaToken) report.tsaToken = tsaToken;
+    report.tsaStatus = tsaStatus;
     report.tsaTimestamp = tsaTimestamp;
-    report.tsaIssuer    = tsaIssuer;
+    report.tsaIssuer = tsaIssuer;
     await report.save();
 
     res.status(201).json({
-      id:           report._id,
+      id: report._id,
       title,
       signerName,
       docId,
@@ -147,9 +162,9 @@ exports.generate = async (req, res) => {
       tsaStatus,
       tsaTimestamp,
       tsaIssuer,
-      fileSize:     stats.size,
-      downloadUrl:  `/api/dev/pdf-test/${report._id}`,
-      verifyUrl:    `/verify/${report._id}`,
+      fileSize: stats.size,
+      downloadUrl: `/api/dev/pdf-test/${report._id}`,
+      verifyUrl: `/verify/${report._id}`,
     });
   } catch (err) {
     console.error('[PDF-TEST]', err);
@@ -169,51 +184,80 @@ exports.tamper = async (req, res) => {
   try {
     const { note } = req.body || {};
     const report = await Report.findById(req.params.id);
-    if (!report)                      return res.status(404).json({ message: 'Not found' });
+    if (!report) return res.status(404).json({ message: 'Not found' });
     if (!fs.existsSync(report.filePath)) return res.status(404).json({ message: 'File missing' });
 
     const original = fs.readFileSync(report.filePath);
-    const pdfDoc   = await PDFDocument.load(original);
-    const font     = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const fontReg  = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const pdfDoc = await PDFDocument.load(original);
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const fontReg = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     // 1) Big red banner stamped on the FIRST page
     const firstPage = pdfDoc.getPage(0);
-    const { width }  = firstPage.getSize();
-    firstPage.drawRectangle({ x: 0, y: 40, width, height: 50, color: rgb(1, 0.2, 0.2), opacity: 0.85 });
+    const { width } = firstPage.getSize();
+    firstPage.drawRectangle({
+      x: 0,
+      y: 40,
+      width,
+      height: 50,
+      color: rgb(1, 0.2, 0.2),
+      opacity: 0.85,
+    });
     firstPage.drawText('* EDIT POST-SIGNATURE *', {
-      x: 40, y: 58, size: 18, font, color: rgb(1, 1, 1),
+      x: 40,
+      y: 58,
+      size: 18,
+      font,
+      color: rgb(1, 1, 1),
     });
-    firstPage.drawText('Contenu modifié après signature — l\'empreinte SHA-256 ne correspond plus.', {
-      x: 40, y: 44, size: 8, font: fontReg, color: rgb(1, 1, 1),
-    });
+    firstPage.drawText(
+      "Contenu modifié après signature — l'empreinte SHA-256 ne correspond plus.",
+      {
+        x: 40,
+        y: 44,
+        size: 8,
+        font: fontReg,
+        color: rgb(1, 1, 1),
+      }
+    );
 
     // 2) Optional custom note appended as a new page
     if (note && String(note).trim().length > 0) {
       const page = pdfDoc.addPage([595, 842]);
       page.drawRectangle({ x: 0, y: 782, width: 595, height: 60, color: rgb(0.98, 0.85, 0.85) });
       page.drawText('PAGE AJOUTÉE APRÈS SIGNATURE', {
-        x: 40, y: 805, size: 16, font, color: rgb(0.7, 0.1, 0.1),
+        x: 40,
+        y: 805,
+        size: 16,
+        font,
+        color: rgb(0.7, 0.1, 0.1),
       });
       page.drawText('Ceci est un contenu ajouté manuellement, qui invalide la signature.', {
-        x: 40, y: 790, size: 9, font: fontReg, color: rgb(0.5, 0.1, 0.1),
+        x: 40,
+        y: 790,
+        size: 9,
+        font: fontReg,
+        color: rgb(0.5, 0.1, 0.1),
       });
       // Wrap the note across lines
       const words = String(note).split(/\s+/);
-      let line = ''; let y = 750;
+      let line = '';
+      let y = 750;
       const maxWidth = 515;
       for (const w of words) {
         const test = line ? line + ' ' + w : w;
         const wpx = fontReg.widthOfTextAtSize(test, 12);
         if (wpx > maxWidth) {
           page.drawText(line, { x: 40, y, size: 12, font: fontReg, color: rgb(0.1, 0.12, 0.15) });
-          line = w; y -= 18;
+          line = w;
+          y -= 18;
         } else {
           line = test;
         }
         if (y < 60) break;
       }
-      if (line) page.drawText(line, { x: 40, y, size: 12, font: fontReg, color: rgb(0.1, 0.12, 0.15) });
+      if (line)
+        page.drawText(line, { x: 40, y, size: 12, font: fontReg, color: rgb(0.1, 0.12, 0.15) });
     }
 
     const tamperedBytes = await pdfDoc.save();
@@ -222,13 +266,14 @@ exports.tamper = async (req, res) => {
     const currentHash = crypto.createHash('sha256').update(tamperedBytes).digest('hex');
 
     res.json({
-      tampered:    true,
-      filePath:    report.filename,
+      tampered: true,
+      filePath: report.filename,
       size,
-      storedHash:  report.hash,            // unchanged in DB
-      currentHash,                         // new SHA-256 of the on-disk file
+      storedHash: report.hash, // unchanged in DB
+      currentHash, // new SHA-256 of the on-disk file
       hashMatches: currentHash === report.hash,
-      message:     'Fichier édité sur le disque. La signature stockée n\'a pas changé → la prochaine vérification signalera une incohérence.',
+      message:
+        "Fichier édité sur le disque. La signature stockée n'a pas changé → la prochaine vérification signalera une incohérence.",
     });
   } catch (err) {
     console.error('[PDF-TEST TAMPER]', err);
